@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ bakery.name }} - Crumb{% endblock %}
+{% block content %}
+<p class="eyebrow">Bakery profile</p>
+<h1>{{ bakery.name }}</h1>
+<div class="card">
+  <dl class="profile">
+    <div>
+      <dt>Address</dt>
+      <dd>{{ bakery.address }}</dd>
+    </div>
+    {% if bakery.phone %}
+    <div>
+      <dt>Phone</dt>
+      <dd>{{ bakery.phone }}</dd>
+    </div>
+    {% endif %}
+    {% if bakery.email %}
+    <div>
+      <dt>Email</dt>
+      <dd>{{ bakery.email }}</dd>
+    </div>
+    {% endif %}
+    {% if bakery.tax_id %}
+    <div>
+      <dt>Tax ID</dt>
+      <dd>{{ bakery.tax_id }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+{% endblock %}
