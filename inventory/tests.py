@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from bakery.models import Bakery
 
+from .forms import IngredientForm
 from .models import Ingredient, UnitOfMeasure
 from .services import register_ingredient
 
@@ -23,6 +24,26 @@ def make_unit(abbreviation='kg'):
 class UnitSeedMigrationTests(TestCase):
     def test_the_four_fr02_units_are_seeded(self):
         abbreviations = set(UnitOfMeasure.objects.values_list('abbreviation', flat=True))
+        self.assertEqual(abbreviations, {'kg', 'g', 'u', 'L'})
+
+
+class UnitOfMeasureModelTests(TestCase):
+    def test_rejects_units_outside_the_four_supported_by_fr02(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                UnitOfMeasure.objects.create(
+                    name='Ounce', abbreviation='oz', unit_type='mass'
+                )
+
+
+class IngredientFormUnitTests(TestCase):
+    def test_offers_exactly_the_four_supported_units(self):
+        form = IngredientForm(bakery=make_bakery())
+
+        abbreviations = set(
+            form.fields['unit'].queryset.values_list('abbreviation', flat=True)
+        )
+
         self.assertEqual(abbreviations, {'kg', 'g', 'u', 'L'})
 
 

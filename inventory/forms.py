@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Ingredient, UnitOfMeasure
+from .models import Ingredient, SUPPORTED_UNIT_ABBREVIATIONS, UnitOfMeasure
 
 
 class IngredientForm(forms.ModelForm):
@@ -25,7 +25,9 @@ class IngredientForm(forms.ModelForm):
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
-        self.fields['unit'].queryset = UnitOfMeasure.objects.all()
+        self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
+            abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
+        )
         self.fields['unit'].empty_label = 'Select a unit'
 
     def clean_name(self):
