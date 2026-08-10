@@ -37,6 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Apps locales de Crumb
+    'apps.accounts',
+    'apps.inventory',
+    'apps.production',
+    'apps.sales',
+    'apps.operations',
 ]
 
 MIDDLEWARE = [
