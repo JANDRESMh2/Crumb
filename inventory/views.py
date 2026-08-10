@@ -28,20 +28,19 @@ def ingredient_create(request):
 
 
 def ingredient_list(request):
-    """Minimal listing to close the loop on FR01 registration.
-
-    Full inventory viewing with filtering/search belongs to FR05 and FR22
-    (separate, unbuilt tickets) - this view only proves ingredients were
-    registered correctly, it is not that feature.
-    """
+    """List active ingredients and search them by name (FR22)."""
     bakery = get_current_bakery()
+    query = request.GET.get('q', '').strip()
     ingredients = (
-        Ingredient.objects.filter(bakery=bakery, is_active=True)
+        Ingredient.objects.filter(bakery=bakery, is_active=True).select_related('unit')
         if bakery is not None
         else Ingredient.objects.none()
     )
+    if query:
+        ingredients = ingredients.filter(name__icontains=query)
+
     return render(
         request,
         'inventory/ingredient_list.html',
-        {'ingredients': ingredients, 'bakery': bakery},
+        {'ingredients': ingredients, 'bakery': bakery, 'query': query},
     )
