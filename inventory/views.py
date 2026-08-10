@@ -7,6 +7,10 @@ from .forms import IngredientForm
 from .models import Ingredient
 from .services import register_ingredient
 
+from .models import Ingredient, StockMovement
+from .forms import StockInForm
+from django.db import transaction
+
 
 def ingredient_create(request):
     """FR01 - register a new ingredient (name, quantity, unit, expiration date)."""
@@ -45,3 +49,27 @@ def ingredient_list(request):
         'inventory/ingredient_list.html',
         {'ingredients': ingredients, 'bakery': bakery},
     )
+
+
+@transaction.atomic
+def stock_in_create(request):
+    if request.method == 'POST':
+        form = StockInForm(request.POST)
+        if form.is_valid():
+            movement = form.save(commit=False)
+            movement.movement_type = 'StockIn'
+            # Asignar la panadería activa del contexto o sesión
+            movement.bakery = request.user.bakery if hasattr(request.user, 'bakery') else Ingredient.objects.first().bakery
+            
+            # Actualizar el stock actual del ingrediente
+            ingredient = movement.ingredient
+            ingredient.current_quantity += movement.quantity
+            ingredient.save()
+            
+            movement.save()
+            messages.success(request, f"Stock-in successfully registered for {ingredient.name}.")
+            return redirect('inventory:ingredient_list')
+    else:
+        form = StockInForm()
+    
+    return render(request, 'inventory/stock_in_form.html', {'form': form})

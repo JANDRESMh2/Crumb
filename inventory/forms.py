@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import Ingredient, UnitOfMeasure
+from .models import StockMovement
 
 
 class IngredientForm(forms.ModelForm):
@@ -44,3 +45,14 @@ class IngredientForm(forms.ModelForm):
             if duplicate:
                 self.add_error('name', 'An ingredient with this name is already registered.')
         return cleaned
+
+
+class StockInForm(forms.ModelForm):
+    class Meta:
+        model = StockMovement
+        fields = ['ingredient', 'quantity', 'note'] 
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
+            'ingredient': forms.Select(attrs={'class': 'form-select'}),
+            'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
