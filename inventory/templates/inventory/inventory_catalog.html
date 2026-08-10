@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Inventory: Ingredients</h2>
+        <div>
+            <a href="{% url 'inventory:create' %}" class="btn btn-success">+ New Ingredient</a>
+            <a href="{% url 'inventory:stock_in' %}" class="btn btn-primary">Register Stock-In</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Current Quantity</th>
+                    <th>Unit</th>
+                    <th>Cost per Unit</th>
+                    <th>Expiration Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ingredient in ingredients %}
+                <tr>
+                    <td>{{ ingredient.name }}</td>
+                    <td>{{ ingredient.category.name|default:"-" }}</td>
+                    
+                    <td><strong>{{ ingredient.current_quantity }}</strong></td>
+                    
+                    <td>{{ ingredient.unit.abbreviation }}</td>
+                    <td>${{ ingredient.cost_per_unit }}</td>
+                    <td>{{ ingredient.expiration_date|date:"Y-m-d"|default:"N/A" }}</td>
+                    <td>
+                        {% if ingredient.status == 'Active' %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center">No ingredients currently registered in the inventory.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

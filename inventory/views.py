@@ -1,3 +1,4 @@
+from os import name
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
@@ -73,3 +74,9 @@ def stock_in_create(request):
         form = StockInForm()
     
     return render(request, 'inventory/stock_in_form.html', {'form': form})
+
+
+    def ingredient_list(request):
+        ingredients = Ingredient.objects.select_reletad('unit', 'category').all().order_by('name')
+        
+        return render(request, 'inventory/inventory_catalog.html', {'ingredients': ingredients})
