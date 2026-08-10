@@ -1,7 +1,11 @@
 from django import forms
 
-from .models import Ingredient, UnitOfMeasure
-from .models import StockMovement
+from .models import (
+    Ingredient,
+    StockMovement,
+    SUPPORTED_UNIT_ABBREVIATIONS,
+    UnitOfMeasure,
+)
 
 
 class IngredientForm(forms.ModelForm):
@@ -26,7 +30,9 @@ class IngredientForm(forms.ModelForm):
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
-        self.fields['unit'].queryset = UnitOfMeasure.objects.all()
+        self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
+            abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
+        )
         self.fields['unit'].empty_label = 'Select a unit'
 
     def clean_name(self):
@@ -50,9 +56,17 @@ class IngredientForm(forms.ModelForm):
 class StockInForm(forms.ModelForm):
     class Meta:
         model = StockMovement
-        fields = ['ingredient', 'quantity', 'note'] 
+        fields = ['ingredient', 'quantity', 'note']
         widgets = {
             'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
             'ingredient': forms.Select(attrs={'class': 'form-select'}),
             'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
+
+    def __init__(self, *args, bakery=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ingredient'].queryset = (
+            Ingredient.objects.filter(bakery=bakery, is_active=True)
+            if bakery is not None
+            else Ingredient.objects.none()
+        )
