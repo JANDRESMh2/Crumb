@@ -82,3 +82,28 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class StockMovement(models.Model):
+    # Declaración de la lista de opciones
+    MOVEMENT_TYPES = [
+        ('StockIn', 'Stock-In (Purchase)'),
+        ('Consumption', 'Consumption'),
+        ('Correction', 'Correction'),
+        ('Loss', 'Loss'),
+    ]
+
+    movement_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    bakery = models.ForeignKey(Bakery, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey('Ingredient', on_delete=models.PROTECT)
+    
+  
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES, default='StockIn')
+    
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    movement_date = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.movement_type} - {self.quantity} of {self.ingredient.name}"
+

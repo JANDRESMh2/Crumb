@@ -1,9 +1,10 @@
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import redirect, render
 
 from bakery.services import get_current_bakery
 
-from .forms import IngredientForm
+from .forms import IngredientForm, StockInForm
 from .models import Ingredient
 from .services import register_ingredient
 
@@ -43,4 +44,38 @@ def ingredient_list(request):
         request,
         'inventory/ingredient_list.html',
         {'ingredients': ingredients, 'bakery': bakery, 'query': query},
+    )
+
+
+@transaction.atomic
+def stock_in_create(request):
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before registering stock.')
+        return redirect('bakery:setup')
+
+    if request.method == 'POST':
+        form = StockInForm(request.POST, bakery=bakery)
+        if form.is_valid():
+            movement = form.save(commit=False)
+            movement.movement_type = 'StockIn'
+            movement.bakery = bakery
+
+            ingredient = movement.ingredient
+            ingredient.current_quantity += movement.quantity
+            ingredient.save()
+
+            movement.save()
+            messages.success(
+                request,
+                f'Stock-in successfully registered for {ingredient.name}.',
+            )
+            return redirect('inventory:list')
+    else:
+        form = StockInForm(bakery=bakery)
+
+    return render(
+        request,
+        'inventory/stock_in_form.html',
+        {'form': form, 'bakery': bakery},
     )
