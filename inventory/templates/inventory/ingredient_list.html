@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Ingredients - Crumb{% endblock %}
+{% block content %}
+<p class="eyebrow">Inventory</p>
+<h1>Ingredients</h1>
+<div class="card">
+  {% if ingredients %}
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Quantity</th><th>Unit</th><th>Expires</th></tr>
+    </thead>
+    <tbody>
+      {% for ingredient in ingredients %}
+      <tr>
+        <td>{{ ingredient.name }}</td>
+        <td>{{ ingredient.current_quantity }}</td>
+        <td>{{ ingredient.unit.abbreviation }}</td>
+        <td>{{ ingredient.expiration_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    <p>No ingredients registered yet.</p>
+  </div>
+  {% endif %}
+  <div class="actions">
+    <a class="btn" href="{% url 'inventory:create' %}">Register ingredient</a>
+  </div>
+</div>
+{% endblock %}

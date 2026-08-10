@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Set up your bakery - Crumb{% endblock %}
+{% block content %}
+<p class="eyebrow">Getting started</p>
+<h1>Set up your bakery profile</h1>
+<p class="lede">This information identifies your bakery across Crumb. You can always add contact details later.</p>
+<div class="card">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% include "partials/field.html" with field=form.name %}
+    {% include "partials/field.html" with field=form.address %}
+    <div class="field-row">
+      {% include "partials/field.html" with field=form.phone %}
+      {% include "partials/field.html" with field=form.email %}
+    </div>
+    {% include "partials/field.html" with field=form.tax_id %}
+    <button type="submit">Save profile</button>
+  </form>
+</div>
+{% endblock %}

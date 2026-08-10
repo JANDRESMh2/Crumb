@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Register ingredient - Crumb{% endblock %}
+{% block content %}
+<p class="eyebrow">Inventory</p>
+<h1>Register ingredient</h1>
+<p class="lede">Add a raw material to {{ bakery.name }}'s inventory.</p>
+<div class="card">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% include "partials/field.html" with field=form.name %}
+    <div class="field-row">
+      {% include "partials/field.html" with field=form.unit %}
+      {% include "partials/field.html" with field=form.current_quantity %}
+    </div>
+    {% include "partials/field.html" with field=form.expiration_date %}
+    <button type="submit">Register ingredient</button>
+  </form>
+</div>
+{% endblock %}

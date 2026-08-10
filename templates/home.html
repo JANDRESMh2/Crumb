@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Crumb - Inventory for small bakeries{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+{% if bakery %}
+  <p class="eyebrow">Dashboard</p>
+  <h1>Welcome back, {{ bakery.name }}</h1>
+  <p class="lede">{{ bakery.address }}</p>
+{% else %}
+  <p class="eyebrow">Crumb</p>
+  <h1>Inventory management for small bakeries</h1>
+  <p class="lede">Track ingredients, stock, and expiration dates in one place. Start by setting up your bakery's profile.</p>
+{% endif %}
+
+<div class="card-grid">
+  <a class="action-card" href="{% url 'bakery:detail' %}">
+    <span class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+    </span>
+    <h2>Bakery profile</h2>
+    <p>{% if bakery %}View your business information.{% else %}Set up your name, address, and contact details.{% endif %}</p>
+  </a>
+  <a class="action-card" href="{% url 'inventory:create' %}">
+    <span class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    </span>
+    <h2>Register ingredient</h2>
+    <p>Add a new ingredient with quantity, unit, and expiration date.</p>
+  </a>
+</div>
+{% endblock %}
