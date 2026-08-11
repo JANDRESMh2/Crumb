@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from bakery.models import Bakery
 
+from .forms import IngredientForm
 from .models import Ingredient, UnitOfMeasure
 from .services import register_ingredient
 
@@ -23,6 +24,26 @@ def make_unit(abbreviation='kg'):
 class UnitSeedMigrationTests(TestCase):
     def test_the_four_fr02_units_are_seeded(self):
         abbreviations = set(UnitOfMeasure.objects.values_list('abbreviation', flat=True))
+        self.assertEqual(abbreviations, {'kg', 'g', 'u', 'L'})
+
+
+class UnitOfMeasureModelTests(TestCase):
+    def test_rejects_units_outside_the_four_supported_by_fr02(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                UnitOfMeasure.objects.create(
+                    name='Ounce', abbreviation='oz', unit_type='mass'
+                )
+
+
+class IngredientFormUnitTests(TestCase):
+    def test_offers_exactly_the_four_supported_units(self):
+        form = IngredientForm(bakery=make_bakery())
+
+        abbreviations = set(
+            form.fields['unit'].queryset.values_list('abbreviation', flat=True)
+        )
+
         self.assertEqual(abbreviations, {'kg', 'g', 'u', 'L'})
 
 
@@ -147,6 +168,45 @@ class IngredientCreateViewTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Ingredient.objects.count(), 1)
+    def test_post_reactivates_previously_deleted_ingredient(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        ingredient = Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+            is_active=False,
+        )
+
+        response = self.client.post(self.url, {
+            'name': 'Flour',
+            'unit': str(unit.pk),
+            'current_quantity': '12.00',
+            'expiration_date': '2027-02-01',
+        })
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        ingredient.refresh_from_db()
+
+        self.assertTrue(ingredient.is_active)
+        self.assertEqual(
+            ingredient.current_quantity,
+            Decimal('12.00'),
+        )
+        self.assertEqual(
+            Ingredient.objects.filter(
+                bakery=bakery,
+                name='Flour',
+            ).count(),
+            1,
+        )
 
 
 class IngredientListViewTests(TestCase):
@@ -163,3 +223,240 @@ class IngredientListViewTests(TestCase):
     def test_shows_empty_state_when_no_bakery_is_configured(self):
         response = self.client.get(reverse('inventory:list'))
         self.assertContains(response, 'No ingredients registered yet.')
+
+    def test_searches_ingredients_by_partial_case_insensitive_name(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Whole Wheat Flour',
+            current_quantity=Decimal('5.00'), expiration_date='2026-12-31',
+        )
+        Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Sugar',
+            current_quantity=Decimal('3.00'), expiration_date='2026-12-31',
+        )
+
+        response = self.client.get(reverse('inventory:list'), {'q': 'FLOUR'})
+
+        self.assertContains(response, 'Whole Wheat Flour')
+        self.assertNotContains(response, 'Sugar')
+        self.assertEqual(response.context['query'], 'FLOUR')
+
+    def test_search_does_not_expose_ingredients_from_another_bakery(self):
+        current_bakery = make_bakery()
+        other_bakery = Bakery.objects.create(name='Other Bakery', address='Calle 20')
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        Ingredient.objects.create(
+            bakery=current_bakery, unit=unit, name='Local Flour',
+            current_quantity=Decimal('5.00'), expiration_date='2026-12-31',
+        )
+        Ingredient.objects.create(
+            bakery=other_bakery, unit=unit, name='Private Flour',
+            current_quantity=Decimal('5.00'), expiration_date='2026-12-31',
+        )
+
+        response = self.client.get(reverse('inventory:list'), {'q': 'flour'})
+
+        self.assertContains(response, 'Local Flour')
+        self.assertNotContains(response, 'Private Flour')
+
+    def test_empty_search_keeps_the_complete_active_inventory(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('5.00'), expiration_date='2026-12-31',
+        )
+
+        response = self.client.get(reverse('inventory:list'), {'q': '   '})
+
+        self.assertContains(response, 'Flour')
+        self.assertEqual(response.context['query'], '')
+
+    def test_shows_a_specific_empty_state_when_search_has_no_matches(self):
+        make_bakery()
+
+        response = self.client.get(reverse('inventory:list'), {'q': 'yeast'})
+
+        self.assertContains(response, 'No ingredients match “yeast”.')
+
+class IngredientEditViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+        self.url = reverse(
+            'inventory:edit',
+            args=[self.ingredient.pk],
+        )
+
+    def test_get_renders_existing_ingredient_data(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flour')
+        self.assertEqual(
+            response.context['form'].instance,
+            self.ingredient,
+        )
+
+    def test_post_updates_existing_ingredient(self):
+        gram = UnitOfMeasure.objects.get(abbreviation='g')
+
+        response = self.client.post(
+            self.url,
+            {
+                'name': 'Whole Wheat Flour',
+                'unit': str(gram.pk),
+                'current_quantity': '8.50',
+                'expiration_date': '2027-01-15',
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        self.ingredient.refresh_from_db()
+
+        self.assertEqual(
+            self.ingredient.name,
+            'Whole Wheat Flour',
+        )
+        self.assertEqual(
+            self.ingredient.current_quantity,
+            Decimal('8.50'),
+        )
+        self.assertEqual(
+            self.ingredient.unit,
+            gram,
+        )
+
+    def test_edit_rejects_duplicate_ingredient_name(self):
+        Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Sugar',
+            current_quantity=Decimal('3.00'),
+            expiration_date='2026-12-31',
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                'name': 'Sugar',
+                'unit': str(self.unit.pk),
+                'current_quantity': '5.00',
+                'expiration_date': '2026-12-31',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.ingredient.refresh_from_db()
+
+        self.assertEqual(
+            self.ingredient.name,
+            'Flour',
+        )
+
+class IngredientDeleteViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+        self.url = reverse(
+            'inventory:delete',
+            args=[self.ingredient.pk],
+        )
+
+    def test_get_displays_delete_confirmation(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flour')
+        self.assertTrue(
+            Ingredient.objects.get(
+                pk=self.ingredient.pk
+            ).is_active
+        )
+
+    def test_post_deactivates_ingredient(self):
+        response = self.client.post(self.url)
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        self.ingredient.refresh_from_db()
+
+        self.assertFalse(
+            self.ingredient.is_active
+        )
+
+    def test_deleted_ingredient_no_longer_appears_in_inventory(self):
+        self.client.post(self.url)
+
+        response = self.client.get(
+            reverse('inventory:list')
+        )
+
+        self.assertNotContains(
+            response,
+            'Flour',
+        )
+
+    def test_reactivates_an_inactive_ingredient_instead_of_creating_duplicate(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        ingredient = Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+            is_active=False,
+        )
+
+        registered = register_ingredient(
+            bakery=bakery,
+            name='Flour',
+            unit=unit,
+            current_quantity=Decimal('10.00'),
+            expiration_date='2027-01-31',
+        )
+
+        ingredient.refresh_from_db()
+
+        self.assertEqual(registered.pk, ingredient.pk)
+        self.assertTrue(ingredient.is_active)
+        self.assertEqual(
+            ingredient.current_quantity,
+            Decimal('10.00'),
+        )
+        self.assertEqual(
+            Ingredient.objects.filter(
+                bakery=bakery,
+                name='Flour',
+            ).count(),
+            1,
+        )

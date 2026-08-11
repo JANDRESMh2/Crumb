@@ -6,6 +6,9 @@ from django.db import models
 from bakery.models import Bakery
 
 
+SUPPORTED_UNIT_ABBREVIATIONS = ('kg', 'g', 'u', 'L')
+
+
 class UnitOfMeasure(models.Model):
     """Reference catalog of measurement units supported by Crumb (FR02, DR01).
 
@@ -29,9 +32,15 @@ class UnitOfMeasure(models.Model):
         verbose_name = 'unit of measure'
         verbose_name_plural = 'units of measure'
         ordering = ['name']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS),
+                name='unit_abbreviation_is_supported',
+            ),
+        ]
 
     def __str__(self):
-        return self.abbreviation
+        return f'{self.name} ({self.abbreviation})'
 
 
 class Ingredient(models.Model):

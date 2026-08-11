@@ -16,7 +16,7 @@ class BakeryAlreadyConfigured(Exception):
 
 
 def get_current_bakery():
-    return Bakery.objects.first()
+    return Bakery.objects.order_by('created_at').first()
 
 
 @transaction.atomic
