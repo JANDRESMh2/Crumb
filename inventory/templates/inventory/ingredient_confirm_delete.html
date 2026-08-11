@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Delete ingredient - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Inventory</p>
+
+<h1>Delete ingredient</h1>
+
+<p class="lede">
+  Are you sure you want to remove {{ ingredient.name }} from the inventory?
+</p>
+
+<div class="card">
+
+  <p>
+    <strong>{{ ingredient.name }}</strong>
+    will no longer appear in the active inventory.
+  </p>
+
+  <form method="post">
+
+    {% csrf_token %}
+
+    <div class="actions">
+      <button type="submit">
+        Delete ingredient
+      </button>
+
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}
