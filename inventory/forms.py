@@ -44,12 +44,22 @@ class IngredientForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         name = cleaned.get('name')
+
         if name and self._bakery is not None:
             duplicate = Ingredient.objects.filter(
-                bakery=self._bakery, name__iexact=name
-            ).exists()
-            if duplicate:
-                self.add_error('name', 'An ingredient with this name is already registered.')
+                bakery=self._bakery,
+                name__iexact=name,
+            )
+
+            if not self.instance._state.adding:
+                duplicate = duplicate.exclude(pk=self.instance.pk)
+
+            if duplicate.exists():
+                self.add_error(
+                    'name',
+                    'An ingredient with this name is already registered.'
+                )
+
         return cleaned
 
 

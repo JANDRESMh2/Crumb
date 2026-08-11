@@ -240,3 +240,147 @@ class IngredientListViewTests(TestCase):
         response = self.client.get(reverse('inventory:list'), {'q': 'yeast'})
 
         self.assertContains(response, 'No ingredients match “yeast”.')
+
+class IngredientEditViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+        self.url = reverse(
+            'inventory:edit',
+            args=[self.ingredient.pk],
+        )
+
+    def test_get_renders_existing_ingredient_data(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flour')
+        self.assertEqual(
+            response.context['form'].instance,
+            self.ingredient,
+        )
+
+    def test_post_updates_existing_ingredient(self):
+        gram = UnitOfMeasure.objects.get(abbreviation='g')
+
+        response = self.client.post(
+            self.url,
+            {
+                'name': 'Whole Wheat Flour',
+                'unit': str(gram.pk),
+                'current_quantity': '8.50',
+                'expiration_date': '2027-01-15',
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        self.ingredient.refresh_from_db()
+
+        self.assertEqual(
+            self.ingredient.name,
+            'Whole Wheat Flour',
+        )
+        self.assertEqual(
+            self.ingredient.current_quantity,
+            Decimal('8.50'),
+        )
+        self.assertEqual(
+            self.ingredient.unit,
+            gram,
+        )
+
+    def test_edit_rejects_duplicate_ingredient_name(self):
+        Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Sugar',
+            current_quantity=Decimal('3.00'),
+            expiration_date='2026-12-31',
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                'name': 'Sugar',
+                'unit': str(self.unit.pk),
+                'current_quantity': '5.00',
+                'expiration_date': '2026-12-31',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.ingredient.refresh_from_db()
+
+        self.assertEqual(
+            self.ingredient.name,
+            'Flour',
+        )
+
+class IngredientDeleteViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+        self.url = reverse(
+            'inventory:delete',
+            args=[self.ingredient.pk],
+        )
+
+    def test_get_displays_delete_confirmation(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flour')
+        self.assertTrue(
+            Ingredient.objects.get(
+                pk=self.ingredient.pk
+            ).is_active
+        )
+
+    def test_post_deactivates_ingredient(self):
+        response = self.client.post(self.url)
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        self.ingredient.refresh_from_db()
+
+        self.assertFalse(
+            self.ingredient.is_active
+        )
+
+    def test_deleted_ingredient_no_longer_appears_in_inventory(self):
+        self.client.post(self.url)
+
+        response = self.client.get(
+            reverse('inventory:list')
+        )
+
+        self.assertNotContains(
+            response,
+            'Flour',
+        )
