@@ -168,6 +168,45 @@ class IngredientCreateViewTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Ingredient.objects.count(), 1)
+    def test_post_reactivates_previously_deleted_ingredient(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        ingredient = Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+            is_active=False,
+        )
+
+        response = self.client.post(self.url, {
+            'name': 'Flour',
+            'unit': str(unit.pk),
+            'current_quantity': '12.00',
+            'expiration_date': '2027-02-01',
+        })
+
+        self.assertRedirects(
+            response,
+            reverse('inventory:list'),
+        )
+
+        ingredient.refresh_from_db()
+
+        self.assertTrue(ingredient.is_active)
+        self.assertEqual(
+            ingredient.current_quantity,
+            Decimal('12.00'),
+        )
+        self.assertEqual(
+            Ingredient.objects.filter(
+                bakery=bakery,
+                name='Flour',
+            ).count(),
+            1,
+        )
 
 
 class IngredientListViewTests(TestCase):
@@ -383,4 +422,41 @@ class IngredientDeleteViewTests(TestCase):
         self.assertNotContains(
             response,
             'Flour',
+        )
+
+    def test_reactivates_an_inactive_ingredient_instead_of_creating_duplicate(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        ingredient = Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+            is_active=False,
+        )
+
+        registered = register_ingredient(
+            bakery=bakery,
+            name='Flour',
+            unit=unit,
+            current_quantity=Decimal('10.00'),
+            expiration_date='2027-01-31',
+        )
+
+        ingredient.refresh_from_db()
+
+        self.assertEqual(registered.pk, ingredient.pk)
+        self.assertTrue(ingredient.is_active)
+        self.assertEqual(
+            ingredient.current_quantity,
+            Decimal('10.00'),
+        )
+        self.assertEqual(
+            Ingredient.objects.filter(
+                bakery=bakery,
+                name='Flour',
+            ).count(),
+            1,
         )

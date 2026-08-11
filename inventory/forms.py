@@ -49,6 +49,7 @@ class IngredientForm(forms.ModelForm):
             duplicate = Ingredient.objects.filter(
                 bakery=self._bakery,
                 name__iexact=name,
+                is_active=True,
             )
 
             if not self.instance._state.adding:
