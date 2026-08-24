@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -96,14 +97,50 @@ class StockMovement(models.Model):
     movement_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bakery = models.ForeignKey(Bakery, on_delete=models.CASCADE)
     ingredient = models.ForeignKey('Ingredient', on_delete=models.PROTECT)
-    
-  
+
+
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES, default='StockIn')
-    
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
     movement_date = models.DateTimeField(auto_now_add=True)
     note = models.TextField(blank=True, null=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name='stock_movement_quantity_positive',
+            ),
+        ]
+
     def __str__(self):
         return f"{self.movement_type} - {self.quantity} of {self.ingredient.name}"
+
+
+class BarcodeIdentifier(models.Model):
+    """Maps a scanned barcode to an ingredient (FR17, DR09).
+
+    Scoped to ingredient registration only, matching FR17's text. Product
+    linkage isn't added because the Product entity doesn't exist in the
+    codebase yet - it belongs to whoever builds that part of the domain.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ingredient = models.ForeignKey(
+        'Ingredient', on_delete=models.CASCADE, related_name='barcodes'
+    )
+    barcode_value = models.CharField(max_length=64, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'barcode identifier'
+        verbose_name_plural = 'barcode identifiers'
+
+    def __str__(self):
+        return self.barcode_value
 

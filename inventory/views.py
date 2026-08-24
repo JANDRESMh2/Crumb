@@ -4,30 +4,34 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from bakery.services import get_current_bakery
 
-from .forms import IngredientForm, StockInForm
+from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm, StockInForm
 from .models import Ingredient
 from .services import (
     deactivate_ingredient,
     register_ingredient,
+    register_stock_consumption,
     update_ingredient,
 )
 
 
 def ingredient_create(request):
-    """FR01 - register a new ingredient (name, quantity, unit, expiration date)."""
+    """FR01 - register a new ingredient (name, quantity, unit, expiration date).
+
+    Also handles FR17 (optional barcode capture) via IngredientRegistrationForm.
+    """
     bakery = get_current_bakery()
     if bakery is None:
         messages.info(request, 'Set up the bakery profile before registering ingredients.')
         return redirect('bakery:setup')
 
     if request.method == 'POST':
-        form = IngredientForm(request.POST, bakery=bakery)
+        form = IngredientRegistrationForm(request.POST, bakery=bakery)
         if form.is_valid():
             register_ingredient(bakery=bakery, **form.cleaned_data)
             messages.success(request, 'Ingredient registered successfully.')
             return redirect('inventory:list')
     else:
-        form = IngredientForm(bakery=bakery)
+        form = IngredientRegistrationForm(bakery=bakery)
 
     return render(request, 'inventory/ingredient_form.html', {'form': form, 'bakery': bakery})
 
@@ -172,5 +176,34 @@ def stock_in_create(request):
     return render(
         request,
         'inventory/stock_in_form.html',
+        {'form': form, 'bakery': bakery},
+    )
+
+
+def stock_consumption_create(request):
+    """FR08 - register the consumption of an ingredient."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before registering consumption.')
+        return redirect('bakery:setup')
+
+    if request.method == 'POST':
+        form = StockConsumptionForm(request.POST, bakery=bakery)
+        if form.is_valid():
+            ingredient = form.cleaned_data['ingredient']
+            register_stock_consumption(
+                bakery=bakery,
+                ingredient=ingredient,
+                quantity=form.cleaned_data['quantity'],
+                note=form.cleaned_data.get('note', ''),
+            )
+            messages.success(request, f'Consumption registered for {ingredient.name}.')
+            return redirect('inventory:list')
+    else:
+        form = StockConsumptionForm(bakery=bakery)
+
+    return render(
+        request,
+        'inventory/stock_consumption_form.html',
         {'form': form, 'bakery': bakery},
     )

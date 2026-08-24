@@ -6,9 +6,9 @@ from django.urls import reverse
 
 from bakery.models import Bakery
 
-from .forms import IngredientForm
-from .models import Ingredient, UnitOfMeasure
-from .services import register_ingredient
+from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm
+from .models import BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure
+from .services import InsufficientStockError, register_ingredient, register_stock_consumption
 
 
 def make_bakery():
@@ -460,3 +460,189 @@ class IngredientDeleteViewTests(TestCase):
             ).count(),
             1,
         )
+
+
+class BarcodeRegistrationServiceTests(TestCase):
+    def test_register_ingredient_with_barcode_creates_the_link(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = register_ingredient(
+            bakery=bakery, name='Flour', unit=unit,
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+            barcode_value='7501234567890',
+        )
+        barcode = BarcodeIdentifier.objects.get(barcode_value='7501234567890')
+        self.assertEqual(barcode.ingredient, ingredient)
+
+    def test_register_ingredient_without_barcode_creates_no_link(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        register_ingredient(
+            bakery=bakery, name='Flour', unit=unit,
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+        self.assertEqual(BarcodeIdentifier.objects.count(), 0)
+
+
+class IngredientRegistrationFormBarcodeTests(TestCase):
+    def test_rejects_a_barcode_already_linked_to_another_ingredient(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        existing = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Sugar',
+            current_quantity=Decimal('5.00'), expiration_date='2027-01-31',
+        )
+        BarcodeIdentifier.objects.create(ingredient=existing, barcode_value='7501234567890')
+
+        form = IngredientRegistrationForm(data={
+            'name': 'Flour',
+            'unit': unit.pk,
+            'current_quantity': '10.00',
+            'expiration_date': '2027-01-31',
+            'barcode_value': '7501234567890',
+        }, bakery=bakery)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('barcode_value', form.errors)
+
+    def test_barcode_field_is_optional(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        form = IngredientRegistrationForm(data={
+            'name': 'Flour',
+            'unit': unit.pk,
+            'current_quantity': '10.00',
+            'expiration_date': '2027-01-31',
+            'barcode_value': '',
+        }, bakery=bakery)
+        self.assertTrue(form.is_valid())
+
+
+class IngredientCreateViewBarcodeTests(TestCase):
+    def test_post_with_barcode_links_it_to_the_new_ingredient(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        response = self.client.post(reverse('inventory:create'), {
+            'name': 'Flour',
+            'unit': str(unit.pk),
+            'current_quantity': '10.00',
+            'expiration_date': '2027-01-31',
+            'barcode_value': '7501234567890',
+        })
+        self.assertRedirects(response, reverse('inventory:list'))
+        ingredient = Ingredient.objects.get(name='Flour')
+        self.assertEqual(
+            BarcodeIdentifier.objects.get(barcode_value='7501234567890').ingredient,
+            ingredient,
+        )
+
+
+class StockMovementModelTests(TestCase):
+    def test_rejects_zero_or_negative_quantity_at_the_database_level(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+        movement = StockMovement(
+            bakery=bakery, ingredient=ingredient, movement_type='Consumption',
+            quantity=Decimal('0.00'),
+        )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                movement.save()
+
+
+class RegisterStockConsumptionServiceTests(TestCase):
+    def test_consuming_available_stock_decreases_the_ingredient_and_logs_the_movement(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+        movement = register_stock_consumption(
+            bakery=bakery, ingredient=ingredient, quantity=Decimal('4.00'), note='For today\'s batch',
+        )
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.current_quantity, Decimal('6.00'))
+        self.assertEqual(movement.movement_type, 'Consumption')
+        self.assertEqual(movement.quantity, Decimal('4.00'))
+
+    def test_consuming_more_than_available_is_rejected(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('3.00'), expiration_date='2027-01-31',
+        )
+        with self.assertRaises(InsufficientStockError):
+            register_stock_consumption(bakery=bakery, ingredient=ingredient, quantity=Decimal('5.00'))
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.current_quantity, Decimal('3.00'))
+        self.assertEqual(StockMovement.objects.count(), 0)
+
+
+class StockConsumptionFormTests(TestCase):
+    def test_rejects_a_quantity_greater_than_the_available_stock(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('3.00'), expiration_date='2027-01-31',
+        )
+        form = StockConsumptionForm(data={
+            'ingredient': ingredient.pk,
+            'quantity': '5.00',
+            'note': '',
+        }, bakery=bakery)
+        self.assertFalse(form.is_valid())
+        self.assertIn('quantity', form.errors)
+
+
+class StockConsumptionCreateViewTests(TestCase):
+    def setUp(self):
+        self.url = reverse('inventory:stock_consumption')
+
+    def test_redirects_to_bakery_setup_when_no_bakery_is_configured(self):
+        response = self.client.get(self.url)
+        self.assertRedirects(response, reverse('bakery:setup'))
+
+    def test_get_renders_the_consumption_form(self):
+        make_bakery()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Register consumption')
+
+    def test_post_with_valid_data_registers_the_consumption_and_redirects(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+        response = self.client.post(self.url, {
+            'ingredient': str(ingredient.pk),
+            'quantity': '4.00',
+            'note': 'For today\'s batch',
+        })
+        self.assertRedirects(response, reverse('inventory:list'))
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.current_quantity, Decimal('6.00'))
+
+    def test_post_exceeding_available_stock_reshows_form_with_error(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('3.00'), expiration_date='2027-01-31',
+        )
+        response = self.client.post(self.url, {
+            'ingredient': str(ingredient.pk),
+            'quantity': '5.00',
+            'note': '',
+        })
+        self.assertEqual(response.status_code, 200)
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.current_quantity, Decimal('3.00'))

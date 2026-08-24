@@ -1,11 +1,21 @@
 from django.db import transaction
 
-from .models import Ingredient
+from .models import BarcodeIdentifier, Ingredient, StockMovement
+
+
+class InsufficientStockError(Exception):
+    """Raised when a consumption would leave an ingredient with negative stock."""
 
 
 @transaction.atomic
-def register_ingredient(*, bakery, name, unit, current_quantity, expiration_date):
-    """FR01 - register a new ingredient under the given bakery."""
+def register_ingredient(
+    *, bakery, name, unit, current_quantity, expiration_date, barcode_value=''
+):
+    """FR01 - register a new ingredient under the given bakery.
+
+    barcode_value is optional (FR17) - when provided, links a scanned
+    barcode to the ingredient being registered.
+    """
 
     existing = Ingredient.objects.filter(
         bakery=bakery,
@@ -30,15 +40,45 @@ def register_ingredient(*, bakery, name, unit, current_quantity, expiration_date
                 'updated_at',
             ]
         )
+        ingredient = existing
+    else:
+        ingredient = Ingredient.objects.create(
+            bakery=bakery,
+            name=name,
+            unit=unit,
+            current_quantity=current_quantity,
+            expiration_date=expiration_date,
+        )
 
-        return existing
+    if barcode_value:
+        BarcodeIdentifier.objects.create(ingredient=ingredient, barcode_value=barcode_value)
 
-    return Ingredient.objects.create(
+    return ingredient
+
+
+@transaction.atomic
+def register_stock_consumption(*, bakery, ingredient, quantity, note=''):
+    """FR08 - register the consumption of an ingredient, decreasing its stock.
+
+    Refuses to leave the ingredient with negative stock (DR03). The form
+    already checks this for a friendly error message; this check is the
+    authoritative guard in case the service is called directly.
+    """
+    if quantity > ingredient.current_quantity:
+        raise InsufficientStockError(
+            f'Cannot consume {quantity} of {ingredient.name}; '
+            f'only {ingredient.current_quantity} available.'
+        )
+
+    ingredient.current_quantity -= quantity
+    ingredient.save(update_fields=['current_quantity', 'updated_at'])
+
+    return StockMovement.objects.create(
         bakery=bakery,
-        name=name,
-        unit=unit,
-        current_quantity=current_quantity,
-        expiration_date=expiration_date,
+        ingredient=ingredient,
+        movement_type='Consumption',
+        quantity=quantity,
+        note=note,
     )
 
 
