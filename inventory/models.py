@@ -84,6 +84,18 @@ class Ingredient(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def active_barcode(self):
+        """FR17 - the barcode currently linked to this ingredient, if any.
+
+        Walks the related rows in Python instead of hitting the database so a
+        prefetched list of ingredients stays at a constant number of queries.
+        """
+        for barcode in self.barcodes.all():
+            if barcode.is_active:
+                return barcode.barcode_value
+        return ''
+
 
 class StockMovement(models.Model):
     # Declaración de la lista de opciones

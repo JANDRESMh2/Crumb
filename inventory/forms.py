@@ -80,7 +80,12 @@ class IngredientRegistrationForm(IngredientForm):
 
     def clean_barcode_value(self):
         value = self.cleaned_data['barcode_value'].strip()
-        if value and BarcodeIdentifier.objects.filter(barcode_value=value).exists():
+        taken = value and BarcodeIdentifier.objects.filter(
+            barcode_value=value,
+            is_active=True,
+            ingredient__is_active=True,
+        ).exists()
+        if taken:
             raise forms.ValidationError('This barcode is already linked to another ingredient.')
         return value
 

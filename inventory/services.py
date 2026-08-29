@@ -51,9 +51,23 @@ def register_ingredient(
         )
 
     if barcode_value:
-        BarcodeIdentifier.objects.create(ingredient=ingredient, barcode_value=barcode_value)
+        _link_barcode(ingredient=ingredient, barcode_value=barcode_value)
 
     return ingredient
+
+
+def _link_barcode(*, ingredient, barcode_value):
+    """FR17 - point a barcode at an ingredient.
+
+    barcode_value is unique, so an ingredient that was deleted and registered
+    again would collide with its own old row. Reusing the row (instead of
+    creating a second one) keeps the re-registration flow working and
+    reactivates the link.
+    """
+    BarcodeIdentifier.objects.update_or_create(
+        barcode_value=barcode_value,
+        defaults={'ingredient': ingredient, 'is_active': True},
+    )
 
 
 @transaction.atomic
@@ -110,7 +124,12 @@ def update_ingredient(
 
 @transaction.atomic
 def deactivate_ingredient(*, ingredient):
-    """FR04 - remove an ingredient from the active inventory."""
+    """FR04 - remove an ingredient from the active inventory.
+
+    Its barcodes are deactivated too (FR17), so the value stops showing in the
+    catalog and can be linked to another ingredient later.
+    """
     ingredient.is_active = False
     ingredient.save(update_fields=['is_active', 'updated_at'])
+    ingredient.barcodes.update(is_active=False)
     return ingredient

@@ -31,6 +31,7 @@
         <th>Quantity</th>
         <th>Unit</th>
         <th>Expires</th>
+        <th>Barcode</th>
         <th>Actions</th>
     </tr>
     </thead>
@@ -41,6 +42,7 @@
         <td>{{ ingredient.current_quantity }}</td>
         <td>{{ ingredient.unit.abbreviation }}</td>
         <td>{{ ingredient.expiration_date }}</td>
+        <td>{{ ingredient.active_barcode|default:"—" }}</td>
 
         <td>
           <a

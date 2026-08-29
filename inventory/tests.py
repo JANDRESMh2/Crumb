@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -8,7 +9,12 @@ from bakery.models import Bakery
 
 from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm
 from .models import BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure
-from .services import InsufficientStockError, register_ingredient, register_stock_consumption
+from .services import (
+    InsufficientStockError,
+    deactivate_ingredient,
+    register_ingredient,
+    register_stock_consumption,
+)
 
 
 def make_bakery():
@@ -646,3 +652,144 @@ class StockConsumptionCreateViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         ingredient.refresh_from_db()
         self.assertEqual(ingredient.current_quantity, Decimal('3.00'))
+
+
+class BarcodeAfterIngredientDeletionTests(TestCase):
+    """FR17 + FR04 - a deleted ingredient must not keep holding its barcode."""
+
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.ingredient = register_ingredient(
+            bakery=self.bakery, name='Flour', unit=self.unit,
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+            barcode_value='7501234567890',
+        )
+
+    def test_deleting_an_ingredient_deactivates_its_barcodes(self):
+        deactivate_ingredient(ingredient=self.ingredient)
+
+        barcode = BarcodeIdentifier.objects.get(barcode_value='7501234567890')
+        self.assertFalse(barcode.is_active)
+
+    def test_form_accepts_a_barcode_left_behind_by_a_deleted_ingredient(self):
+        deactivate_ingredient(ingredient=self.ingredient)
+
+        form = IngredientRegistrationForm(data={
+            'name': 'Flour',
+            'unit': self.unit.pk,
+            'current_quantity': '5.00',
+            'expiration_date': '2027-02-28',
+            'barcode_value': '7501234567890',
+        }, bakery=self.bakery)
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_re_registering_a_deleted_ingredient_reuses_its_barcode_row(self):
+        deactivate_ingredient(ingredient=self.ingredient)
+
+        reactivated = register_ingredient(
+            bakery=self.bakery, name='Flour', unit=self.unit,
+            current_quantity=Decimal('5.00'), expiration_date='2027-02-28',
+            barcode_value='7501234567890',
+        )
+
+        self.assertEqual(reactivated.pk, self.ingredient.pk)
+        self.assertEqual(BarcodeIdentifier.objects.count(), 1)
+        barcode = BarcodeIdentifier.objects.get(barcode_value='7501234567890')
+        self.assertEqual(barcode.ingredient, reactivated)
+        self.assertTrue(barcode.is_active)
+
+    def test_a_barcode_freed_by_deletion_can_be_linked_to_another_ingredient(self):
+        deactivate_ingredient(ingredient=self.ingredient)
+
+        sugar = register_ingredient(
+            bakery=self.bakery, name='Sugar', unit=self.unit,
+            current_quantity=Decimal('2.00'), expiration_date='2027-02-28',
+            barcode_value='7501234567890',
+        )
+
+        self.assertEqual(BarcodeIdentifier.objects.count(), 1)
+        self.assertEqual(
+            BarcodeIdentifier.objects.get(barcode_value='7501234567890').ingredient,
+            sugar,
+        )
+
+    def test_a_barcode_linked_to_an_active_ingredient_is_still_rejected(self):
+        form = IngredientRegistrationForm(data={
+            'name': 'Sugar',
+            'unit': self.unit.pk,
+            'current_quantity': '5.00',
+            'expiration_date': '2027-02-28',
+            'barcode_value': '7501234567890',
+        }, bakery=self.bakery)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('barcode_value', form.errors)
+
+
+class IngredientListViewBarcodeTests(TestCase):
+    """FR17 - the linked barcode has to be visible in the catalog, not only in the admin."""
+
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+    def test_shows_the_barcode_linked_to_each_ingredient(self):
+        register_ingredient(
+            bakery=self.bakery, name='Flour', unit=self.unit,
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+            barcode_value='7501234567890',
+        )
+
+        response = self.client.get(reverse('inventory:list'))
+
+        self.assertContains(response, '7501234567890')
+
+    def test_shows_a_placeholder_when_the_ingredient_has_no_barcode(self):
+        register_ingredient(
+            bakery=self.bakery, name='Sugar', unit=self.unit,
+            current_quantity=Decimal('4.00'), expiration_date='2027-01-31',
+        )
+
+        response = self.client.get(reverse('inventory:list'))
+
+        self.assertContains(response, '<td>—</td>')
+
+    def test_does_not_show_the_barcode_of_a_deleted_ingredient(self):
+        ingredient = register_ingredient(
+            bakery=self.bakery, name='Flour', unit=self.unit,
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+            barcode_value='7501234567890',
+        )
+        deactivate_ingredient(ingredient=ingredient)
+
+        response = self.client.get(reverse('inventory:list'))
+
+        self.assertNotContains(response, '7501234567890')
+
+
+class StockConsumptionViewErrorHandlingTests(TestCase):
+    """FR08 - a stock change between validating and saving must not raise a 500."""
+
+    def test_reshows_the_form_when_the_service_reports_insufficient_stock(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        ingredient = Ingredient.objects.create(
+            bakery=bakery, unit=unit, name='Flour',
+            current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+
+        with patch(
+            'inventory.views.register_stock_consumption',
+            side_effect=InsufficientStockError('Cannot consume 4.00 of Flour; only 1.00 available.'),
+        ):
+            response = self.client.post(reverse('inventory:stock_consumption'), {
+                'ingredient': str(ingredient.pk),
+                'quantity': '4.00',
+                'note': '',
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'only 1.00 available.')
+        self.assertEqual(StockMovement.objects.count(), 0)

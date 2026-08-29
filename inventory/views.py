@@ -7,6 +7,7 @@ from bakery.services import get_current_bakery
 from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm, StockInForm
 from .models import Ingredient
 from .services import (
+    InsufficientStockError,
     deactivate_ingredient,
     register_ingredient,
     register_stock_consumption,
@@ -132,7 +133,9 @@ def ingredient_list(request):
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
     ingredients = (
-        Ingredient.objects.filter(bakery=bakery, is_active=True).select_related('unit')
+        Ingredient.objects.filter(bakery=bakery, is_active=True)
+        .select_related('unit')
+        .prefetch_related('barcodes')
         if bakery is not None
         else Ingredient.objects.none()
     )
@@ -191,14 +194,20 @@ def stock_consumption_create(request):
         form = StockConsumptionForm(request.POST, bakery=bakery)
         if form.is_valid():
             ingredient = form.cleaned_data['ingredient']
-            register_stock_consumption(
-                bakery=bakery,
-                ingredient=ingredient,
-                quantity=form.cleaned_data['quantity'],
-                note=form.cleaned_data.get('note', ''),
-            )
-            messages.success(request, f'Consumption registered for {ingredient.name}.')
-            return redirect('inventory:list')
+            try:
+                register_stock_consumption(
+                    bakery=bakery,
+                    ingredient=ingredient,
+                    quantity=form.cleaned_data['quantity'],
+                    note=form.cleaned_data.get('note', ''),
+                )
+            except InsufficientStockError as error:
+                # The form already validates the available stock; this covers
+                # the stock changing between validation and saving.
+                form.add_error('quantity', str(error))
+            else:
+                messages.success(request, f'Consumption registered for {ingredient.name}.')
+                return redirect('inventory:list')
     else:
         form = StockConsumptionForm(bakery=bakery)
 
