@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from bakery.services import get_current_bakery
 
-from .forms import IngredientForm, StockInForm
+from .forms import Ingredient_registration, StockInForm
 from .models import Ingredient
 from .services import (
     deactivate_ingredient,
@@ -21,13 +21,13 @@ def ingredient_create(request):
         return redirect('bakery:setup')
 
     if request.method == 'POST':
-        form = IngredientForm(request.POST, bakery=bakery)
+        form = Ingredient_registration(request.POST, bakery=bakery)
         if form.is_valid():
             register_ingredient(bakery=bakery, **form.cleaned_data)
             messages.success(request, 'Ingredient registered successfully.')
             return redirect('inventory:list')
     else:
-        form = IngredientForm(bakery=bakery)
+        form = Ingredient_registration(bakery=bakery)
 
     return render(request, 'inventory/ingredient_form.html', {'form': form, 'bakery': bakery})
 
@@ -51,7 +51,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
     if request.method == 'POST':
-        form = IngredientForm(
+        form = Ingredient_registration(
             request.POST,
             instance=ingredient,
             bakery=bakery,
@@ -70,7 +70,7 @@ def ingredient_edit(request, ingredient_id):
             return redirect('inventory:list')
 
     else:
-        form = IngredientForm(
+        form = Ingredient_registration(
             instance=ingredient,
             bakery=bakery,
         )
@@ -86,7 +86,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
 
-def ingredient_delete(request, ingredient_id):
+def  Ingredient_deletion(request, ingredient_id):
     """FR04 - remove an existing ingredient from the active inventory."""
     bakery = get_current_bakery()
 
@@ -123,7 +123,7 @@ def ingredient_delete(request, ingredient_id):
     )
 
 
-def ingredient_list(request):
+def Search_ingredient(request):
     """List active ingredients and search them by name (FR22)."""
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()

@@ -8,7 +8,7 @@ from .models import (
 )
 
 
-class IngredientForm(forms.ModelForm):
+class Ingredient_registration(forms.ModelForm):
     class Meta:
         model = Ingredient
         fields = ['name', 'unit', 'current_quantity', 'expiration_date']
@@ -30,6 +30,7 @@ class IngredientForm(forms.ModelForm):
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
+        # [FR02: Restringir unidades de medida de ingredientes]
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )

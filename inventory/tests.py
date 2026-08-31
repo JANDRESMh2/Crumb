@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from bakery.models import Bakery
 
-from .forms import IngredientForm
+from .forms import Ingredient_registration
 from .models import Ingredient, UnitOfMeasure
 from .services import register_ingredient
 
