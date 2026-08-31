@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import (
+    AlertConfiguration,
     Ingredient,
     StockMovement,
     SUPPORTED_UNIT_ABBREVIATIONS,
@@ -9,9 +10,25 @@ from .models import (
 
 
 class IngredientForm(forms.ModelForm):
+    expiration_warning_days = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label='Expiration warning days',
+        help_text='Show an alert this many days before the expiration date.',
+        widget=forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '1'}
+        ),
+    )
+
     class Meta:
         model = Ingredient
-        fields = ['name', 'unit', 'current_quantity', 'expiration_date']
+        fields = [
+            'name',
+            'unit',
+            'current_quantity',
+            'expiration_date',
+            'expiration_warning_days',
+        ]
         labels = {
             'current_quantity': 'Quantity',
             'unit': 'Unit of measure',
@@ -34,6 +51,16 @@ class IngredientForm(forms.ModelForm):
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )
         self.fields['unit'].empty_label = 'Select a unit'
+
+        if not self.instance._state.adding:
+            try:
+                configuration = self.instance.alert_configuration
+            except AlertConfiguration.DoesNotExist:
+                pass
+            else:
+                self.initial['expiration_warning_days'] = (
+                    configuration.expiration_warning_days
+                )
 
     def clean_name(self):
         name = self.cleaned_data['name'].strip()

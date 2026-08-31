@@ -1,15 +1,23 @@
 from decimal import Decimal
+from datetime import date, timedelta
 from time import perf_counter
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from bakery.models import Bakery
 
 from .forms import IngredientForm
 from .models import AlertConfiguration, Ingredient, UnitOfMeasure
-from .services import is_ingredient_low_stock, register_ingredient
+from .services import (
+    configure_expiration_alert,
+    is_ingredient_expired,
+    is_ingredient_expiring_soon,
+    is_ingredient_low_stock,
+    register_ingredient,
+)
 
 
 def make_bakery():
@@ -120,6 +128,28 @@ class AlertConfigurationModelTests(TestCase):
                     minimum_stock_threshold=Decimal('0.00'),
                 )
 
+    def test_allows_an_expiration_configuration_without_a_stock_threshold(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            expiration_warning_days=3,
+        )
+
+        self.assertIsNone(configuration.minimum_stock_threshold)
+        self.assertEqual(configuration.expiration_warning_days, 3)
+
+    def test_rejects_negative_expiration_warning_days(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                AlertConfiguration.objects.create(
+                    ingredient=self.ingredient,
+                    expiration_warning_days=-1,
+                )
+
+    def test_rejects_configuration_without_any_threshold(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                AlertConfiguration.objects.create(ingredient=self.ingredient)
+
 
 class LowStockServiceTests(TestCase):
     def setUp(self):
@@ -160,6 +190,124 @@ class LowStockServiceTests(TestCase):
         self.configure_threshold(Decimal('6.00'), is_active=False)
 
         self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+
+    def test_expiration_only_configuration_is_not_low_stock(self):
+        AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            expiration_warning_days=3,
+        )
+
+        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+
+
+class ExpirationAlertServiceTests(TestCase):
+    def setUp(self):
+        self.today = date(2026, 8, 31)
+        self.ingredient = Ingredient.objects.create(
+            bakery=make_bakery(),
+            unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Fresh Cream',
+            current_quantity=Decimal('5.00'),
+            expiration_date=self.today + timedelta(days=2),
+        )
+
+    def configure_threshold(self, days, *, is_active=True):
+        return AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            expiration_warning_days=days,
+            is_active=is_active,
+        )
+
+    def test_date_inside_threshold_is_expiring_soon(self):
+        self.configure_threshold(3)
+
+        self.assertTrue(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_date_outside_threshold_is_not_expiring_soon(self):
+        self.configure_threshold(1)
+
+        self.assertFalse(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_threshold_boundary_is_inclusive(self):
+        self.configure_threshold(2)
+
+        self.assertTrue(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_zero_day_threshold_alerts_on_expiration_day(self):
+        self.ingredient.expiration_date = self.today
+        self.configure_threshold(0)
+
+        self.assertTrue(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_expired_ingredient_is_not_expiring_soon(self):
+        self.ingredient.expiration_date = self.today - timedelta(days=1)
+        self.configure_threshold(3)
+
+        self.assertFalse(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+        self.assertTrue(is_ingredient_expired(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_ingredient_without_expiration_date_does_not_crash(self):
+        self.ingredient.expiration_date = None
+        self.configure_threshold(3)
+
+        self.assertFalse(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+        self.assertFalse(is_ingredient_expired(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_missing_configuration_is_not_expiring_soon(self):
+        self.assertFalse(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_inactive_configuration_is_not_expiring_soon(self):
+        self.configure_threshold(3, is_active=False)
+
+        self.assertFalse(is_ingredient_expiring_soon(
+            ingredient=self.ingredient,
+            today=self.today,
+        ))
+
+    def test_configure_expiration_alert_preserves_stock_threshold(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        configure_expiration_alert(
+            ingredient=self.ingredient,
+            expiration_warning_days=4,
+        )
+
+        configuration.refresh_from_db()
+        self.assertEqual(
+            configuration.minimum_stock_threshold,
+            Decimal('2.00'),
+        )
+        self.assertEqual(configuration.expiration_warning_days, 4)
 
 
 class RegisterIngredientServiceTests(TestCase):
@@ -202,6 +350,48 @@ class IngredientCreateViewTests(TestCase):
         ingredient = Ingredient.objects.get(name='Flour')
         self.assertEqual(ingredient.bakery, bakery)
         self.assertEqual(ingredient.current_quantity, Decimal('10.50'))
+
+    def test_post_persists_the_expiration_warning_threshold(self):
+        make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        response = self.client.post(self.url, {
+            'name': 'Fresh Cream',
+            'unit': str(unit.pk),
+            'current_quantity': '5.00',
+            'expiration_date': '2026-09-03',
+            'expiration_warning_days': '3',
+        })
+
+        self.assertRedirects(response, reverse('inventory:list'))
+        ingredient = Ingredient.objects.get(name='Fresh Cream')
+        self.assertEqual(
+            ingredient.alert_configuration.expiration_warning_days,
+            3,
+        )
+        self.assertIsNone(
+            ingredient.alert_configuration.minimum_stock_threshold,
+        )
+
+    def test_post_rejects_a_negative_expiration_warning_threshold(self):
+        make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        response = self.client.post(self.url, {
+            'name': 'Fresh Cream',
+            'unit': str(unit.pk),
+            'current_quantity': '5.00',
+            'expiration_date': '2026-09-03',
+            'expiration_warning_days': '-1',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context['form'],
+            'expiration_warning_days',
+            'Ensure this value is greater than or equal to 0.',
+        )
+        self.assertFalse(Ingredient.objects.filter(name='Fresh Cream').exists())
 
     def test_post_missing_required_fields_reshows_form_with_errors(self):
         make_bakery()
@@ -452,6 +642,118 @@ class LowStockAlertViewTests(TestCase):
         self.assertLess(elapsed_seconds, 2)
 
 
+class ExpirationAlertViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.url = reverse('inventory:list')
+        self.today = timezone.localdate()
+
+    def create_ingredient(
+        self,
+        *,
+        name='Fresh Cream',
+        days_until_expiration,
+        warning_days=None,
+        minimum_stock_threshold=None,
+        quantity=Decimal('5.00'),
+        configuration_is_active=True,
+    ):
+        ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=quantity,
+            expiration_date=self.today + timedelta(days=days_until_expiration),
+        )
+        if warning_days is not None or minimum_stock_threshold is not None:
+            AlertConfiguration.objects.create(
+                ingredient=ingredient,
+                expiration_warning_days=warning_days,
+                minimum_stock_threshold=minimum_stock_threshold,
+                is_active=configuration_is_active,
+            )
+        return ingredient
+
+    def test_displays_alert_inside_configured_threshold(self):
+        self.create_ingredient(days_until_expiration=2, warning_days=3)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Expiring soon', count=1)
+
+    def test_does_not_display_alert_outside_configured_threshold(self):
+        self.create_ingredient(days_until_expiration=4, warning_days=3)
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Expiring soon')
+        self.assertNotContains(response, '>Expired<')
+
+    def test_displays_alert_on_threshold_boundary(self):
+        self.create_ingredient(days_until_expiration=3, warning_days=3)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Expiring soon', count=1)
+
+    def test_displays_expired_instead_of_expiring_soon_for_past_date(self):
+        self.create_ingredient(days_until_expiration=-1, warning_days=3)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Expired', count=1)
+        self.assertNotContains(response, 'Expiring soon')
+
+    def test_does_not_display_expiring_soon_without_configuration(self):
+        self.create_ingredient(days_until_expiration=1)
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Expiring soon')
+
+    def test_displays_low_stock_and_expiration_alerts_together(self):
+        self.create_ingredient(
+            days_until_expiration=1,
+            warning_days=3,
+            minimum_stock_threshold=Decimal('6.00'),
+            quantity=Decimal('5.00'),
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Low stock', count=1)
+        self.assertContains(response, 'Expiring soon', count=1)
+
+    def test_inactive_configuration_suppresses_expiration_warning(self):
+        self.create_ingredient(
+            days_until_expiration=1,
+            warning_days=3,
+            configuration_is_active=False,
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Expiring soon')
+
+    def test_displays_alert_within_two_seconds_without_per_item_queries(self):
+        for index in range(50):
+            self.create_ingredient(
+                name=f'Expiring ingredient {index:02}',
+                days_until_expiration=1,
+                warning_days=2,
+            )
+
+        started_at = perf_counter()
+        with self.assertNumQueries(2):
+            response = self.client.get(self.url)
+        elapsed_seconds = perf_counter() - started_at
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Expiring soon', count=50)
+        self.assertLess(elapsed_seconds, 2)
+
+
 class IngredientEditViewTests(TestCase):
     def setUp(self):
         self.bakery = make_bakery()
@@ -511,6 +813,44 @@ class IngredientEditViewTests(TestCase):
         self.assertEqual(
             self.ingredient.unit,
             gram,
+        )
+
+    def test_get_shows_existing_expiration_warning_threshold(self):
+        AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            expiration_warning_days=4,
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.context['form'].initial['expiration_warning_days'],
+            4,
+        )
+
+    def test_post_updates_expiration_threshold_and_preserves_stock_threshold(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                'name': 'Flour',
+                'unit': str(self.unit.pk),
+                'current_quantity': '5.00',
+                'expiration_date': '2026-12-31',
+                'expiration_warning_days': '5',
+            },
+        )
+
+        self.assertRedirects(response, reverse('inventory:list'))
+        configuration.refresh_from_db()
+        self.assertEqual(configuration.expiration_warning_days, 5)
+        self.assertEqual(
+            configuration.minimum_stock_threshold,
+            Decimal('2.00'),
         )
 
     def test_edit_rejects_duplicate_ingredient_name(self):

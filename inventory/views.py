@@ -8,6 +8,8 @@ from .forms import IngredientForm, StockInForm
 from .models import Ingredient
 from .services import (
     deactivate_ingredient,
+    is_ingredient_expired,
+    is_ingredient_expiring_soon,
     is_ingredient_low_stock,
     register_ingredient,
     update_ingredient,
@@ -125,7 +127,7 @@ def ingredient_delete(request, ingredient_id):
 
 
 def ingredient_list(request):
-    """List active ingredients and search them by name (FR22)."""
+    """Display active inventory with alerts and name search (FR05/06/11/22)."""
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
     ingredients = (
@@ -142,6 +144,12 @@ def ingredient_list(request):
     ingredients = list(ingredients)
     for ingredient in ingredients:
         ingredient.is_low_stock = is_ingredient_low_stock(
+            ingredient=ingredient,
+        )
+        ingredient.is_expiring_soon = is_ingredient_expiring_soon(
+            ingredient=ingredient,
+        )
+        ingredient.is_expired = is_ingredient_expired(
             ingredient=ingredient,
         )
 

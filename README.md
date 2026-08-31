@@ -47,6 +47,7 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 | FR03 | Ingredient editing | Available |
 | FR04 | Ingredient deletion | Available |
 | FR05 | Current inventory viewing | Available |
+| FR06 | Configurable ingredient expiration alerts | Available |
 | FR07 | Stock in (purchase registration) | Available |
 | FR09 | Business profile setup (bakery information) | Available |
 | FR22 | Search functionality | Available |
@@ -215,6 +216,7 @@ the backlog in the wiki to the implementation without searching:
 | FR03 | `inventory/services.py`, `inventory/views.py` |
 | FR04 | `inventory/services.py` (soft delete through `is_active`), `inventory/views.py` |
 | FR05 | `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR06 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR07 | `inventory/models.py` (`StockMovement`), `inventory/views.py` |
 | FR09 | `bakery/models.py`, `bakery/services.py`, `bakery/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
