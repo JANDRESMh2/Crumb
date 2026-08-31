@@ -31,6 +31,7 @@
         <th>Quantity</th>
         <th>Unit</th>
         <th>Expires</th>
+        <th>Status</th>
         <th>Actions</th>
     </tr>
     </thead>
@@ -41,7 +42,20 @@
         <td>{{ ingredient.current_quantity }}</td>
         <td>{{ ingredient.unit.abbreviation }}</td>
         <td>{{ ingredient.expiration_date }}</td>
-
+        <td>
+          {% if ingredient.is_low_stock %}
+          <span class="status-badge status-badge-warning">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+            Low stock
+          </span>
+          {% else %}
+          <span class="status-empty" aria-label="No inventory alert">—</span>
+          {% endif %}
+        </td>
         <td>
           <a
             class="btn btn-secondary"

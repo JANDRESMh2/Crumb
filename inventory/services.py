@@ -1,6 +1,20 @@
 from django.db import transaction
 
-from .models import Ingredient
+from .models import AlertConfiguration, Ingredient
+
+
+def is_ingredient_low_stock(*, ingredient):
+    """FR11 - return whether an ingredient is below its active threshold."""
+    try:
+        configuration = ingredient.alert_configuration
+    except AlertConfiguration.DoesNotExist:
+        return False
+
+    return (
+        configuration.is_active
+        and ingredient.current_quantity
+        < configuration.minimum_stock_threshold
+    )
 
 
 @transaction.atomic

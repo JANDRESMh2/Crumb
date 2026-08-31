@@ -1,4 +1,5 @@
 from decimal import Decimal
+from time import perf_counter
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -7,8 +8,8 @@ from django.urls import reverse
 from bakery.models import Bakery
 
 from .forms import IngredientForm
-from .models import Ingredient, UnitOfMeasure
-from .services import register_ingredient
+from .models import AlertConfiguration, Ingredient, UnitOfMeasure
+from .services import is_ingredient_low_stock, register_ingredient
 
 
 def make_bakery():
@@ -86,6 +87,79 @@ class IngredientModelTests(TestCase):
             current_quantity=Decimal('5.00'), expiration_date='2026-12-31',
         )
         self.assertEqual(Ingredient.objects.count(), 2)
+
+
+class AlertConfigurationModelTests(TestCase):
+    def setUp(self):
+        self.ingredient = Ingredient.objects.create(
+            bakery=make_bakery(),
+            unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+    def test_associates_at_most_one_alert_configuration_with_an_ingredient(self):
+        AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                AlertConfiguration.objects.create(
+                    ingredient=self.ingredient,
+                    minimum_stock_threshold=Decimal('3.00'),
+                )
+
+    def test_rejects_a_non_positive_minimum_stock_threshold(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                AlertConfiguration.objects.create(
+                    ingredient=self.ingredient,
+                    minimum_stock_threshold=Decimal('0.00'),
+                )
+
+
+class LowStockServiceTests(TestCase):
+    def setUp(self):
+        self.ingredient = Ingredient.objects.create(
+            bakery=make_bakery(),
+            unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+    def configure_threshold(self, threshold, *, is_active=True):
+        return AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=threshold,
+            is_active=is_active,
+        )
+
+    def test_quantity_below_threshold_is_low_stock(self):
+        self.configure_threshold(Decimal('6.00'))
+
+        self.assertTrue(is_ingredient_low_stock(ingredient=self.ingredient))
+
+    def test_quantity_equal_to_threshold_is_not_low_stock(self):
+        self.configure_threshold(Decimal('5.00'))
+
+        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+
+    def test_quantity_above_threshold_is_not_low_stock(self):
+        self.configure_threshold(Decimal('4.00'))
+
+        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+
+    def test_missing_configuration_is_not_low_stock(self):
+        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+
+    def test_inactive_configuration_is_not_low_stock(self):
+        self.configure_threshold(Decimal('6.00'), is_active=False)
+
+        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
 
 
 class RegisterIngredientServiceTests(TestCase):
@@ -279,6 +353,104 @@ class IngredientListViewTests(TestCase):
         response = self.client.get(reverse('inventory:list'), {'q': 'yeast'})
 
         self.assertContains(response, 'No ingredients match “yeast”.')
+
+
+class LowStockAlertViewTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.url = reverse('inventory:list')
+
+    def create_ingredient(
+        self,
+        *,
+        name='Flour',
+        quantity,
+        threshold=None,
+        configuration_is_active=True,
+    ):
+        ingredient = Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=quantity,
+            expiration_date='2026-12-31',
+        )
+        if threshold is not None:
+            AlertConfiguration.objects.create(
+                ingredient=ingredient,
+                minimum_stock_threshold=threshold,
+                is_active=configuration_is_active,
+            )
+        return ingredient
+
+    def test_displays_low_stock_alert_when_quantity_is_below_threshold(self):
+        self.create_ingredient(
+            quantity=Decimal('4.00'),
+            threshold=Decimal('5.00'),
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Low stock', count=1)
+        self.assertContains(response, 'status-badge-warning')
+        self.assertContains(response, 'aria-hidden="true"')
+
+    def test_does_not_display_alert_when_quantity_equals_threshold(self):
+        self.create_ingredient(
+            quantity=Decimal('5.00'),
+            threshold=Decimal('5.00'),
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Low stock')
+
+    def test_does_not_display_alert_when_quantity_is_above_threshold(self):
+        self.create_ingredient(
+            quantity=Decimal('6.00'),
+            threshold=Decimal('5.00'),
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Low stock')
+
+    def test_does_not_display_alert_without_configuration(self):
+        self.create_ingredient(quantity=Decimal('0.00'))
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Low stock')
+
+    def test_does_not_display_alert_for_inactive_configuration(self):
+        self.create_ingredient(
+            quantity=Decimal('4.00'),
+            threshold=Decimal('5.00'),
+            configuration_is_active=False,
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Low stock')
+
+    def test_displays_alert_within_two_seconds_without_per_item_queries(self):
+        for index in range(50):
+            self.create_ingredient(
+                name=f'Ingredient {index:02}',
+                quantity=Decimal('1.00'),
+                threshold=Decimal('2.00'),
+            )
+
+        started_at = perf_counter()
+        with self.assertNumQueries(2):
+            response = self.client.get(self.url)
+        elapsed_seconds = perf_counter() - started_at
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Low stock', count=50)
+        self.assertLess(elapsed_seconds, 2)
+
 
 class IngredientEditViewTests(TestCase):
     def setUp(self):
