@@ -252,7 +252,17 @@
     background: var(--warning-bg);
     color: var(--warning);
   }
+  .status-badge-error {
+    background: var(--error-bg);
+    color: var(--error);
+  }
   .status-badge svg { flex-shrink: 0; }
+  .status-badges {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
   .status-empty { color: var(--muted); }
 
   .empty-state {

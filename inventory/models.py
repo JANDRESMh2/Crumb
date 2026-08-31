@@ -86,11 +86,11 @@ class Ingredient(models.Model):
 
 
 class AlertConfiguration(models.Model):
-    """Per-ingredient alert settings shared by FR10, FR11, and future FR06.
+    """Per-ingredient alert settings shared by FR06, FR10, and FR11.
 
     A missing row means that alerts have not been configured for the
-    ingredient. FR06 can extend this model with its expiration setting when
-    that requirement is implemented.
+    ingredient. Each threshold is optional so expiration and low-stock
+    configuration can be introduced independently.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -102,15 +102,38 @@ class AlertConfiguration(models.Model):
     minimum_stock_threshold = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    expiration_warning_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
     )
     is_active = models.BooleanField(default=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(minimum_stock_threshold__gt=0),
+                condition=(
+                    models.Q(minimum_stock_threshold__isnull=True)
+                    | models.Q(minimum_stock_threshold__gt=0)
+                ),
                 name='alert_minimum_stock_threshold_positive',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(expiration_warning_days__isnull=True)
+                    | models.Q(expiration_warning_days__gte=0)
+                ),
+                name='alert_expiration_warning_days_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(minimum_stock_threshold__isnull=False)
+                    | models.Q(expiration_warning_days__isnull=False)
+                ),
+                name='alert_at_least_one_threshold_configured',
             ),
         ]
 
