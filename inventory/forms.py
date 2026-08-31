@@ -9,7 +9,7 @@ from .models import (
 )
 
 
-class IngredientForm(forms.ModelForm):
+class Ingredient_registration(forms.ModelForm):
     class Meta:
         model = Ingredient
         fields = ['name', 'unit', 'current_quantity', 'expiration_date']
@@ -31,6 +31,7 @@ class IngredientForm(forms.ModelForm):
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
+        # [FR02: Restringir unidades de medida de ingredientes]
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )
@@ -65,10 +66,11 @@ class IngredientForm(forms.ModelForm):
         return cleaned
 
 
-class IngredientRegistrationForm(IngredientForm):
-    """Adds an optional barcode field to IngredientForm, scoped to initial
+# [FR17: Barcode scanning for ingredient registration]
+class Barcode_scanning_for_ingredient_registration(Ingredient_registration):
+    """Adds an optional barcode field to Ingredient_registration, scoped to initial
     registration (FR17). Editing an ingredient (FR03) keeps using the base
-    IngredientForm unchanged.
+    Ingredient_registration unchanged.
     """
 
     barcode_value = forms.CharField(
@@ -90,7 +92,8 @@ class IngredientRegistrationForm(IngredientForm):
         return value
 
 
-class StockConsumptionForm(forms.ModelForm):
+# [FR08: Stock consumption registration]
+class Stock_consumption_registration_form(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['ingredient', 'quantity', 'note']

@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from bakery.services import get_current_bakery
 
-from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm, StockInForm
+from .forms import Ingredient_registration, Barcode_scanning_for_ingredient_registration, Stock_consumption_registration_form, StockInForm
 from .models import Ingredient
 from .services import (
     InsufficientStockError,
@@ -18,7 +18,7 @@ from .services import (
 def ingredient_create(request):
     """FR01 - register a new ingredient (name, quantity, unit, expiration date).
 
-    Also handles FR17 (optional barcode capture) via IngredientRegistrationForm.
+    Also handles FR17 (optional barcode capture) via Barcode_scanning_for_ingredient_registration.
     """
     bakery = get_current_bakery()
     if bakery is None:
@@ -26,13 +26,13 @@ def ingredient_create(request):
         return redirect('bakery:setup')
 
     if request.method == 'POST':
-        form = IngredientRegistrationForm(request.POST, bakery=bakery)
+        form = Barcode_scanning_for_ingredient_registration(request.POST, bakery=bakery)
         if form.is_valid():
             register_ingredient(bakery=bakery, **form.cleaned_data)
             messages.success(request, 'Ingredient registered successfully.')
             return redirect('inventory:list')
     else:
-        form = IngredientRegistrationForm(bakery=bakery)
+        form = Barcode_scanning_for_ingredient_registration(bakery=bakery)
 
     return render(request, 'inventory/ingredient_form.html', {'form': form, 'bakery': bakery})
 
@@ -56,7 +56,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
     if request.method == 'POST':
-        form = IngredientForm(
+        form = Ingredient_registration(
             request.POST,
             instance=ingredient,
             bakery=bakery,
@@ -75,7 +75,7 @@ def ingredient_edit(request, ingredient_id):
             return redirect('inventory:list')
 
     else:
-        form = IngredientForm(
+        form = Ingredient_registration(
             instance=ingredient,
             bakery=bakery,
         )
@@ -91,7 +91,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
 
-def ingredient_delete(request, ingredient_id):
+def  Ingredient_deletion(request, ingredient_id):
     """FR04 - remove an existing ingredient from the active inventory."""
     bakery = get_current_bakery()
 
@@ -128,7 +128,7 @@ def ingredient_delete(request, ingredient_id):
     )
 
 
-def ingredient_list(request):
+def Search_ingredient(request):
     """List active ingredients and search them by name (FR22)."""
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
@@ -183,7 +183,8 @@ def stock_in_create(request):
     )
 
 
-def stock_consumption_create(request):
+# [FR08: Stock consumption registration]
+def Stock_consumption_registration(request):
     """FR08 - register the consumption of an ingredient."""
     bakery = get_current_bakery()
     if bakery is None:
@@ -191,7 +192,7 @@ def stock_consumption_create(request):
         return redirect('bakery:setup')
 
     if request.method == 'POST':
-        form = StockConsumptionForm(request.POST, bakery=bakery)
+        form = Stock_consumption_registration_form(request.POST, bakery=bakery)
         if form.is_valid():
             ingredient = form.cleaned_data['ingredient']
             try:
@@ -209,7 +210,7 @@ def stock_consumption_create(request):
                 messages.success(request, f'Consumption registered for {ingredient.name}.')
                 return redirect('inventory:list')
     else:
-        form = StockConsumptionForm(bakery=bakery)
+        form = Stock_consumption_registration_form(bakery=bakery)
 
     return render(
         request,

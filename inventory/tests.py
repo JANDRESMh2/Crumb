@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from bakery.models import Bakery
 
-from .forms import IngredientForm, IngredientRegistrationForm, StockConsumptionForm
+from .forms import Ingredient_registration, Barcode_scanning_for_ingredient_registration, Stock_consumption_registration_form
 from .models import BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure
 from .services import (
     InsufficientStockError,
@@ -44,7 +44,7 @@ class UnitOfMeasureModelTests(TestCase):
 
 class IngredientFormUnitTests(TestCase):
     def test_offers_exactly_the_four_supported_units(self):
-        form = IngredientForm(bakery=make_bakery())
+        form = Ingredient_registration(bakery=make_bakery())
 
         abbreviations = set(
             form.fields['unit'].queryset.values_list('abbreviation', flat=True)
@@ -500,7 +500,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
         )
         BarcodeIdentifier.objects.create(ingredient=existing, barcode_value='7501234567890')
 
-        form = IngredientRegistrationForm(data={
+        form = Barcode_scanning_for_ingredient_registration(data={
             'name': 'Flour',
             'unit': unit.pk,
             'current_quantity': '10.00',
@@ -514,7 +514,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
     def test_barcode_field_is_optional(self):
         bakery = make_bakery()
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
-        form = IngredientRegistrationForm(data={
+        form = Barcode_scanning_for_ingredient_registration(data={
             'name': 'Flour',
             'unit': unit.pk,
             'current_quantity': '10.00',
@@ -598,7 +598,7 @@ class StockConsumptionFormTests(TestCase):
             bakery=bakery, unit=unit, name='Flour',
             current_quantity=Decimal('3.00'), expiration_date='2027-01-31',
         )
-        form = StockConsumptionForm(data={
+        form = Stock_consumption_registration_form(data={
             'ingredient': ingredient.pk,
             'quantity': '5.00',
             'note': '',
@@ -675,7 +675,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
     def test_form_accepts_a_barcode_left_behind_by_a_deleted_ingredient(self):
         deactivate_ingredient(ingredient=self.ingredient)
 
-        form = IngredientRegistrationForm(data={
+        form = Barcode_scanning_for_ingredient_registration(data={
             'name': 'Flour',
             'unit': self.unit.pk,
             'current_quantity': '5.00',
@@ -716,7 +716,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
         )
 
     def test_a_barcode_linked_to_an_active_ingredient_is_still_rejected(self):
-        form = IngredientRegistrationForm(data={
+        form = Barcode_scanning_for_ingredient_registration(data={
             'name': 'Sugar',
             'unit': self.unit.pk,
             'current_quantity': '5.00',
