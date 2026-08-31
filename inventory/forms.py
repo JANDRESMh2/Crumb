@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import (
+    AlertConfiguration,
     BarcodeIdentifier,
     Ingredient,
     StockMovement,
@@ -9,10 +10,26 @@ from .models import (
 )
 
 
-class Ingredient_registration(forms.ModelForm):
+class IngredientForm(forms.ModelForm):
+    expiration_warning_days = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label='Expiration warning days',
+        help_text='Show an alert this many days before the expiration date.',
+        widget=forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '1'}
+        ),
+    )
+
     class Meta:
         model = Ingredient
-        fields = ['name', 'unit', 'current_quantity', 'expiration_date']
+        fields = [
+            'name',
+            'unit',
+            'current_quantity',
+            'expiration_date',
+            'expiration_warning_days',
+        ]
         labels = {
             'current_quantity': 'Quantity',
             'unit': 'Unit of measure',
@@ -31,11 +48,20 @@ class Ingredient_registration(forms.ModelForm):
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
-        # [FR02: Restringir unidades de medida de ingredientes]
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )
         self.fields['unit'].empty_label = 'Select a unit'
+
+        if not self.instance._state.adding:
+            try:
+                configuration = self.instance.alert_configuration
+            except AlertConfiguration.DoesNotExist:
+                pass
+            else:
+                self.initial['expiration_warning_days'] = (
+                    configuration.expiration_warning_days
+                )
 
     def clean_name(self):
         name = self.cleaned_data['name'].strip()
@@ -67,10 +93,10 @@ class Ingredient_registration(forms.ModelForm):
 
 
 # [FR17: Barcode scanning for ingredient registration]
-class Barcode_scanning_for_ingredient_registration(Ingredient_registration):
-    """Adds an optional barcode field to Ingredient_registration, scoped to initial
+class Barcode_scanning_for_ingredient_registration(IngredientForm):
+    """Adds an optional barcode field to IngredientForm, scoped to initial
     registration (FR17). Editing an ingredient (FR03) keeps using the base
-    Ingredient_registration unchanged.
+    IngredientForm unchanged.
     """
 
     barcode_value = forms.CharField(

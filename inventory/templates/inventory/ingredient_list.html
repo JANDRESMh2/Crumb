@@ -32,6 +32,7 @@
         <th>Unit</th>
         <th>Expires</th>
         <th>Barcode</th>
+        <th>Status</th>
         <th>Actions</th>
     </tr>
     </thead>
@@ -43,7 +44,41 @@
         <td>{{ ingredient.unit.abbreviation }}</td>
         <td>{{ ingredient.expiration_date }}</td>
         <td>{{ ingredient.active_barcode|default:"—" }}</td>
-
+        <td>
+          <div class="status-badges">
+          {% if ingredient.is_low_stock %}
+          <span class="status-badge status-badge-warning">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+            Low stock
+          </span>
+          {% endif %}
+          {% if ingredient.is_expired %}
+          <span class="status-badge status-badge-error">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="m9 9 6 6" />
+              <path d="m15 9-6 6" />
+            </svg>
+            Expired
+          </span>
+          {% elif ingredient.is_expiring_soon %}
+          <span class="status-badge status-badge-warning">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+            Expiring soon
+          </span>
+          {% endif %}
+          {% if not ingredient.is_low_stock and not ingredient.is_expired and not ingredient.is_expiring_soon %}
+          <span class="status-empty" aria-label="No inventory alert">—</span>
+          {% endif %}
+          </div>
+        </td>
         <td>
           <a
             class="btn btn-secondary"
@@ -76,7 +111,6 @@
   <div class="actions">
     <a class="btn" href="{% url 'inventory:create' %}">Register ingredient</a>
     <a class="btn btn-secondary" href="{% url 'inventory:stock_in' %}">Register Stock-In</a>
-    <a class="btn btn-secondary" href="{% url 'inventory:stock_consumption' %}">Register consumption</a>
   </div>
 </div>
 {% endblock %}

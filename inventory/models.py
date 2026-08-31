@@ -97,6 +97,62 @@ class Ingredient(models.Model):
         return ''
 
 
+class AlertConfiguration(models.Model):
+    """Per-ingredient alert settings shared by FR06, FR10, and FR11.
+
+    A missing row means that alerts have not been configured for the
+    ingredient. Each threshold is optional so expiration and low-stock
+    configuration can be introduced independently.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ingredient = models.OneToOneField(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='alert_configuration',
+    )
+    minimum_stock_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    expiration_warning_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(minimum_stock_threshold__isnull=True)
+                    | models.Q(minimum_stock_threshold__gt=0)
+                ),
+                name='alert_minimum_stock_threshold_positive',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(expiration_warning_days__isnull=True)
+                    | models.Q(expiration_warning_days__gte=0)
+                ),
+                name='alert_expiration_warning_days_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(minimum_stock_threshold__isnull=False)
+                    | models.Q(expiration_warning_days__isnull=False)
+                ),
+                name='alert_at_least_one_threshold_configured',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Alerts for {self.ingredient.name}'
+
+
 class StockMovement(models.Model):
     # Declaración de la lista de opciones
     MOVEMENT_TYPES = [

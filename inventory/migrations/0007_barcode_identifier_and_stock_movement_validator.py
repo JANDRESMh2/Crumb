@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('bakery', '0001_initial'),
-        ('inventory', '0004_merge_20260810_1710'),
+        ('inventory', '0006_expiration_alert_configuration'),
     ]
 
     operations = [

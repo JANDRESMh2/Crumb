@@ -4,11 +4,19 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from bakery.services import get_current_bakery
 
-from .forms import Ingredient_registration, Barcode_scanning_for_ingredient_registration, Stock_consumption_registration_form, StockInForm
+from .forms import (
+    Barcode_scanning_for_ingredient_registration,
+    IngredientForm,
+    Stock_consumption_registration_form,
+    StockInForm,
+)
 from .models import Ingredient
 from .services import (
     InsufficientStockError,
     deactivate_ingredient,
+    is_ingredient_expired,
+    is_ingredient_expiring_soon,
+    is_ingredient_low_stock,
     register_ingredient,
     register_stock_consumption,
     update_ingredient,
@@ -18,7 +26,8 @@ from .services import (
 def ingredient_create(request):
     """FR01 - register a new ingredient (name, quantity, unit, expiration date).
 
-    Also handles FR17 (optional barcode capture) via Barcode_scanning_for_ingredient_registration.
+    Also handles FR17 (optional barcode capture) via
+    Barcode_scanning_for_ingredient_registration.
     """
     bakery = get_current_bakery()
     if bakery is None:
@@ -56,7 +65,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
     if request.method == 'POST':
-        form = Ingredient_registration(
+        form = IngredientForm(
             request.POST,
             instance=ingredient,
             bakery=bakery,
@@ -75,7 +84,7 @@ def ingredient_edit(request, ingredient_id):
             return redirect('inventory:list')
 
     else:
-        form = Ingredient_registration(
+        form = IngredientForm(
             instance=ingredient,
             bakery=bakery,
         )
@@ -91,7 +100,7 @@ def ingredient_edit(request, ingredient_id):
     )
 
 
-def  Ingredient_deletion(request, ingredient_id):
+def ingredient_delete(request, ingredient_id):
     """FR04 - remove an existing ingredient from the active inventory."""
     bakery = get_current_bakery()
 
@@ -128,19 +137,31 @@ def  Ingredient_deletion(request, ingredient_id):
     )
 
 
-def Search_ingredient(request):
-    """List active ingredients and search them by name (FR22)."""
+def ingredient_list(request):
+    """Display active inventory with alerts and name search (FR05/06/11/22)."""
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
     ingredients = (
         Ingredient.objects.filter(bakery=bakery, is_active=True)
-        .select_related('unit')
+        .select_related('unit', 'alert_configuration')
         .prefetch_related('barcodes')
         if bakery is not None
         else Ingredient.objects.none()
     )
     if query:
         ingredients = ingredients.filter(name__icontains=query)
+
+    ingredients = list(ingredients)
+    for ingredient in ingredients:
+        ingredient.is_low_stock = is_ingredient_low_stock(
+            ingredient=ingredient,
+        )
+        ingredient.is_expiring_soon = is_ingredient_expiring_soon(
+            ingredient=ingredient,
+        )
+        ingredient.is_expired = is_ingredient_expired(
+            ingredient=ingredient,
+        )
 
     return render(
         request,
