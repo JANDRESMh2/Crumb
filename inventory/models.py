@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -82,6 +83,39 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AlertConfiguration(models.Model):
+    """Per-ingredient alert settings shared by FR10, FR11, and future FR06.
+
+    A missing row means that alerts have not been configured for the
+    ingredient. FR06 can extend this model with its expiration setting when
+    that requirement is implemented.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ingredient = models.OneToOneField(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='alert_configuration',
+    )
+    minimum_stock_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(minimum_stock_threshold__gt=0),
+                name='alert_minimum_stock_threshold_positive',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Alerts for {self.ingredient.name}'
 
 
 class StockMovement(models.Model):

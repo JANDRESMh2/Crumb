@@ -8,6 +8,7 @@ from .forms import IngredientForm, StockInForm
 from .models import Ingredient
 from .services import (
     deactivate_ingredient,
+    is_ingredient_low_stock,
     register_ingredient,
     update_ingredient,
 )
@@ -128,12 +129,21 @@ def ingredient_list(request):
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
     ingredients = (
-        Ingredient.objects.filter(bakery=bakery, is_active=True).select_related('unit')
+        Ingredient.objects.filter(bakery=bakery, is_active=True).select_related(
+            'unit',
+            'alert_configuration',
+        )
         if bakery is not None
         else Ingredient.objects.none()
     )
     if query:
         ingredients = ingredients.filter(name__icontains=query)
+
+    ingredients = list(ingredients)
+    for ingredient in ingredients:
+        ingredient.is_low_stock = is_ingredient_low_stock(
+            ingredient=ingredient,
+        )
 
     return render(
         request,
