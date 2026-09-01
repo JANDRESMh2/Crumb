@@ -49,10 +49,12 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 | FR05 | Current inventory viewing | Available |
 | FR06 | Configurable ingredient expiration alerts | Available |
 | FR07 | Stock in (purchase registration) | Available |
+| FR08 | Stock consumption registration | Available |
 | FR09 | Business profile setup (bakery information) | Available |
+| FR10 | Low-stock threshold configuration | Available |
+| FR11 | Low-stock alerts | Available |
+| FR17 | Barcode scanning for ingredient registration | Available |
 | FR22 | Search functionality | Available |
-| FR08 | Stock consumption registration | In review |
-| FR17 | Barcode scanning for ingredient registration | In review |
 
 The complete prioritized backlog (FR01–FR38, MoSCoW) lives in the
 [project wiki](https://github.com/JANDRESMh2/Crumb/wiki).
@@ -218,7 +220,11 @@ the backlog in the wiki to the implementation without searching:
 | FR05 | `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR06 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR07 | `inventory/models.py` (`StockMovement`), `inventory/views.py` |
+| FR08 | `inventory/forms.py` (`Stock_consumption_registration_form`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/stock_consumption_form.html` |
 | FR09 | `bakery/models.py`, `bakery/services.py`, `bakery/views.py` |
+| FR10 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py` (`LowStockThresholdConfigurationForm`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/low_stock_threshold_configuration.html` |
+| FR11 | `inventory/models.py` (`AlertConfiguration`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR17 | `inventory/models.py` (`BarcodeIdentifier`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
 
 ---
@@ -271,8 +277,8 @@ Run `python manage.py migrate` again.
 | Sprint | Scope |
 |---|---|
 | Sprint 1 | Ingredient CRUD, units of measure, inventory viewing, search, stock-in, bakery profile |
-| Sprint 2 | Stock consumption, barcode scanning and auto-fill, expiration alerts, low-stock thresholds and alerts, spreadsheet import, expiration date filter |
-| Later | Production and sales records, reports and exports, history and loss reporting, user accounts, dashboard and sales analytics |
+| Sprint 2 | Stock consumption, barcode scanning and auto-fill, expiration alerts, low-stock thresholds and alerts |
+| Later | Spreadsheet import, expiration date filter, production and sales records, reports and exports, history and loss reporting, user accounts, dashboard and sales analytics |
 
 ---
 

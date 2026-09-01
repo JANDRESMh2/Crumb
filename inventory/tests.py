@@ -14,6 +14,7 @@ from .forms import (
     Barcode_scanning_for_ingredient_registration,
     IngredientForm,
     Stock_consumption_registration_form,
+    LowStockThresholdConfigurationForm,
 )
 from .models import (
     AlertConfiguration,
@@ -31,6 +32,7 @@ from .services import (
     is_ingredient_low_stock,
     register_ingredient,
     register_stock_consumption,
+    configure_low_stock_threshold,
 )
 
 
@@ -1317,3 +1319,133 @@ class StockConsumptionViewErrorHandlingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'only 1.00 available.')
         self.assertEqual(StockMovement.objects.count(), 0)
+
+class LowStockThresholdConfigurationFormTests(TestCase):
+    def test_accepts_positive_threshold(self):
+        form = LowStockThresholdConfigurationForm({
+            'minimum_stock_threshold': '5.00',
+        })
+
+        self.assertTrue(form.is_valid())
+
+    def test_rejects_zero_threshold(self):
+        form = LowStockThresholdConfigurationForm({
+            'minimum_stock_threshold': '0',
+        })
+
+        self.assertFalse(form.is_valid())
+
+    def test_rejects_negative_threshold(self):
+        form = LowStockThresholdConfigurationForm({
+            'minimum_stock_threshold': '-1',
+        })
+
+        self.assertFalse(form.is_valid())
+
+    def test_rejects_non_numeric_threshold(self):
+        form = LowStockThresholdConfigurationForm({
+            'minimum_stock_threshold': 'abc',
+        })
+
+        self.assertFalse(form.is_valid())
+
+
+class LowStockThresholdConfigurationServiceTests(TestCase):
+    def setUp(self):
+        self.ingredient = Ingredient.objects.create(
+            bakery=make_bakery(),
+            unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Flour',
+            current_quantity=Decimal('5.00'),
+            expiration_date='2026-12-31',
+        )
+
+    def test_creates_threshold_configuration(self):
+        configuration = configure_low_stock_threshold(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('3.00'),
+        )
+
+        self.assertEqual(
+            configuration.minimum_stock_threshold,
+            Decimal('3.00'),
+        )
+
+    def test_updates_existing_threshold(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        configure_low_stock_threshold(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('4.00'),
+        )
+
+        configuration.refresh_from_db()
+
+        self.assertEqual(
+            configuration.minimum_stock_threshold,
+            Decimal('4.00'),
+        )
+
+    def test_preserves_expiration_warning_days(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            expiration_warning_days=3,
+        )
+
+        configure_low_stock_threshold(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        configuration.refresh_from_db()
+
+        self.assertEqual(
+            configuration.minimum_stock_threshold,
+            Decimal('2.00'),
+        )
+        self.assertEqual(
+            configuration.expiration_warning_days,
+            3,
+        )
+
+    def test_clearing_threshold_preserves_expiration_configuration(self):
+        configuration = AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+            expiration_warning_days=3,
+        )
+
+        configure_low_stock_threshold(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=None,
+        )
+
+        configuration.refresh_from_db()
+
+        self.assertIsNone(
+            configuration.minimum_stock_threshold
+        )
+        self.assertEqual(
+            configuration.expiration_warning_days,
+            3,
+        )
+
+    def test_clearing_only_threshold_deletes_empty_configuration(self):
+        AlertConfiguration.objects.create(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=Decimal('2.00'),
+        )
+
+        configure_low_stock_threshold(
+            ingredient=self.ingredient,
+            minimum_stock_threshold=None,
+        )
+
+        self.assertFalse(
+            AlertConfiguration.objects.filter(
+                ingredient=self.ingredient
+            ).exists()
+        )
