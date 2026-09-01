@@ -560,6 +560,185 @@ class IngredientListViewTests(TestCase):
 
         self.assertContains(response, 'No ingredients match “yeast”.')
 
+    def test_filters_ingredients_by_expiration_date_range(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Before range',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 8, 31),
+        )
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Inside range',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 10, 15),
+        )
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='After range',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2027, 1, 1),
+        )
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {
+                'start_date': '2026-09-01',
+                'end_date': '2026-12-31',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Before range')
+        self.assertContains(response, 'Inside range')
+        self.assertNotContains(response, 'After range')
+
+
+    def test_filters_ingredients_from_start_expiration_date(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Old ingredient',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 8, 31),
+        )
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Future ingredient',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 10, 15),
+        )
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {'start_date': '2026-09-01'},
+        )
+
+        self.assertNotContains(response, 'Old ingredient')
+        self.assertContains(response, 'Future ingredient')
+
+
+    def test_filters_ingredients_until_end_expiration_date(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Early ingredient',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 10, 15),
+        )
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Late ingredient',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2027, 1, 1),
+        )
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {'end_date': '2026-12-31'},
+        )
+
+        self.assertContains(response, 'Early ingredient')
+        self.assertNotContains(response, 'Late ingredient')
+
+
+    def test_expiration_date_range_is_inclusive(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='Start boundary',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 9, 1),
+        )
+
+        Ingredient.objects.create(
+            bakery=bakery,
+            unit=unit,
+            name='End boundary',
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2026, 12, 31),
+        )
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {
+                'start_date': '2026-09-01',
+                'end_date': '2026-12-31',
+            },
+        )
+
+        self.assertContains(response, 'Start boundary')
+        self.assertContains(response, 'End boundary')
+
+
+    def test_rejects_expiration_range_when_start_date_is_after_end_date(self):
+        make_bakery()
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {
+                'start_date': '2026-12-31',
+                'end_date': '2026-09-01',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'The start date cannot be later than the end date.',
+        )
+        self.assertEqual(len(response.context['ingredients']), 0)
+
+
+    def test_expiration_date_range_filter_responds_within_two_seconds(self):
+        bakery = make_bakery()
+        unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+        for index in range(100):
+            Ingredient.objects.create(
+                bakery=bakery,
+                unit=unit,
+                name=f'Ingredient {index}',
+                current_quantity=Decimal('5.00'),
+                expiration_date=date(2026, 10, 15),
+            )
+
+        start = perf_counter()
+
+        response = self.client.get(
+            reverse('inventory:list'),
+            {
+                'start_date': '2026-09-01',
+                'end_date': '2026-12-31',
+            },
+        )
+
+        elapsed = perf_counter() - start
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(elapsed, 2)
+
 
 class LowStockAlertViewTests(TestCase):
     def setUp(self):
