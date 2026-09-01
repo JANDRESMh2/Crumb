@@ -1,6 +1,9 @@
+from urllib import request
+
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_date
 
 from bakery.services import get_current_bakery
 
@@ -145,6 +148,12 @@ def ingredient_list(request):
     """Display active inventory with alerts and name search (FR05/06/11/22)."""
     bakery = get_current_bakery()
     query = request.GET.get('q', '').strip()
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+
+    start_date_value = parse_date(start_date) if start_date else None
+    end_date_value = parse_date(end_date) if end_date else None
+
     ingredients = (
         Ingredient.objects.filter(bakery=bakery, is_active=True)
         .select_related('unit', 'alert_configuration')
@@ -154,6 +163,27 @@ def ingredient_list(request):
     )
     if query:
         ingredients = ingredients.filter(name__icontains=query)
+
+    if (
+        start_date_value
+        and end_date_value
+        and start_date_value > end_date_value
+    ):
+        messages.error(
+            request,
+            'The start date cannot be later than the end date.'
+        )
+        ingredients = Ingredient.objects.none()
+    else:
+        if start_date_value:
+            ingredients = ingredients.filter(
+                expiration_date__gte=start_date_value
+            )
+
+        if end_date_value:
+            ingredients = ingredients.filter(
+                expiration_date__lte=end_date_value
+            )
 
     ingredients = list(ingredients)
     for ingredient in ingredients:
@@ -170,7 +200,13 @@ def ingredient_list(request):
     return render(
         request,
         'inventory/ingredient_list.html',
-        {'ingredients': ingredients, 'bakery': bakery, 'query': query},
+        {
+            'ingredients': ingredients,
+            'bakery': bakery,
+            'query': query,
+            'start_date': start_date,
+            'end_date': end_date,
+        },
     )
 
 

@@ -17,9 +17,38 @@
         placeholder="For example, flour or sugar"
       >
     </div>
+    <div class="field">
+      <label for="expiration-start-date">
+        Expiration date from
+      </label>
+
+      <input
+        class="form-control"
+        id="expiration-start-date"
+        name="start_date"
+        type="date"
+        value="{{ start_date }}"
+      >
+    </div>
+
+    <div class="field">
+      <label for="expiration-end-date">
+        Expiration date to
+      </label>
+
+      <input
+        class="form-control"
+        id="expiration-end-date"
+        name="end_date"
+        type="date"
+        value="{{ end_date }}"
+      >
+    </div>
     <button type="submit">Search</button>
-    {% if query %}
-    <a class="btn btn-secondary" href="{% url 'inventory:list' %}">Clear search</a>
+    {% if query or start_date or end_date %}
+    <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
+      Clear filters
+    </a>
     {% endif %}
   </form>
 
@@ -107,8 +136,10 @@
   {% else %}
   <div class="empty-state">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-    {% if query %}
+    {% if query and not start_date and not end_date %}
     <p>No ingredients match “{{ query }}”.</p>
+    {% elif start_date or end_date %}
+    <p>No ingredients match the selected filters.</p>
     {% else %}
     <p>No ingredients registered yet.</p>
     {% endif %}
