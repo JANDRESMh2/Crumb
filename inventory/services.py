@@ -78,6 +78,37 @@ def configure_expiration_alert(*, ingredient, expiration_warning_days):
 
 
 @transaction.atomic
+def configure_low_stock_threshold(*, ingredient, minimum_stock_threshold):
+    """FR10 - configure or clear an ingredient's low-stock threshold."""
+
+    try:
+        configuration = ingredient.alert_configuration
+    except AlertConfiguration.DoesNotExist:
+        if minimum_stock_threshold is None:
+            return None
+
+        return AlertConfiguration.objects.create(
+            ingredient=ingredient,
+            minimum_stock_threshold=minimum_stock_threshold,
+        )
+
+    configuration.minimum_stock_threshold = minimum_stock_threshold
+
+    if (
+        configuration.minimum_stock_threshold is None
+        and configuration.expiration_warning_days is None
+    ):
+        configuration.delete()
+        return None
+
+    configuration.save(
+        update_fields=['minimum_stock_threshold']
+    )
+
+    return configuration
+
+
+@transaction.atomic
 def register_ingredient(
     *,
     bakery,

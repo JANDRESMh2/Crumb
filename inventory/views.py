@@ -7,12 +7,16 @@ from bakery.services import get_current_bakery
 from .forms import (
     Barcode_scanning_for_ingredient_registration,
     IngredientForm,
+    LowStockThresholdConfigurationForm,
     Stock_consumption_registration_form,
     StockInForm,
 )
-from .models import Ingredient
+
+from .models import AlertConfiguration, Ingredient
+
 from .services import (
     InsufficientStockError,
+    configure_low_stock_threshold,
     deactivate_ingredient,
     is_ingredient_expired,
     is_ingredient_expiring_soon,
@@ -207,15 +211,25 @@ def stock_in_create(request):
 # [FR08: Stock consumption registration]
 def Stock_consumption_registration(request):
     """FR08 - register the consumption of an ingredient."""
+
     bakery = get_current_bakery()
+
     if bakery is None:
-        messages.info(request, 'Set up the bakery profile before registering consumption.')
+        messages.info(
+            request,
+            'Set up the bakery profile before registering consumption.'
+        )
         return redirect('bakery:setup')
 
     if request.method == 'POST':
-        form = Stock_consumption_registration_form(request.POST, bakery=bakery)
+        form = Stock_consumption_registration_form(
+            request.POST,
+            bakery=bakery,
+        )
+
         if form.is_valid():
             ingredient = form.cleaned_data['ingredient']
+
             try:
                 register_stock_consumption(
                     bakery=bakery,
@@ -223,18 +237,91 @@ def Stock_consumption_registration(request):
                     quantity=form.cleaned_data['quantity'],
                     note=form.cleaned_data.get('note', ''),
                 )
+
             except InsufficientStockError as error:
-                # The form already validates the available stock; this covers
-                # the stock changing between validation and saving.
-                form.add_error('quantity', str(error))
+                form.add_error(
+                    'quantity',
+                    str(error),
+                )
+
             else:
-                messages.success(request, f'Consumption registered for {ingredient.name}.')
+                messages.success(
+                    request,
+                    f'Consumption registered for {ingredient.name}.'
+                )
                 return redirect('inventory:list')
+
     else:
-        form = Stock_consumption_registration_form(bakery=bakery)
+        form = Stock_consumption_registration_form(
+            bakery=bakery
+        )
 
     return render(
         request,
         'inventory/stock_consumption_form.html',
-        {'form': form, 'bakery': bakery},
+        {
+            'form': form,
+            'bakery': bakery,
+        },
+    )
+
+
+def low_stock_threshold_configuration(request, ingredient_id):
+    """FR10 - configure the low-stock threshold for an ingredient."""
+
+    bakery = get_current_bakery()
+
+    if bakery is None:
+        messages.info(
+            request,
+            'Set up the bakery profile before configuring stock thresholds.'
+        )
+        return redirect('bakery:setup')
+
+    ingredient = get_object_or_404(
+        Ingredient,
+        pk=ingredient_id,
+        bakery=bakery,
+        is_active=True,
+    )
+
+    try:
+        configuration = ingredient.alert_configuration
+        current_threshold = configuration.minimum_stock_threshold
+    except AlertConfiguration.DoesNotExist:
+        current_threshold = None
+
+    if request.method == 'POST':
+        form = LowStockThresholdConfigurationForm(request.POST)
+
+        if form.is_valid():
+            configure_low_stock_threshold(
+                ingredient=ingredient,
+                minimum_stock_threshold=form.cleaned_data[
+                    'minimum_stock_threshold'
+                ],
+            )
+
+            messages.success(
+                request,
+                'Low-stock threshold updated successfully.'
+            )
+
+            return redirect('inventory:list')
+
+    else:
+        form = LowStockThresholdConfigurationForm(
+            initial={
+                'minimum_stock_threshold': current_threshold,
+            }
+        )
+
+    return render(
+        request,
+        'inventory/low_stock_threshold_configuration.html',
+        {
+            'form': form,
+            'ingredient': ingredient,
+            'bakery': bakery,
+        },
     )

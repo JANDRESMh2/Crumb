@@ -18,4 +18,9 @@ urlpatterns = [
     views.ingredient_delete,
     name='delete',
     ),
+    path(
+        'ingredients/<uuid:ingredient_id>/low-stock-threshold/',
+        views.low_stock_threshold_configuration,
+        name='low_stock_threshold_configuration',
+    ),
 ]

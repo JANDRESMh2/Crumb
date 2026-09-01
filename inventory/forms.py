@@ -1,5 +1,7 @@
 from django import forms
 
+from decimal import Decimal
+
 from .models import (
     AlertConfiguration,
     BarcodeIdentifier,
@@ -169,3 +171,24 @@ class StockInForm(forms.ModelForm):
             if bakery is not None
             else Ingredient.objects.none()
         )
+
+
+class LowStockThresholdConfigurationForm(forms.Form):
+    minimum_stock_threshold = forms.DecimalField(
+        required=False,
+        min_value=Decimal('0.01'),
+        max_digits=10,
+        decimal_places=2,
+        label='Low-stock threshold',
+        help_text=(
+            'Enter the minimum quantity before the ingredient is considered '
+            'low stock. Leave blank to remove the threshold.'
+        ),
+        widget=forms.NumberInput(
+            attrs={
+                'class': 'form-control',
+                'min': '0.01',
+                'step': '0.01',
+            }
+        ),
+    )

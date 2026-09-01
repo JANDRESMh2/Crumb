@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Configure low-stock threshold - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Inventory</p>
+
+<h1>Configure low-stock threshold</h1>
+
+<p class="lede">
+  Configure the minimum stock level for {{ ingredient.name }}.
+  The threshold uses the same unit as the ingredient
+  ({{ ingredient.unit.abbreviation }}).
+</p>
+
+<div class="card">
+
+  <p>
+    Current quantity:
+    <strong>
+      {{ ingredient.current_quantity }}
+      {{ ingredient.unit.abbreviation }}
+    </strong>
+  </p>
+
+  <form method="post" novalidate>
+
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="form-errors">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    {% include "partials/field.html" with field=form.minimum_stock_threshold %}
+
+    <div class="actions">
+      <button type="submit">
+        Save threshold
+      </button>
+
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}
