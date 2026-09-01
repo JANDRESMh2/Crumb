@@ -54,7 +54,13 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 | FR10 | Low-stock threshold configuration | Available |
 | FR11 | Low-stock alerts | Available |
 | FR17 | Barcode scanning for ingredient registration | Available |
+| FR18 | Auto-fill product data from barcode scan | Pending |
 | FR22 | Search functionality | Available |
+| FR24 | Expiration date range filter | Available |
+| FR31a/FR31b | User registration and authentication | Pending |
+
+Sprint 2 has six of its eight committed requirement families available. FR18
+and FR31a/FR31b remain pending.
 
 The complete prioritized backlog (FR01–FR38, MoSCoW) lives in the
 [project wiki](https://github.com/JANDRESMh2/Crumb/wiki).
@@ -226,6 +232,7 @@ the backlog in the wiki to the implementation without searching:
 | FR11 | `inventory/models.py` (`AlertConfiguration`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR17 | `inventory/models.py` (`BarcodeIdentifier`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
+| FR24 | `inventory/views.py` (the `start_date` and `end_date` query parameters), `inventory/templates/inventory/ingredient_list.html` |
 
 ---
 
@@ -276,9 +283,9 @@ Run `python manage.py migrate` again.
 
 | Sprint | Scope |
 |---|---|
-| Sprint 1 | Ingredient CRUD, units of measure, inventory viewing, search, stock-in, bakery profile |
-| Sprint 2 | Stock consumption, barcode scanning and auto-fill, expiration alerts, low-stock thresholds and alerts |
-| Later | Spreadsheet import, expiration date filter, production and sales records, reports and exports, history and loss reporting, user accounts, dashboard and sales analytics |
+| Sprint 1 — Done | Ingredient CRUD, units of measure, inventory viewing, search, stock-in, bakery profile |
+| Sprint 2 — In progress | Stock consumption, low-stock thresholds and alerts, expiration alerts and date filtering, and barcode registration are available; barcode auto-fill and user registration/authentication remain pending |
+| Future sprints — Planned | Production and sales records, spreadsheet import and validation, inventory correction, history, reports and exports, advanced ingredient registration, account controls and analytics |
 
 ---
 
