@@ -1,0 +1,15 @@
+# Crumb - Python dependencies
+#
+# Requires Python 3.12 or newer (developed and tested on 3.14.3).
+#
+#   python -m venv .venv
+#   pip install -r requirements.txt
+#
+# Only direct dependencies are listed first; the rest are Django's own runtime
+# requirements, pinned so every machine builds the same environment.
+
+Django==6.0.7
+
+asgiref==3.12.1
+sqlparse==0.5.5
+tzdata==2025.3
