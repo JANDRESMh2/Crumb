@@ -93,6 +93,12 @@
           >
             Delete
           </a>
+          <a
+            class="btn btn-secondary"
+            href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
+          >
+            Low-stock threshold
+          </a>
         </td>
       </tr>
       {% endfor %}
