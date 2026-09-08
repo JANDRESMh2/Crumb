@@ -224,12 +224,12 @@ the backlog in the wiki to the implementation without searching:
 | FR03 | `inventory/services.py`, `inventory/views.py` |
 | FR04 | `inventory/services.py` (soft delete through `is_active`), `inventory/views.py` |
 | FR05 | `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
-| FR06 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR06 | `inventory/services.py` (`expiration_alerts`, `configure_expiration_alert`), `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR07 | `inventory/models.py` (`StockMovement`), `inventory/views.py` |
 | FR08 | `inventory/forms.py` (`Stock_consumption_registration_form`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/stock_consumption_form.html` |
 | FR09 | `bakery/models.py`, `bakery/services.py`, `bakery/views.py` |
 | FR10 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py` (`LowStockThresholdConfigurationForm`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/low_stock_threshold_configuration.html` |
-| FR11 | `inventory/models.py` (`AlertConfiguration`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR11 | `inventory/services.py` (`low_stock_alerts`), `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR17 | `inventory/models.py` (`BarcodeIdentifier`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
 | FR24 | `inventory/views.py` (the `start_date` and `end_date` query parameters), `inventory/templates/inventory/ingredient_list.html` |

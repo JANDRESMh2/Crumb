@@ -8,8 +8,8 @@ class InsufficientStockError(Exception):
     """Raised when a consumption would leave an ingredient with negative stock."""
 
 
-def is_ingredient_low_stock(*, ingredient):
-    """FR11 - return whether an ingredient is below its active threshold."""
+def low_stock_alerts(*, ingredient):
+    """FR11 - return whether an ingredient needs a low-stock alert."""
     try:
         configuration = ingredient.alert_configuration
     except AlertConfiguration.DoesNotExist:
@@ -23,8 +23,8 @@ def is_ingredient_low_stock(*, ingredient):
     )
 
 
-def is_ingredient_expiring_soon(*, ingredient, today=None):
-    """FR06 - return whether an ingredient is inside its warning period."""
+def expiration_alerts(*, ingredient, today=None):
+    """FR06 - return whether an ingredient needs an expiration alert."""
     if ingredient.expiration_date is None:
         return False
 

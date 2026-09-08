@@ -22,8 +22,8 @@ from .services import (
     configure_low_stock_threshold,
     deactivate_ingredient,
     is_ingredient_expired,
-    is_ingredient_expiring_soon,
-    is_ingredient_low_stock,
+    expiration_alerts,
+    low_stock_alerts,
     register_ingredient,
     register_stock_consumption,
     update_ingredient,
@@ -187,10 +187,10 @@ def ingredient_list(request):
 
     ingredients = list(ingredients)
     for ingredient in ingredients:
-        ingredient.is_low_stock = is_ingredient_low_stock(
+        ingredient.is_low_stock = low_stock_alerts(
             ingredient=ingredient,
         )
-        ingredient.is_expiring_soon = is_ingredient_expiring_soon(
+        ingredient.is_expiring_soon = expiration_alerts(
             ingredient=ingredient,
         )
         ingredient.is_expired = is_ingredient_expired(
