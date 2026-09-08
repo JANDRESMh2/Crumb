@@ -1,7 +1,9 @@
 from urllib import request
+import pandas as pd
 
 from django.contrib import messages
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
@@ -10,6 +12,7 @@ from bakery.services import get_current_bakery
 from .forms import (
     Barcode_scanning_for_ingredient_registration,
     IngredientForm,
+    IngredientImportForm,
     LowStockThresholdConfigurationForm,
     Stock_consumption_registration_form,
     StockInForm,
@@ -21,6 +24,7 @@ from .services import (
     InsufficientStockError,
     configure_low_stock_threshold,
     deactivate_ingredient,
+    import_ingredients_from_excel,
     is_ingredient_expired,
     expiration_alerts,
     low_stock_alerts,
@@ -361,3 +365,42 @@ def low_stock_threshold_configuration(request, ingredient_id):
             'bakery': bakery,
         },
     )
+
+
+def ingredient_import_view(request):
+    """FR15 - bulk import ingredients from Excel or CSV file."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before importing ingredients.')
+        return redirect('bakery:setup')
+
+    if request.method == 'POST':
+        form = IngredientImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.cleaned_data['file']
+            try:
+                created, updated = import_ingredients_from_excel(file=file, bakery=bakery)
+                messages.success(request, f'Successfully imported ingredients: {created} created, {updated} updated.')
+                return redirect('inventory:list')
+            except Exception as e:
+                messages.error(request, f'Error importing file: {str(e)}')
+    else:
+        form = IngredientImportForm()
+
+    return render(request, 'inventory/ingredient_import.html', {'form': form, 'bakery': bakery})
+
+
+def download_import_template_view(request):
+    """Provides an Excel template for FR15."""
+    df = pd.DataFrame(columns=[
+        'Name', 
+        'Unit', 
+        'Quantity', 
+        'Expiration date', 
+        'Expiration warning days', 
+        'Barcode'
+    ])
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="ingredients_template.xlsx"'
+    df.to_excel(response, index=False)
+    return response
