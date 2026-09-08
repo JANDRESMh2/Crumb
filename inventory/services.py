@@ -1,7 +1,9 @@
+import pandas as pd
+from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AlertConfiguration, BarcodeIdentifier, Ingredient, StockMovement
+from .models import AlertConfiguration, BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure, SUPPORTED_UNIT_ABBREVIATIONS
 
 
 class InsufficientStockError(Exception):
@@ -255,3 +257,85 @@ def deactivate_ingredient(*, ingredient):
     ingredient.save(update_fields=['is_active', 'updated_at'])
     ingredient.barcodes.update(is_active=False)
     return ingredient
+
+
+def import_ingredients_from_excel(*, file, bakery):
+    """FR15 - import ingredients from Excel or CSV file."""
+    column_mapping = {
+        'Nombre': 'name', 'Unidad': 'unit', 'Cantidad': 'quantity',
+        'Fecha de caducidad': 'expiration_date', 
+        'Dias de aviso de caducidad': 'expiration_warning_days',
+        'Codigo de barras': 'barcode'
+    }
+
+    # Cargar y normalizar encabezados
+    df = pd.read_csv(file) if file.name.endswith('.csv') else pd.read_excel(file)
+    df.columns = [str(c).strip().capitalize() for c in df.columns] # Normaliza mayúsculas
+    df.rename(columns=column_mapping, inplace=True)
+    df.columns = [c.lower() for c in df.columns] # Fuerza minúsculas para validación interna
+
+    required_cols = {'name', 'unit', 'quantity', 'expiration_date'}
+    if missing := required_cols - set(df.columns):
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+
+    # Limpiar nulos de forma nativa para evitar strings 'nan' o 'none'
+    df = df.where(pd.notnull(df), None)
+
+    # Precargar datos de la BD
+    units = UnitOfMeasure.objects.filter(abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS)
+    unit_map = {**{u.name.lower(): u for u in units}, **{u.abbreviation.lower(): u for u in units}}
+    existing_map = {ing.name.lower(): ing for ing in Ingredient.objects.filter(bakery=bakery, is_active=True)}
+
+    new_ingredients, update_ingredients = [], []
+    alerts_to_process, barcodes_to_link = [], []
+
+    # itertuples es más rápido y limpio que iterrows
+    for row in df.itertuples(index=False):
+        if not row.name: continue
+        name = str(row.name).strip()
+        
+        unit = unit_map.get(str(row.unit).strip().lower())
+        if not unit: 
+            raise ValueError(f"Unknown unit: {row.unit} for ingredient {name}")
+
+        try:
+            quantity = Decimal(str(row.quantity))
+            expiration_date = pd.to_datetime(row.expiration_date).date()
+        except Exception as e:
+            raise ValueError(f"Invalid quantity or date for {name}: {e}")
+
+        # Lógica de creación / actualización
+        ing = existing_map.get(name.lower())
+        if ing:
+            ing.current_quantity += quantity
+            ing.expiration_date = expiration_date
+            ing.unit = unit
+            update_ingredients.append(ing)
+        else:
+            ing = Ingredient(bakery=bakery, name=name, unit=unit, current_quantity=quantity, expiration_date=expiration_date)
+            new_ingredients.append(ing)
+
+        # Alertas y códigos de barras (sin distinguir si son nuevos o actualizados)
+        if getattr(row, 'expiration_warning_days', None) is not None:
+            alerts_to_process.append((ing, int(row.expiration_warning_days)))
+        
+        barcode = getattr(row, 'barcode', None)
+        if barcode:
+            barcodes_to_link.append((ing, str(barcode).strip()))
+
+    # Ejecución en base de datos
+    with transaction.atomic():
+        if new_ingredients:
+            Ingredient.objects.bulk_create(new_ingredients)
+        if update_ingredients:
+            # Nota: Si updated_at usa auto_now=True, bulk_update no lo actualizará automáticamente,
+            # tendrías que inyectar timezone.now() manualmente en el objeto antes de este paso.
+            Ingredient.objects.bulk_update(update_ingredients, ['current_quantity', 'expiration_date', 'unit'])
+
+        for ing, wd in alerts_to_process:
+            configure_expiration_alert(ingredient=ing, expiration_warning_days=wd)
+            
+        for ing, code in barcodes_to_link:
+            _link_barcode(ingredient=ing, barcode_value=code)
+
+    return len(new_ingredients), len(update_ingredients)

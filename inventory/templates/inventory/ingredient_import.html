@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Import Ingredients - Crumb{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Inventory</p>
+<h1>Import Ingredients</h1>
+
+<div class="card">
+  <p>
+    Upload an Excel or CSV file to bulk import ingredients.
+    If an ingredient already exists, its quantity will be added and the expiration date updated.
+  </p>
+  <p>
+    <a href="{% url 'inventory:import_template' %}" class="btn btn-secondary">Download Template</a>
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button class="btn" type="submit">Import</button>
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
