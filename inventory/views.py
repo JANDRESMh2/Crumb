@@ -2,9 +2,12 @@ from urllib import request
 import pandas as pd
 
 from django.contrib import messages
+import json
+from decimal import Decimal
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
 
 from bakery.services import get_current_bakery
@@ -18,7 +21,7 @@ from .forms import (
     StockInForm,
 )
 
-from .models import AlertConfiguration, Ingredient
+from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMovement
 
 from .services import (
     InsufficientStockError,
@@ -404,3 +407,58 @@ def download_import_template_view(request):
     response['Content-Disposition'] = 'attachment; filename="ingredients_template.xlsx"'
     df.to_excel(response, index=False)
     return response
+
+
+@require_POST
+@transaction.atomic
+def stock_in_barcode_scan(request):
+    """FR18 - Continuous barcode scanning for stock-in."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        return JsonResponse({'error': 'Set up the bakery profile before registering stock.'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+        barcode_value = data.get('barcode', '').strip()
+        quantity_str = data.get('quantity', '1')
+        quantity = Decimal(quantity_str)
+        if quantity <= 0:
+            return JsonResponse({'error': 'Quantity must be positive.'}, status=400)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid request format.'}, status=400)
+
+    if not barcode_value:
+        return JsonResponse({'error': 'No barcode provided.'}, status=400)
+
+    barcode_obj = BarcodeIdentifier.objects.filter(
+        barcode_value=barcode_value,
+        is_active=True,
+        ingredient__bakery=bakery,
+        ingredient__is_active=True
+    ).select_related('ingredient', 'ingredient__unit').first()
+
+    if not barcode_obj:
+        return JsonResponse({
+            'error': 'The scanned barcode is not registered. You must register the product as an ingredient first.'
+        }, status=404)
+
+    ingredient = barcode_obj.ingredient
+
+    ingredient.current_quantity += quantity
+    ingredient.save(update_fields=['current_quantity', 'updated_at'])
+
+    StockMovement.objects.create(
+        bakery=bakery,
+        ingredient=ingredient,
+        movement_type='StockIn',
+        quantity=quantity,
+        note='Continuous scan'
+    )
+
+    return JsonResponse({
+        'success': True,
+        'ingredient_name': ingredient.name,
+        'unit': ingredient.unit.abbreviation,
+        'added': str(quantity),
+        'new_total': str(ingredient.current_quantity)
+    })
