@@ -28,8 +28,8 @@ from .services import (
     configure_expiration_alert,
     deactivate_ingredient,
     is_ingredient_expired,
-    is_ingredient_expiring_soon,
-    is_ingredient_low_stock,
+    expiration_alerts,
+    low_stock_alerts,
     register_ingredient,
     register_stock_consumption,
     configure_low_stock_threshold,
@@ -167,7 +167,7 @@ class AlertConfigurationModelTests(TestCase):
                 AlertConfiguration.objects.create(ingredient=self.ingredient)
 
 
-class LowStockServiceTests(TestCase):
+class LowStockAlertsServiceTests(TestCase):
     def setUp(self):
         self.ingredient = Ingredient.objects.create(
             bakery=make_bakery(),
@@ -187,25 +187,25 @@ class LowStockServiceTests(TestCase):
     def test_quantity_below_threshold_is_low_stock(self):
         self.configure_threshold(Decimal('6.00'))
 
-        self.assertTrue(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertTrue(low_stock_alerts(ingredient=self.ingredient))
 
     def test_quantity_equal_to_threshold_is_not_low_stock(self):
         self.configure_threshold(Decimal('5.00'))
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_quantity_above_threshold_is_not_low_stock(self):
         self.configure_threshold(Decimal('4.00'))
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_missing_configuration_is_not_low_stock(self):
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_inactive_configuration_is_not_low_stock(self):
         self.configure_threshold(Decimal('6.00'), is_active=False)
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_expiration_only_configuration_is_not_low_stock(self):
         AlertConfiguration.objects.create(
@@ -213,10 +213,10 @@ class LowStockServiceTests(TestCase):
             expiration_warning_days=3,
         )
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
 
-class ExpirationAlertServiceTests(TestCase):
+class ExpirationAlertsServiceTests(TestCase):
     def setUp(self):
         self.today = date(2026, 8, 31)
         self.ingredient = Ingredient.objects.create(
@@ -237,7 +237,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_date_inside_threshold_is_expiring_soon(self):
         self.configure_threshold(3)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -245,7 +245,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_date_outside_threshold_is_not_expiring_soon(self):
         self.configure_threshold(1)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -253,7 +253,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_threshold_boundary_is_inclusive(self):
         self.configure_threshold(2)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -262,7 +262,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = self.today
         self.configure_threshold(0)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -271,7 +271,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = self.today - timedelta(days=1)
         self.configure_threshold(3)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -284,7 +284,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = None
         self.configure_threshold(3)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -294,7 +294,7 @@ class ExpirationAlertServiceTests(TestCase):
         ))
 
     def test_missing_configuration_is_not_expiring_soon(self):
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -302,7 +302,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_inactive_configuration_is_not_expiring_soon(self):
         self.configure_threshold(3, is_active=False)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -740,7 +740,7 @@ class IngredientListViewTests(TestCase):
         self.assertLess(elapsed, 2)
 
 
-class LowStockAlertViewTests(TestCase):
+class LowStockAlertsViewTests(TestCase):
     def setUp(self):
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
@@ -839,7 +839,7 @@ class LowStockAlertViewTests(TestCase):
         self.assertLess(elapsed_seconds, 2)
 
 
-class ExpirationAlertViewTests(TestCase):
+class ExpirationAlertsViewTests(TestCase):
     def setUp(self):
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')

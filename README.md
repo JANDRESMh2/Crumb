@@ -47,20 +47,20 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 | FR03 | Ingredient editing | Available |
 | FR04 | Ingredient deletion | Available |
 | FR05 | Current inventory viewing | Available |
-| FR06 | Configurable ingredient expiration alerts | Available |
+| FR06 | Expiration alerts | Available |
 | FR07 | Stock in (purchase registration) | Available |
 | FR08 | Stock consumption registration | Available |
 | FR09 | Business profile setup (bakery information) | Available |
-| FR10 | Low-stock threshold configuration | Available |
-| FR11 | Low-stock alerts | Available |
+| FR10 | Low stock threshold configuration | Available |
+| FR11 | Low stock alerts | Available |
+| FR15 | Inventory import from Excel/spreadsheet | Available |
 | FR17 | Barcode scanning for ingredient registration | Available |
-| FR18 | Auto-fill product data from barcode scan | Pending |
+| FR18 | Auto-fill product data from barcode scan | Available |
 | FR22 | Search functionality | Available |
 | FR24 | Expiration date range filter | Available |
-| FR31a/FR31b | User registration and authentication | Pending |
 
-Sprint 2 has six of its eight committed requirement families available. FR18
-and FR31a/FR31b remain pending.
+The eight requirements committed for Sprint 2 are available: FR06, FR08, FR10,
+FR11, FR15, FR17, FR18 and FR24.
 
 The complete prioritized backlog (FR01–FR38, MoSCoW) lives in the
 [project wiki](https://github.com/JANDRESMh2/Crumb/wiki).
@@ -224,12 +224,12 @@ the backlog in the wiki to the implementation without searching:
 | FR03 | `inventory/services.py`, `inventory/views.py` |
 | FR04 | `inventory/services.py` (soft delete through `is_active`), `inventory/views.py` |
 | FR05 | `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
-| FR06 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR06 | `inventory/services.py` (`expiration_alerts`, `configure_expiration_alert`), `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR07 | `inventory/models.py` (`StockMovement`), `inventory/views.py` |
 | FR08 | `inventory/forms.py` (`Stock_consumption_registration_form`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/stock_consumption_form.html` |
 | FR09 | `bakery/models.py`, `bakery/services.py`, `bakery/views.py` |
 | FR10 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py` (`LowStockThresholdConfigurationForm`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/low_stock_threshold_configuration.html` |
-| FR11 | `inventory/models.py` (`AlertConfiguration`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR11 | `inventory/services.py` (`low_stock_alerts`), `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
 | FR17 | `inventory/models.py` (`BarcodeIdentifier`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
 | FR24 | `inventory/views.py` (the `start_date` and `end_date` query parameters), `inventory/templates/inventory/ingredient_list.html` |

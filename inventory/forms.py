@@ -192,3 +192,14 @@ class LowStockThresholdConfigurationForm(forms.Form):
             }
         ),
     )
+
+
+class IngredientImportForm(forms.Form):
+    file = forms.FileField(
+        label='Excel or CSV File',
+        help_text='Upload an .xlsx, .xls, or .csv file.',
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'form-control',
+            'accept': '.xlsx,.xls,.csv'
+        })
+    )

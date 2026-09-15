@@ -1,18 +1,136 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Register Stock-In (Ingredient Purchase)</h2>
+<div style="margin-top: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1 style="margin: 0; font-size: 1.8rem;">Register Stock-In (Ingredient Purchase)</h1>
+        <button id="toggle-scan-mode" type="button" class="btn btn-secondary">
+            Enable Scan Mode
+        </button>
+    </div>
     
-    <form method="post" class="mt-3">
+    <ul id="scan-alert-container" class="messages"></ul>
+    
+    <div id="scan-mode-container" style="display: none; background: var(--success-bg); color: var(--success); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; border-left: 3px solid var(--success);">
+        <strong>Scan Mode Enabled:</strong> You can scan products continuously.
+        <input type="text" id="hidden-barcode-input" class="form-control" style="margin-top: 0.75rem;" placeholder="Waiting for scan..." autocomplete="off">
+    </div>
+
+    <form method="post" style="margin-top: 1rem;">
         {% csrf_token %}
-        {{ form.as_p }}
+        <div style="margin-bottom: 1.5rem;">
+            {{ form.as_p }}
+        </div>
         
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Save Stock-In</button>
-            
+        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <button type="submit" class="btn">Save Stock-In</button>
             <a href="{% url 'inventory:list' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const toggleBtn = document.getElementById('toggle-scan-mode');
+        const scanContainer = document.getElementById('scan-mode-container');
+        const hiddenInput = document.getElementById('hidden-barcode-input');
+        const alertContainer = document.getElementById('scan-alert-container');
+        let scanModeActive = false;
+        let scanTimeout = null;
+
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            scanModeActive = !scanModeActive;
+            if (scanModeActive) {
+                toggleBtn.textContent = "Disable Scan Mode";
+                toggleBtn.className = "btn"; // Make it solid primary color when active
+                scanContainer.style.display = 'block';
+                setTimeout(() => hiddenInput.focus(), 100);
+            } else {
+                toggleBtn.textContent = 'Enable Scan Mode';
+                toggleBtn.className = "btn btn-secondary"; // Revert to outlined
+                scanContainer.style.display = 'none';
+                hiddenInput.value = '';
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (scanModeActive && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                hiddenInput.focus();
+            }
+        });
+
+        hiddenInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                processBufferedScan();
+            }
+        });
+
+        hiddenInput.addEventListener('input', function(e) {
+            clearTimeout(scanTimeout);
+            scanTimeout = setTimeout(() => {
+                processBufferedScan();
+            }, 400); 
+        });
+
+        function processBufferedScan() {
+            clearTimeout(scanTimeout);
+            const barcode = hiddenInput.value.trim();
+            if (!barcode) return;
+            
+            hiddenInput.value = '';
+            processScan(barcode);
+        }
+
+        function processScan(barcode) {
+            const qtyInput = document.getElementById('id_quantity');
+            const qty = qtyInput && qtyInput.value ? qtyInput.value : '1';
+
+            fetch("{% url 'inventory:stock_in_barcode_scan' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ barcode: barcode, quantity: qty })
+            })
+            .then(response => {
+                if (!response.ok && response.status !== 404 && response.status !== 400) {
+                    throw new Error("Server error: " + response.status);
+                }
+                return response.json().then(data => ({ status: response.status, body: data }));
+            })
+            .then(res => {
+                if (res.status === 200) {
+                    showAlert('success', `Stock updated: Added ${res.body.added} ${res.body.unit} to ${res.body.ingredient_name}. Total: ${res.body.new_total} ${res.body.unit}`);
+                } else if (res.status === 404) {
+                    showAlert('error', res.body.error || 'The scanned barcode is not registered. You must register the product as an ingredient first.');
+                } else {
+                    showAlert('error', res.body.error || 'An error occurred while processing the scan.');
+                }
+            })
+            .catch(error => {
+                console.error("Fetch error:", error);
+                showAlert('error', 'Connection error while processing the code. Check the console.');
+            });
+        }
+
+        function showAlert(type, message) {
+            // type should be 'success', 'warning', or 'error' to match custom CSS classes
+            const liHtml = `
+                <li class="${type}" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>${message}</div>
+                    <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; padding: 0 0 0 1rem; line-height: 1;" onclick="this.parentElement.remove()" aria-label="Close">&times;</button>
+                </li>
+            `;
+            alertContainer.innerHTML = liHtml;
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 4000);
+            }
+        }
+    });
+</script>
 {% endblock %}
