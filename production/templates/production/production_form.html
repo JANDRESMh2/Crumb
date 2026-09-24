@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Register daily production - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Register daily production</h1>
+
+<p class="lede">
+    Record the baked products manufactured by
+    {{ bakery.name }}.
+</p>
+
+{% if not has_products %}
+
+    <div class="card">
+
+        <h2>No products registered</h2>
+
+        <p>
+            Register your first baked product before
+            recording daily production.
+        </p>
+
+        <a
+            href="{% url 'production:product_create' %}"
+            class="btn"
+        >
+            Register product
+        </a>
+
+    </div>
+
+{% else %}
+
+    <div class="card">
+
+        <form method="post" novalidate>
+
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="form-errors">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% include "partials/field.html" with field=form.product %}
+
+            {% include "partials/field.html" with field=form.quantity %}
+
+            {% include "partials/field.html" with field=form.production_date %}
+
+            <div class="actions">
+
+                <button type="submit">
+                    Register production
+                </button>
+
+                <a
+                    href="{% url 'production:product_create' %}"
+                    class="btn btn-secondary"
+                >
+                    Add product
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+{% endif %}
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:list' %}"
+        class="btn btn-secondary"
+    >
+        View production records
+    </a>
+
+</div>
+
+{% endblock %}
