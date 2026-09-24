@@ -122,6 +122,33 @@ class DailyProductionRegistrationTests(TestCase):
             products,
         )
 
+    def test_duplicate_product_is_rejected(self):
+      """An active product cannot be registered twice."""
+
+      with self.assertRaises(ValidationError):
+          register_product(
+              bakery=self.bakery,
+              name='Croissant',
+          )
+
+      self.assertEqual(Product.objects.count(), 1)
+
+
+    def test_inactive_product_is_reactivated(self):
+        """Registering an inactive product reactivates it."""
+
+        self.product.is_active = False
+        self.product.save()
+
+        reactivated = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+        )
+
+        self.assertEqual(reactivated.pk, self.product.pk)
+        self.assertTrue(reactivated.is_active)
+        self.assertEqual(Product.objects.count(), 1)
+
 
 class ProductionViewTests(TestCase):
 
