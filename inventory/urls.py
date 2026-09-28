@@ -8,6 +8,7 @@ urlpatterns = [
     path('ingredients/new/', views.ingredient_create, name='create'),
     path('stock-in/', views.stock_in_create, name='stock_in'),
     path('stock-consumption/', views.Stock_consumption_registration, name='stock_consumption'),
+    path('api/stock-in-barcode/', views.stock_in_barcode_scan, name='stock_in_barcode_scan'),
     path('ingredients/', views.ingredient_list, name='list'),
 
     path('ingredients/<uuid:ingredient_id>/edit/',
@@ -23,4 +24,11 @@ urlpatterns = [
         views.low_stock_threshold_configuration,
         name='low_stock_threshold_configuration',
     ),
+    path(
+        'ingredients/<uuid:ingredient_id>/correction/',
+        views.manual_inventory_correction,
+        name='manual_inventory_correction',
+    ),
+    path('ingredients/import/', views.ingredient_import_view, name='import'),
+    path('ingredients/import/template/', views.download_import_template_view, name='import_template'),
 ]

@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -176,6 +177,24 @@ class StockMovement(models.Model):
     )
     movement_date = models.DateTimeField(auto_now_add=True)
     note = models.TextField(blank=True, null=True)
+
+    # FR23 - a correction overwrites the stock, so the quantity alone does not
+    # say whether it went up or down; both values are kept for the audit trail.
+    previous_quantity = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+    )
+    new_quantity = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+    )
+    # DR02 / FR23 - who performed the movement. Nullable until user accounts
+    # (FR31) exist; filled whenever the request comes from a signed-in user.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+    )
 
     class Meta:
         constraints = [

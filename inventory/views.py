@@ -1,8 +1,13 @@
 from urllib import request
+import pandas as pd
 
 from django.contrib import messages
+import json
+from decimal import Decimal
 from django.db import transaction
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
 
 from bakery.services import get_current_bakery
@@ -10,21 +15,26 @@ from bakery.services import get_current_bakery
 from .forms import (
     Barcode_scanning_for_ingredient_registration,
     IngredientForm,
+    IngredientImportForm,
     LowStockThresholdConfigurationForm,
+    ManualInventoryCorrectionForm,
     Stock_consumption_registration_form,
     StockInForm,
 )
 
-from .models import AlertConfiguration, Ingredient
+from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMovement
 
 from .services import (
     InsufficientStockError,
+    InventoryCorrectionError,
     configure_low_stock_threshold,
     deactivate_ingredient,
+    import_ingredients_from_excel,
     is_ingredient_expired,
-    is_ingredient_expiring_soon,
-    is_ingredient_low_stock,
+    expiration_alerts,
+    low_stock_alerts,
     register_ingredient,
+    register_inventory_correction,
     register_stock_consumption,
     update_ingredient,
 )
@@ -206,10 +216,10 @@ def ingredient_list(request):
 
     ingredients = list(ingredients)
     for ingredient in ingredients:
-        ingredient.is_low_stock = is_ingredient_low_stock(
+        ingredient.is_low_stock = low_stock_alerts(
             ingredient=ingredient,
         )
-        ingredient.is_expiring_soon = is_ingredient_expiring_soon(
+        ingredient.is_expiring_soon = expiration_alerts(
             ingredient=ingredient,
         )
         ingredient.is_expired = is_ingredient_expired(
@@ -379,4 +389,147 @@ def low_stock_threshold_configuration(request, ingredient_id):
             'ingredient': ingredient,
             'bakery': bakery,
         },
+    )
+
+
+def ingredient_import_view(request):
+    """FR15 - bulk import ingredients from Excel or CSV file."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before importing ingredients.')
+        return redirect('bakery:setup')
+
+    if request.method == 'POST':
+        form = IngredientImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.cleaned_data['file']
+            try:
+                created, updated = import_ingredients_from_excel(file=file, bakery=bakery)
+                messages.success(request, f'Successfully imported ingredients: {created} created, {updated} updated.')
+                return redirect('inventory:list')
+            except Exception as e:
+                messages.error(request, f'Error importing file: {str(e)}')
+    else:
+        form = IngredientImportForm()
+
+    return render(request, 'inventory/ingredient_import.html', {'form': form, 'bakery': bakery})
+
+
+def download_import_template_view(request):
+    """Provides an Excel template for FR15."""
+    df = pd.DataFrame(columns=[
+        'Name', 
+        'Unit', 
+        'Quantity', 
+        'Expiration date', 
+        'Expiration warning days', 
+        'Barcode'
+    ])
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="ingredients_template.xlsx"'
+    df.to_excel(response, index=False)
+    return response
+
+
+@require_POST
+@transaction.atomic
+def stock_in_barcode_scan(request):
+    """FR18 - Continuous barcode scanning for stock-in."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        return JsonResponse({'error': 'Set up the bakery profile before registering stock.'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+        barcode_value = data.get('barcode', '').strip()
+        quantity_str = data.get('quantity', '1')
+        quantity = Decimal(quantity_str)
+        if quantity <= 0:
+            return JsonResponse({'error': 'Quantity must be positive.'}, status=400)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid request format.'}, status=400)
+
+    if not barcode_value:
+        return JsonResponse({'error': 'No barcode provided.'}, status=400)
+
+    barcode_obj = BarcodeIdentifier.objects.filter(
+        barcode_value=barcode_value,
+        is_active=True,
+        ingredient__bakery=bakery,
+        ingredient__is_active=True
+    ).select_related('ingredient', 'ingredient__unit').first()
+
+    if not barcode_obj:
+        return JsonResponse({
+            'error': 'The scanned barcode is not registered. You must register the product as an ingredient first.'
+        }, status=404)
+
+    ingredient = barcode_obj.ingredient
+
+    ingredient.current_quantity += quantity
+    ingredient.save(update_fields=['current_quantity', 'updated_at'])
+
+    StockMovement.objects.create(
+        bakery=bakery,
+        ingredient=ingredient,
+        movement_type='StockIn',
+        quantity=quantity,
+        note='Continuous scan'
+    )
+
+    return JsonResponse({
+        'success': True,
+        'ingredient_name': ingredient.name,
+        'unit': ingredient.unit.abbreviation,
+        'added': str(quantity),
+        'new_total': str(ingredient.current_quantity)
+    })
+
+
+# [FR23: Manual inventory correction]
+def manual_inventory_correction(request, ingredient_id):
+    """FR23 - manually correct an ingredient's quantity with date, user and reason."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before correcting the inventory.')
+        return redirect('bakery:setup')
+
+    ingredient = get_object_or_404(
+        Ingredient.objects.select_related('unit'),
+        pk=ingredient_id,
+        bakery=bakery,
+        is_active=True,
+    )
+
+    if request.method == 'POST':
+        form = ManualInventoryCorrectionForm(request.POST, ingredient=ingredient)
+        if form.is_valid():
+            try:
+                register_inventory_correction(
+                    bakery=bakery,
+                    ingredient=ingredient,
+                    new_quantity=form.cleaned_data['new_quantity'],
+                    reason=form.cleaned_data['reason'],
+                    user=request.user if request.user.is_authenticated else None,
+                )
+            except InventoryCorrectionError as error:
+                # The form already validates the input; this covers the stock
+                # changing between rendering the form and saving it.
+                form.add_error('new_quantity', str(error))
+            else:
+                messages.success(request, f'Inventory corrected for {ingredient.name}.')
+                return redirect('inventory:list')
+    else:
+        form = ManualInventoryCorrectionForm(ingredient=ingredient)
+
+    corrections = (
+        StockMovement.objects.filter(ingredient=ingredient, movement_type='Correction')
+        .select_related('user')
+        .order_by('-movement_date')[:10]
+    )
+
+    return render(
+        request,
+        'inventory/manual_inventory_correction.html',
+        {'form': form, 'ingredient': ingredient, 'bakery': bakery, 'corrections': corrections},
     )

@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from time import perf_counter
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
@@ -15,6 +16,7 @@ from .forms import (
     IngredientForm,
     Stock_consumption_registration_form,
     LowStockThresholdConfigurationForm,
+    ManualInventoryCorrectionForm,
 )
 from .models import (
     AlertConfiguration,
@@ -25,12 +27,14 @@ from .models import (
 )
 from .services import (
     InsufficientStockError,
+    InventoryCorrectionError,
     configure_expiration_alert,
     deactivate_ingredient,
     is_ingredient_expired,
-    is_ingredient_expiring_soon,
-    is_ingredient_low_stock,
+    expiration_alerts,
+    low_stock_alerts,
     register_ingredient,
+    register_inventory_correction,
     register_stock_consumption,
     configure_low_stock_threshold,
 )
@@ -167,7 +171,7 @@ class AlertConfigurationModelTests(TestCase):
                 AlertConfiguration.objects.create(ingredient=self.ingredient)
 
 
-class LowStockServiceTests(TestCase):
+class LowStockAlertsServiceTests(TestCase):
     def setUp(self):
         self.ingredient = Ingredient.objects.create(
             bakery=make_bakery(),
@@ -187,25 +191,25 @@ class LowStockServiceTests(TestCase):
     def test_quantity_below_threshold_is_low_stock(self):
         self.configure_threshold(Decimal('6.00'))
 
-        self.assertTrue(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertTrue(low_stock_alerts(ingredient=self.ingredient))
 
     def test_quantity_equal_to_threshold_is_not_low_stock(self):
         self.configure_threshold(Decimal('5.00'))
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_quantity_above_threshold_is_not_low_stock(self):
         self.configure_threshold(Decimal('4.00'))
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_missing_configuration_is_not_low_stock(self):
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_inactive_configuration_is_not_low_stock(self):
         self.configure_threshold(Decimal('6.00'), is_active=False)
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
     def test_expiration_only_configuration_is_not_low_stock(self):
         AlertConfiguration.objects.create(
@@ -213,10 +217,10 @@ class LowStockServiceTests(TestCase):
             expiration_warning_days=3,
         )
 
-        self.assertFalse(is_ingredient_low_stock(ingredient=self.ingredient))
+        self.assertFalse(low_stock_alerts(ingredient=self.ingredient))
 
 
-class ExpirationAlertServiceTests(TestCase):
+class ExpirationAlertsServiceTests(TestCase):
     def setUp(self):
         self.today = date(2026, 8, 31)
         self.ingredient = Ingredient.objects.create(
@@ -237,7 +241,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_date_inside_threshold_is_expiring_soon(self):
         self.configure_threshold(3)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -245,7 +249,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_date_outside_threshold_is_not_expiring_soon(self):
         self.configure_threshold(1)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -253,7 +257,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_threshold_boundary_is_inclusive(self):
         self.configure_threshold(2)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -262,7 +266,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = self.today
         self.configure_threshold(0)
 
-        self.assertTrue(is_ingredient_expiring_soon(
+        self.assertTrue(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -271,7 +275,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = self.today - timedelta(days=1)
         self.configure_threshold(3)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -284,7 +288,7 @@ class ExpirationAlertServiceTests(TestCase):
         self.ingredient.expiration_date = None
         self.configure_threshold(3)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -294,7 +298,7 @@ class ExpirationAlertServiceTests(TestCase):
         ))
 
     def test_missing_configuration_is_not_expiring_soon(self):
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -302,7 +306,7 @@ class ExpirationAlertServiceTests(TestCase):
     def test_inactive_configuration_is_not_expiring_soon(self):
         self.configure_threshold(3, is_active=False)
 
-        self.assertFalse(is_ingredient_expiring_soon(
+        self.assertFalse(expiration_alerts(
             ingredient=self.ingredient,
             today=self.today,
         ))
@@ -740,7 +744,7 @@ class IngredientListViewTests(TestCase):
         self.assertLess(elapsed, 2)
 
 
-class LowStockAlertViewTests(TestCase):
+class LowStockAlertsViewTests(TestCase):
     def setUp(self):
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
@@ -839,7 +843,7 @@ class LowStockAlertViewTests(TestCase):
         self.assertLess(elapsed_seconds, 2)
 
 
-class ExpirationAlertViewTests(TestCase):
+class ExpirationAlertsViewTests(TestCase):
     def setUp(self):
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
@@ -1628,3 +1632,179 @@ class LowStockThresholdConfigurationServiceTests(TestCase):
                 ingredient=self.ingredient
             ).exists()
         )
+
+
+class ManualInventoryCorrectionServiceTests(TestCase):
+    """FR23 - the service corrects the stock and logs date, user and reason."""
+
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery, unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Flour', current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+
+    def correct(self, new_quantity, reason='Physical count', user=None):
+        return register_inventory_correction(
+            bakery=self.bakery, ingredient=self.ingredient,
+            new_quantity=new_quantity, reason=reason, user=user,
+        )
+
+    def test_correcting_down_replaces_the_quantity_and_logs_the_movement(self):
+        movement = self.correct(Decimal('7.50'), reason='Spilled bag found during count')
+
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('7.50'))
+        self.assertEqual(movement.movement_type, 'Correction')
+        self.assertEqual(movement.previous_quantity, Decimal('10.00'))
+        self.assertEqual(movement.new_quantity, Decimal('7.50'))
+        self.assertEqual(movement.quantity, Decimal('2.50'))
+        self.assertEqual(movement.note, 'Spilled bag found during count')
+        self.assertIsNotNone(movement.movement_date)
+
+    def test_correcting_up_keeps_a_positive_quantity_and_both_values(self):
+        movement = self.correct(Decimal('12.00'))
+
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('12.00'))
+        self.assertEqual(movement.quantity, Decimal('2.00'))
+        self.assertEqual(movement.previous_quantity, Decimal('10.00'))
+        self.assertEqual(movement.new_quantity, Decimal('12.00'))
+
+    def test_correcting_to_zero_is_allowed(self):
+        self.correct(Decimal('0'))
+
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('0'))
+
+    def test_records_the_user_who_made_the_correction(self):
+        user = get_user_model().objects.create_user(username='admin', password='secret-pass-123')
+
+        movement = self.correct(Decimal('8.00'), user=user)
+
+        self.assertEqual(movement.user, user)
+
+    def test_rejects_a_correction_that_does_not_change_the_quantity(self):
+        with self.assertRaises(InventoryCorrectionError):
+            self.correct(Decimal('10.00'))
+        self.assertEqual(StockMovement.objects.count(), 0)
+
+    def test_rejects_a_negative_quantity(self):
+        with self.assertRaises(InventoryCorrectionError):
+            self.correct(Decimal('-1.00'))
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('10.00'))
+
+    def test_rejects_a_correction_without_reason(self):
+        with self.assertRaises(InventoryCorrectionError):
+            self.correct(Decimal('5.00'), reason='   ')
+        self.assertEqual(StockMovement.objects.count(), 0)
+
+
+class ManualInventoryCorrectionFormTests(TestCase):
+    """FR23 - the form gives readable errors before reaching the service."""
+
+    def setUp(self):
+        self.ingredient = Ingredient.objects.create(
+            bakery=make_bakery(), unit=UnitOfMeasure.objects.get(abbreviation='kg'),
+            name='Flour', current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
+        )
+
+    def form(self, **data):
+        return ManualInventoryCorrectionForm(data=data, ingredient=self.ingredient)
+
+    def test_accepts_a_new_quantity_with_a_reason(self):
+        self.assertTrue(self.form(new_quantity='6.00', reason='Physical count').is_valid())
+
+    def test_rejects_the_same_quantity_as_the_current_one(self):
+        form = self.form(new_quantity='10.00', reason='Physical count')
+        self.assertFalse(form.is_valid())
+        self.assertIn('new_quantity', form.errors)
+
+    def test_requires_a_reason(self):
+        form = self.form(new_quantity='6.00', reason='   ')
+        self.assertFalse(form.is_valid())
+        self.assertIn('reason', form.errors)
+
+    def test_rejects_a_negative_quantity(self):
+        form = self.form(new_quantity='-2.00', reason='Physical count')
+        self.assertFalse(form.is_valid())
+        self.assertIn('new_quantity', form.errors)
+
+
+class ManualInventoryCorrectionViewTests(TestCase):
+    """FR23 - the correction page, end to end."""
+
+    def setUp(self):
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+    def create_ingredient(self, bakery, name='Flour', quantity='10.00', is_active=True):
+        return Ingredient.objects.create(
+            bakery=bakery, unit=self.unit, name=name, current_quantity=Decimal(quantity),
+            expiration_date='2027-01-31', is_active=is_active,
+        )
+
+    def url(self, ingredient):
+        return reverse('inventory:manual_inventory_correction', args=[ingredient.pk])
+
+    def test_redirects_to_bakery_setup_when_no_bakery_is_configured(self):
+        url = reverse('inventory:manual_inventory_correction', args=['00000000-0000-0000-0000-000000000001'])
+        self.assertRedirects(self.client.get(url), reverse('bakery:setup'))
+
+    def test_get_shows_the_current_quantity(self):
+        ingredient = self.create_ingredient(make_bakery())
+        response = self.client.get(self.url(ingredient))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Correct inventory')
+        self.assertContains(response, '10.00 kg')
+
+    def test_post_corrects_the_quantity_and_redirects_to_the_catalog(self):
+        ingredient = self.create_ingredient(make_bakery())
+        response = self.client.post(self.url(ingredient), {'new_quantity': '7.00', 'reason': 'Physical count'})
+
+        self.assertRedirects(response, reverse('inventory:list'))
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.current_quantity, Decimal('7.00'))
+        movement = StockMovement.objects.get(movement_type='Correction')
+        self.assertEqual(movement.note, 'Physical count')
+        self.assertIsNone(movement.user)
+
+    def test_post_with_the_same_quantity_reshows_the_form_with_an_error(self):
+        ingredient = self.create_ingredient(make_bakery())
+        response = self.client.post(self.url(ingredient), {'new_quantity': '10.00', 'reason': 'Physical count'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'must be different from the current quantity')
+        self.assertEqual(StockMovement.objects.count(), 0)
+
+    def test_records_the_signed_in_user(self):
+        user = get_user_model().objects.create_user(username='manager', password='secret-pass-123')
+        self.client.force_login(user)
+        ingredient = self.create_ingredient(make_bakery())
+
+        self.client.post(self.url(ingredient), {'new_quantity': '4.00', 'reason': 'Physical count'})
+
+        self.assertEqual(StockMovement.objects.get(movement_type='Correction').user, user)
+
+    def test_history_lists_previous_corrections_with_their_reason(self):
+        bakery = make_bakery()
+        ingredient = self.create_ingredient(bakery)
+        register_inventory_correction(
+            bakery=bakery, ingredient=ingredient, new_quantity=Decimal('8.00'), reason='Weekly count',
+        )
+
+        response = self.client.get(self.url(ingredient))
+
+        self.assertContains(response, 'Weekly count')
+        self.assertContains(response, '10.00 kg')
+        self.assertContains(response, '8.00 kg')
+
+    def test_does_not_allow_correcting_a_deleted_ingredient(self):
+        ingredient = self.create_ingredient(make_bakery(), is_active=False)
+        response = self.client.get(self.url(ingredient))
+        self.assertEqual(response.status_code, 404)
+
+    def test_the_catalog_links_to_the_correction_page(self):
+        ingredient = self.create_ingredient(make_bakery())
+        response = self.client.get(reverse('inventory:list'))
+        self.assertContains(response, self.url(ingredient))
