@@ -17,6 +17,7 @@ from .forms import (
     IngredientForm,
     IngredientImportForm,
     LowStockThresholdConfigurationForm,
+    ManualInventoryCorrectionForm,
     Stock_consumption_registration_form,
     StockInForm,
 )
@@ -25,6 +26,7 @@ from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMove
 
 from .services import (
     InsufficientStockError,
+    InventoryCorrectionError,
     configure_low_stock_threshold,
     deactivate_ingredient,
     import_ingredients_from_excel,
@@ -32,6 +34,7 @@ from .services import (
     expiration_alerts,
     low_stock_alerts,
     register_ingredient,
+    register_inventory_correction,
     register_stock_consumption,
     update_ingredient,
 )
@@ -481,3 +484,52 @@ def stock_in_barcode_scan(request):
         'added': str(quantity),
         'new_total': str(ingredient.current_quantity)
     })
+
+
+# [FR23: Manual inventory correction]
+def manual_inventory_correction(request, ingredient_id):
+    """FR23 - manually correct an ingredient's quantity with date, user and reason."""
+    bakery = get_current_bakery()
+    if bakery is None:
+        messages.info(request, 'Set up the bakery profile before correcting the inventory.')
+        return redirect('bakery:setup')
+
+    ingredient = get_object_or_404(
+        Ingredient.objects.select_related('unit'),
+        pk=ingredient_id,
+        bakery=bakery,
+        is_active=True,
+    )
+
+    if request.method == 'POST':
+        form = ManualInventoryCorrectionForm(request.POST, ingredient=ingredient)
+        if form.is_valid():
+            try:
+                register_inventory_correction(
+                    bakery=bakery,
+                    ingredient=ingredient,
+                    new_quantity=form.cleaned_data['new_quantity'],
+                    reason=form.cleaned_data['reason'],
+                    user=request.user if request.user.is_authenticated else None,
+                )
+            except InventoryCorrectionError as error:
+                # The form already validates the input; this covers the stock
+                # changing between rendering the form and saving it.
+                form.add_error('new_quantity', str(error))
+            else:
+                messages.success(request, f'Inventory corrected for {ingredient.name}.')
+                return redirect('inventory:list')
+    else:
+        form = ManualInventoryCorrectionForm(ingredient=ingredient)
+
+    corrections = (
+        StockMovement.objects.filter(ingredient=ingredient, movement_type='Correction')
+        .select_related('user')
+        .order_by('-movement_date')[:10]
+    )
+
+    return render(
+        request,
+        'inventory/manual_inventory_correction.html',
+        {'form': form, 'ingredient': ingredient, 'bakery': bakery, 'corrections': corrections},
+    )

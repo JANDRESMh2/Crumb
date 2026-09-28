@@ -10,6 +10,10 @@ class InsufficientStockError(Exception):
     """Raised when a consumption would leave an ingredient with negative stock."""
 
 
+class InventoryCorrectionError(Exception):
+    """Raised when a manual correction is invalid (no change, negative or without a reason)."""
+
+
 def low_stock_alerts(*, ingredient):
     """FR11 - return whether an ingredient needs a low-stock alert."""
     try:
@@ -339,3 +343,40 @@ def import_ingredients_from_excel(*, file, bakery):
             _link_barcode(ingredient=ing, barcode_value=code)
 
     return len(new_ingredients), len(update_ingredients)
+
+
+@transaction.atomic
+def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, user=None):
+    """FR23 - manually correct an ingredient's quantity, logging the change.
+
+    The correction is stored as a StockMovement of type Correction with the
+    quantity before and after, the reason and the user, so every manual change
+    to the stock leaves an audit trail. The form already validates the input;
+    these checks are the authoritative guard if the service is called directly.
+    """
+    ingredient.refresh_from_db(fields=['current_quantity'])
+    previous_quantity = ingredient.current_quantity
+    reason = (reason or '').strip()
+
+    if new_quantity is None or new_quantity < 0:
+        raise InventoryCorrectionError('The corrected quantity cannot be negative.')
+    if new_quantity == previous_quantity:
+        raise InventoryCorrectionError(
+            'The corrected quantity must be different from the current quantity.'
+        )
+    if not reason:
+        raise InventoryCorrectionError('A reason is required to correct the inventory.')
+
+    ingredient.current_quantity = new_quantity
+    ingredient.save(update_fields=['current_quantity', 'updated_at'])
+
+    return StockMovement.objects.create(
+        bakery=bakery,
+        ingredient=ingredient,
+        movement_type='Correction',
+        quantity=abs(new_quantity - previous_quantity),
+        previous_quantity=previous_quantity,
+        new_quantity=new_quantity,
+        note=reason,
+        user=user,
+    )

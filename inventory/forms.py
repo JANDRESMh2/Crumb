@@ -203,3 +203,41 @@ class IngredientImportForm(forms.Form):
             'accept': '.xlsx,.xls,.csv'
         })
     )
+
+
+# [FR23: Manual inventory correction]
+class ManualInventoryCorrectionForm(forms.Form):
+    new_quantity = forms.DecimalField(
+        min_value=Decimal('0'),
+        max_digits=10,
+        decimal_places=2,
+        label='Corrected quantity',
+        help_text='The real quantity counted in the bakery. It replaces the current quantity.',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+    )
+    reason = forms.CharField(
+        max_length=500,
+        label='Reason',
+        help_text='Explain why the quantity is being corrected, for example a physical count.',
+        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+    )
+
+    def __init__(self, *args, ingredient=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._ingredient = ingredient
+
+    def clean_reason(self):
+        reason = self.cleaned_data['reason'].strip()
+        if not reason:
+            raise forms.ValidationError('A reason is required to correct the inventory.')
+        return reason
+
+    def clean_new_quantity(self):
+        new_quantity = self.cleaned_data['new_quantity']
+        ingredient = self._ingredient
+        if ingredient is not None and new_quantity == ingredient.current_quantity:
+            raise forms.ValidationError(
+                f'The corrected quantity must be different from the current quantity '
+                f'({ingredient.current_quantity} {ingredient.unit.abbreviation}).'
+            )
+        return new_quantity
