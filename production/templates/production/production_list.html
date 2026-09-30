@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Production records - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Production records</h1>
+
+<p class="lede">
+    Review the daily production registered
+    for {{ bakery.name }}.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:register' %}"
+        class="btn"
+    >
+        Register production
+    </a>
+
+    <a
+        href="{% url 'production:product_create' %}"
+        class="btn btn-secondary"
+    >
+        Add product
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    {% if records %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Production date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for record in records %}
+
+                    <tr>
+                        <td>{{ record.product.name }}</td>
+                        <td>{{ record.quantity }}</td>
+                        <td>{{ record.production_date }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <p>
+                No production records have been registered yet.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
