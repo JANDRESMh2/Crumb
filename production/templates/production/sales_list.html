@@ -1,38 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}Production records - Crumb{% endblock %}
+{% block title %}Sales records - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">Sales</p>
 
-<h1>Production records</h1>
+<h1>Sales records</h1>
 
 <p class="lede">
-    Review the daily production registered
-    for {{ bakery.name }}.
+    Review the sales registered for
+    {{ bakery.name }}.
 </p>
 
 <div class="actions">
 
     <a
-        href="{% url 'production:register' %}"
-        class="btn"
-    >
-        Register production
-    </a>
-
-    <a
-        href="{% url 'production:product_list' %}"
-        class="btn btn-secondary"
-    >
-        Manage products
-    </a>
-    <a
         href="{% url 'production:sales_register' %}"
-        class="btn btn-secondary"
+        class="btn"
     >
         Register sale
     </a>
@@ -49,7 +36,9 @@
                 <tr>
                     <th>Product</th>
                     <th>Quantity</th>
-                    <th>Production date</th>
+                    <th>Unit price</th>
+                    <th>Total</th>
+                    <th>Date</th>
                 </tr>
             </thead>
 
@@ -59,8 +48,10 @@
 
                     <tr>
                         <td>{{ record.product.name }}</td>
-                        <td>{{ record.produced_quantity }}</td>
-                        <td>{{ record.production_date }}</td>
+                        <td>{{ record.quantity_sold }}</td>
+                        <td>{{ record.unit_price_at_sale }}</td>
+                        <td>{{ record.total_amount }}</td>
+                        <td>{{ record.sale_timestamp }}</td>
                     </tr>
 
                 {% endfor %}
@@ -74,7 +65,7 @@
         <div class="empty-state">
 
             <p>
-                No production records have been registered yet.
+                No sales have been registered yet.
             </p>
 
         </div>

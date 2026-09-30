@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Register daily production - Crumb{% endblock %}
+{% block title %}Register daily sales - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">Sales</p>
 
-<h1>Register daily production</h1>
+<h1>Register daily sales</h1>
 
 <p class="lede">
-    Record the baked products manufactured by
+    Record baked products sold by
     {{ bakery.name }}.
 </p>
 
@@ -20,8 +20,8 @@
         <h2>No products registered</h2>
 
         <p>
-            Register your first baked product before
-            recording daily production.
+            Register a baked product before
+            recording sales.
         </p>
 
         <a
@@ -49,21 +49,21 @@
 
             {% include "partials/field.html" with field=form.product %}
 
-            {% include "partials/field.html" with field=form.produced_quantity %}
+            {% include "partials/field.html" with field=form.quantity_sold %}
 
-            {% include "partials/field.html" with field=form.production_date %}
+            {% include "partials/field.html" with field=form.sale_timestamp %}
 
             <div class="actions">
 
                 <button type="submit">
-                    Register production
+                    Register sale
                 </button>
 
                 <a
-                    href="{% url 'production:product_create' %}"
+                    href="{% url 'production:sales_list' %}"
                     class="btn btn-secondary"
                 >
-                    Add product
+                    View sales
                 </a>
 
             </div>
@@ -73,16 +73,5 @@
     </div>
 
 {% endif %}
-
-<div class="actions">
-
-    <a
-        href="{% url 'production:list' %}"
-        class="btn btn-secondary"
-    >
-        View production records
-    </a>
-
-</div>
 
 {% endblock %}
