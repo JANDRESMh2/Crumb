@@ -25,6 +25,8 @@
         {% endif %}
 
         {% include "partials/field.html" with field=form.name %}
+        {% include "partials/field.html" with field=form.sku %}
+        {% include "partials/field.html" with field=form.unit_price %}
 
         <div class="actions">
             <button type="submit">

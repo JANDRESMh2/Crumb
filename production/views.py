@@ -34,7 +34,7 @@ def product_create(request):
             try:
                 register_product(
                     bakery=bakery,
-                    name=form.cleaned_data['name'],
+                    **form.cleaned_data,
                 )
             except ValidationError as error:
                 form.add_error('name', error)
@@ -104,7 +104,7 @@ def daily_production_registration(request):
             'bakery': bakery,
             'has_products': Product.objects.filter(
                 bakery=bakery,
-                is_active=True,
+                status=Product.Status.ACTIVE,
             ).exists(),
         },
     )

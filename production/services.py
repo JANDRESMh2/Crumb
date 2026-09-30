@@ -5,14 +5,19 @@ from .models import Product, ProductionRecord
 
 
 @transaction.atomic
-def register_product(*, bakery, name):
+def register_product(
+    *,
+    bakery,
+    name,
+    unit_price,
+    sku=None,
+):
     """
-    Register a baked product in the bakery catalog.
+    Register or reactivate a baked product.
+    """
 
-    Existing active products cannot be duplicated.
-    Inactive products can be reactivated.
-    """
     name = name.strip()
+    sku = sku.strip() if sku else None
 
     if not name:
         raise ValidationError(
@@ -26,18 +31,24 @@ def register_product(*, bakery, name):
 
     if existing_product is not None:
 
-        if existing_product.is_active:
+        if existing_product.status == Product.Status.ACTIVE:
             raise ValidationError(
                 'This product is already registered.'
             )
 
         existing_product.name = name
-        existing_product.is_active = True
+        existing_product.sku = sku
+        existing_product.unit_price = unit_price
+        existing_product.status = Product.Status.ACTIVE
+
+        existing_product.full_clean()
 
         existing_product.save(
             update_fields=[
                 'name',
-                'is_active',
+                'sku',
+                'unit_price',
+                'status',
                 'updated_at',
             ]
         )
@@ -47,6 +58,8 @@ def register_product(*, bakery, name):
     product = Product(
         bakery=bakery,
         name=name,
+        sku=sku,
+        unit_price=unit_price,
     )
 
     product.full_clean()
@@ -60,11 +73,11 @@ def register_daily_production(
     *,
     bakery,
     product,
-    quantity,
+    produced_quantity,
     production_date,
 ):
     """
-    FR12 - Register the daily production of a baked product.
+    FR12 - Register daily production.
     """
 
     if product.bakery_id != bakery.pk:
@@ -73,7 +86,7 @@ def register_daily_production(
             'to this bakery.'
         )
 
-    if not product.is_active:
+    if product.status != Product.Status.ACTIVE:
         raise ValidationError(
             'Inactive products cannot be used '
             'for production registration.'
@@ -82,8 +95,9 @@ def register_daily_production(
     record = ProductionRecord(
         bakery=bakery,
         product=product,
-        quantity=quantity,
+        produced_quantity=produced_quantity,
         production_date=production_date,
+        status=ProductionRecord.Status.COMPLETED,
     )
 
     record.full_clean()

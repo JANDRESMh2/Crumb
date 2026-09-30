@@ -1,4 +1,5 @@
 from django import forms
+from decimal import Decimal
 
 from .models import Product, ProductionRecord
 
@@ -16,6 +17,29 @@ class ProductForm(forms.Form):
         ),
     )
 
+    sku = forms.CharField(
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+            }
+        ),
+    )
+
+    unit_price = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0.00'),
+        widget=forms.NumberInput(
+            attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01',
+            }
+        ),
+    )
+
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.bakery = bakery
@@ -27,7 +51,7 @@ class ProductForm(forms.Form):
             duplicate = Product.objects.filter(
                 bakery=self.bakery,
                 name__iexact=name,
-                is_active=True,
+                status=Product.Status.ACTIVE,
             ).exists()
 
             if duplicate:
@@ -46,14 +70,14 @@ class DailyProductionRegistrationForm(forms.ModelForm):
 
         fields = [
             'product',
-            'quantity',
+            'produced_quantity',
             'production_date',
         ]
 
         labels = {
             'product': 'Product',
-            'quantity': 'Quantity produced',
-            'production_date': 'Production date',
+            'produced_quantity': 'Quantity produced',
+            'production_date': 'Production date and time',
         }
 
         widgets = {
@@ -62,19 +86,19 @@ class DailyProductionRegistrationForm(forms.ModelForm):
                     'class': 'form-select',
                 }
             ),
-            'quantity': forms.NumberInput(
+            'produced_quantity': forms.NumberInput(
                 attrs={
                     'class': 'form-control',
-                    'min': '1',
-                    'step': '1',
+                    'min': '0.01',
+                    'step': '0.01',
                 }
             ),
-            'production_date': forms.DateInput(
+            'production_date': forms.DateTimeInput(
                 attrs={
                     'class': 'form-control',
-                    'type': 'date',
+                    'type': 'datetime-local',
                 },
-                format='%Y-%m-%d',
+                format='%Y-%m-%dT%H:%M',
             ),
         }
 
@@ -84,7 +108,7 @@ class DailyProductionRegistrationForm(forms.ModelForm):
         self.fields['product'].queryset = (
             Product.objects.filter(
                 bakery=bakery,
-                is_active=True,
+                status=Product.Status.ACTIVE,
             )
             if bakery is not None
             else Product.objects.none()

@@ -1,4 +1,4 @@
-from datetime import date
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -14,6 +14,7 @@ from .services import (
     register_product,
 )
 
+
 class DailyProductionRegistrationTests(TestCase):
 
     def setUp(self):
@@ -25,23 +26,40 @@ class DailyProductionRegistrationTests(TestCase):
         self.product = register_product(
             bakery=self.bakery,
             name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
         )
 
     def test_register_daily_production(self):
         """FR12 - A valid production record is created."""
 
+        production_date = timezone.now()
+
         record = register_daily_production(
             bakery=self.bakery,
             product=self.product,
-            quantity=50,
-            production_date=date(2026, 9, 23),
+            produced_quantity=Decimal('50.00'),
+            production_date=production_date,
         )
 
-        self.assertEqual(record.quantity, 50)
+        self.assertEqual(
+            record.produced_quantity,
+            Decimal('50.00'),
+        )
 
         self.assertEqual(
             record.product,
             self.product,
+        )
+
+        self.assertEqual(
+            record.bakery,
+            self.bakery,
+        )
+
+        self.assertEqual(
+            record.status,
+            ProductionRecord.Status.COMPLETED,
         )
 
         self.assertEqual(
@@ -56,8 +74,8 @@ class DailyProductionRegistrationTests(TestCase):
             register_daily_production(
                 bakery=self.bakery,
                 product=self.product,
-                quantity=0,
-                production_date=date(2026, 9, 23),
+                produced_quantity=Decimal('0.00'),
+                production_date=timezone.now(),
             )
 
         self.assertEqual(
@@ -77,23 +95,36 @@ class DailyProductionRegistrationTests(TestCase):
             register_daily_production(
                 bakery=another_bakery,
                 product=self.product,
-                quantity=10,
-                production_date=date(2026, 9, 23),
+                produced_quantity=Decimal('10.00'),
+                production_date=timezone.now(),
             )
+
+        self.assertEqual(
+            ProductionRecord.objects.count(),
+            0,
+        )
 
     def test_inactive_product_is_rejected(self):
         """FR12 - Inactive products cannot be produced."""
 
-        self.product.is_active = False
-        self.product.save()
+        self.product.status = Product.Status.INACTIVE
+
+        self.product.save(
+            update_fields=['status']
+        )
 
         with self.assertRaises(ValidationError):
             register_daily_production(
                 bakery=self.bakery,
                 product=self.product,
-                quantity=10,
-                production_date=date(2026, 9, 23),
+                produced_quantity=Decimal('10.00'),
+                production_date=timezone.now(),
             )
+
+        self.assertEqual(
+            ProductionRecord.objects.count(),
+            0,
+        )
 
     def test_form_only_displays_active_products(self):
         """FR12 - The form excludes inactive products."""
@@ -101,10 +132,15 @@ class DailyProductionRegistrationTests(TestCase):
         inactive_product = register_product(
             bakery=self.bakery,
             name='Baguette',
+            sku='BAG-001',
+            unit_price=Decimal('4000.00'),
         )
 
-        inactive_product.is_active = False
-        inactive_product.save()
+        inactive_product.status = Product.Status.INACTIVE
+
+        inactive_product.save(
+            update_fields=['status']
+        )
 
         form = DailyProductionRegistrationForm(
             bakery=self.bakery,
@@ -123,31 +159,106 @@ class DailyProductionRegistrationTests(TestCase):
         )
 
     def test_duplicate_product_is_rejected(self):
-      """An active product cannot be registered twice."""
+        """An active product cannot be registered twice."""
 
-      with self.assertRaises(ValidationError):
-          register_product(
-              bakery=self.bakery,
-              name='Croissant',
-          )
+        with self.assertRaises(ValidationError):
+            register_product(
+                bakery=self.bakery,
+                name='Croissant',
+                sku='CRO-002',
+                unit_price=Decimal('5500.00'),
+            )
 
-      self.assertEqual(Product.objects.count(), 1)
-
+        self.assertEqual(
+            Product.objects.count(),
+            1,
+        )
 
     def test_inactive_product_is_reactivated(self):
         """Registering an inactive product reactivates it."""
 
-        self.product.is_active = False
-        self.product.save()
+        self.product.status = Product.Status.INACTIVE
+
+        self.product.save(
+            update_fields=['status']
+        )
 
         reactivated = register_product(
             bakery=self.bakery,
             name='Croissant',
+            sku='CRO-NEW',
+            unit_price=Decimal('5500.00'),
         )
 
-        self.assertEqual(reactivated.pk, self.product.pk)
-        self.assertTrue(reactivated.is_active)
-        self.assertEqual(Product.objects.count(), 1)
+        self.assertEqual(
+            reactivated.pk,
+            self.product.pk,
+        )
+
+        self.assertEqual(
+            reactivated.status,
+            Product.Status.ACTIVE,
+        )
+
+        self.assertEqual(
+            reactivated.sku,
+            'CRO-NEW',
+        )
+
+        self.assertEqual(
+            reactivated.unit_price,
+            Decimal('5500.00'),
+        )
+
+        self.assertEqual(
+            Product.objects.count(),
+            1,
+        )
+
+    def test_product_stores_deliverable_1_fields(self):
+        """Product stores the additional Deliverable 1 data."""
+
+        self.assertEqual(
+            self.product.sku,
+            'CRO-001',
+        )
+
+        self.assertEqual(
+            self.product.unit_price,
+            Decimal('5000.00'),
+        )
+
+        self.assertEqual(
+            self.product.status,
+            Product.Status.ACTIVE,
+        )
+
+    def test_production_record_defaults_to_completed(self):
+        """A new production record starts as completed."""
+
+        record = register_daily_production(
+            bakery=self.bakery,
+            product=self.product,
+            produced_quantity=Decimal('25.00'),
+            production_date=timezone.now(),
+        )
+
+        self.assertEqual(
+            record.status,
+            ProductionRecord.Status.COMPLETED,
+        )
+
+        self.assertIsNone(
+            record.user,
+        )
+
+        self.assertIsNone(
+            record.expiration_date,
+        )
+
+        self.assertIsNone(
+            record.notes,
+        )
 
 
 class ProductionViewTests(TestCase):
@@ -161,6 +272,8 @@ class ProductionViewTests(TestCase):
         self.product = register_product(
             bakery=self.bakery,
             name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
         )
 
     def test_production_page_loads(self):
@@ -170,7 +283,10 @@ class ProductionViewTests(TestCase):
             reverse('production:register')
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
 
         self.assertContains(
             response,
@@ -182,7 +298,11 @@ class ProductionViewTests(TestCase):
 
         response = self.client.post(
             reverse('production:product_create'),
-            {'name': 'Pandebono'},
+            {
+                'name': 'Pandebono',
+                'sku': 'PAN-001',
+                'unit_price': '3500.00',
+            },
         )
 
         self.assertRedirects(
@@ -190,22 +310,45 @@ class ProductionViewTests(TestCase):
             reverse('production:register'),
         )
 
-        self.assertTrue(
-            Product.objects.filter(
-                bakery=self.bakery,
-                name='Pandebono',
-            ).exists()
+        product = Product.objects.get(
+            bakery=self.bakery,
+            name='Pandebono',
+        )
+
+        self.assertEqual(
+            product.sku,
+            'PAN-001',
+        )
+
+        self.assertEqual(
+            product.unit_price,
+            Decimal('3500.00'),
+        )
+
+        self.assertEqual(
+            product.status,
+            Product.Status.ACTIVE,
         )
 
     def test_register_production_from_web(self):
         """FR12 - Production can be registered through the interface."""
 
+        production_date = (
+            timezone.localtime()
+            .replace(
+                second=0,
+                microsecond=0,
+            )
+        )
+
         response = self.client.post(
             reverse('production:register'),
             {
                 'product': self.product.pk,
-                'quantity': 50,
-                'production_date': timezone.localdate().isoformat(),
+                'produced_quantity': '50.00',
+                'production_date': production_date.strftime(
+                    '%Y-%m-%dT%H:%M'
+                ),
             },
         )
 
@@ -214,32 +357,55 @@ class ProductionViewTests(TestCase):
             reverse('production:list'),
         )
 
-        self.assertTrue(
-            ProductionRecord.objects.filter(
-                bakery=self.bakery,
-                product=self.product,
-                quantity=50,
-            ).exists()
+        record = ProductionRecord.objects.get(
+            bakery=self.bakery,
+            product=self.product,
+        )
+
+        self.assertEqual(
+            record.produced_quantity,
+            Decimal('50.00'),
+        )
+
+        self.assertEqual(
+            record.status,
+            ProductionRecord.Status.COMPLETED,
         )
 
     def test_zero_quantity_is_rejected(self):
         """FR12 - The web form rejects zero production."""
 
+        production_date = (
+            timezone.localtime()
+            .replace(
+                second=0,
+                microsecond=0,
+            )
+        )
+
         response = self.client.post(
             reverse('production:register'),
             {
                 'product': self.product.pk,
-                'quantity': 0,
-                'production_date': timezone.localdate().isoformat(),
+                'produced_quantity': '0.00',
+                'production_date': production_date.strftime(
+                    '%Y-%m-%dT%H:%M'
+                ),
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
 
         self.assertFormError(
             response.context['form'],
-            'quantity',
-            'Ensure this value is greater than or equal to 1.',
+            'produced_quantity',
+            (
+                'Ensure this value is greater than '
+                'or equal to 0.01.'
+            ),
         )
 
         self.assertEqual(
@@ -248,7 +414,7 @@ class ProductionViewTests(TestCase):
         )
 
     def test_product_from_another_bakery_is_rejected(self):
-        """FR12 - The form rejects products belonging to another bakery."""
+        """FR12 - The form rejects products from another bakery."""
 
         another_bakery = Bakery.objects.create(
             name='Another Bakery',
@@ -258,18 +424,33 @@ class ProductionViewTests(TestCase):
         another_product = register_product(
             bakery=another_bakery,
             name='Brownie',
+            sku='BRO-001',
+            unit_price=Decimal('6000.00'),
+        )
+
+        production_date = (
+            timezone.localtime()
+            .replace(
+                second=0,
+                microsecond=0,
+            )
         )
 
         response = self.client.post(
             reverse('production:register'),
             {
                 'product': another_product.pk,
-                'quantity': 10,
-                'production_date': timezone.localdate().isoformat(),
+                'produced_quantity': '10.00',
+                'production_date': production_date.strftime(
+                    '%Y-%m-%dT%H:%M'
+                ),
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
 
         self.assertTrue(
             response.context['form'].errors['product']
@@ -286,16 +467,25 @@ class ProductionViewTests(TestCase):
         register_daily_production(
             bakery=self.bakery,
             product=self.product,
-            quantity=50,
-            production_date=timezone.localdate(),
+            produced_quantity=Decimal('50.00'),
+            production_date=timezone.now(),
         )
 
         response = self.client.get(
             reverse('production:list')
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
 
-        self.assertContains(response, 'Croissant')
+        self.assertContains(
+            response,
+            'Croissant',
+        )
 
-        self.assertContains(response, '50')
+        self.assertContains(
+            response,
+            '50',
+        )
