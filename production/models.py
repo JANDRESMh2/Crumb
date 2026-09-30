@@ -176,3 +176,95 @@ class ProductionRecord(models.Model):
             f'{self.produced_quantity} '
             f'on {self.production_date:%Y-%m-%d %H:%M}'
         )
+
+class SalesRecord(models.Model):
+    """FR13 - Daily sales registration."""
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    bakery = models.ForeignKey(
+        Bakery,
+        on_delete=models.PROTECT,
+        related_name='sales_records',
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='sales_records',
+    )
+
+    # Deliverable 1 requires the responsible seller.
+    # Nullable until FR31 provides application user management.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales_records',
+    )
+
+    quantity_sold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01')),
+        ],
+    )
+
+    unit_price_at_sale = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.00')),
+        ],
+    )
+
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.00')),
+        ],
+    )
+
+    sale_timestamp = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    class Meta:
+        ordering = [
+            '-sale_timestamp',
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    quantity_sold__gt=0,
+                ),
+                name='sales_quantity_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    unit_price_at_sale__gte=0,
+                ),
+                name='sales_unit_price_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    total_amount__gte=0,
+                ),
+                name='sales_total_non_negative',
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f'{self.product.name}: '
+            f'{self.quantity_sold} sold '
+            f'on {self.sale_timestamp:%Y-%m-%d %H:%M}'
+        )

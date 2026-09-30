@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Register daily sales - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Sales</p>
+
+<h1>Register daily sales</h1>
+
+<p class="lede">
+    Record baked products sold by
+    {{ bakery.name }}.
+</p>
+
+{% if not has_products %}
+
+    <div class="card">
+
+        <h2>No products registered</h2>
+
+        <p>
+            Register a baked product before
+            recording sales.
+        </p>
+
+        <a
+            href="{% url 'production:product_create' %}"
+            class="btn"
+        >
+            Register product
+        </a>
+
+    </div>
+
+{% else %}
+
+    <div class="card">
+
+        <form method="post" novalidate>
+
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="form-errors">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% include "partials/field.html" with field=form.product %}
+
+            {% include "partials/field.html" with field=form.quantity_sold %}
+
+            {% include "partials/field.html" with field=form.sale_timestamp %}
+
+            <div class="actions">
+
+                <button type="submit">
+                    Register sale
+                </button>
+
+                <a
+                    href="{% url 'production:sales_list' %}"
+                    class="btn btn-secondary"
+                >
+                    View sales
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}
