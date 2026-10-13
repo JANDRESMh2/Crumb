@@ -53,14 +53,23 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 | FR09 | Business profile setup (bakery information) | Available |
 | FR10 | Low stock threshold configuration | Available |
 | FR11 | Low stock alerts | Available |
+| FR12 | Daily production registration | Available |
+| FR13 | Daily sales registration | Available |
+| FR14 | Automatic unsold product calculation | Available |
 | FR15 | Inventory import from Excel/spreadsheet | Available |
 | FR17 | Barcode scanning for ingredient registration | Available |
 | FR18 | Auto-fill product data from barcode scan | Available |
+| FR21 | Import error validation | Available |
 | FR22 | Search functionality | Available |
+| FR23 | Manual inventory correction | Available |
 | FR24 | Expiration date range filter | Available |
+| FR25 | History tracking (production and sales) | Available |
+| FR30 | Business profile editing | Available |
+| FR31a | User registration | Available |
+| FR31b | User authentication | Available |
 
-The eight requirements committed for Sprint 2 are available: FR06, FR08, FR10,
-FR11, FR15, FR17, FR18 and FR24.
+The requirements committed for Sprint 3 are available: FR12, FR13, FR14, FR21,
+FR23, FR25, FR30 and FR31a/b.
 
 The complete prioritized backlog (FR01–FR38, MoSCoW) lives in the
 [project wiki](https://github.com/JANDRESMh2/Crumb/wiki).
@@ -171,6 +180,7 @@ Crumb/
 │   ├── views.py        # HTTP layer only
 │   ├── migrations/     # Schema plus the FR02 unit-seeding data migration
 │   └── templates/
+├── production/         # Products, daily production and sales, history (FR12, FR13, FR25)
 ├── templates/          # base.html design system and shared partials
 ├── manage.py
 └── requirements.txt
@@ -230,9 +240,13 @@ the backlog in the wiki to the implementation without searching:
 | FR09 | `bakery/models.py`, `bakery/services.py`, `bakery/views.py` |
 | FR10 | `inventory/models.py` (`AlertConfiguration`), `inventory/forms.py` (`LowStockThresholdConfigurationForm`), `inventory/services.py`, `inventory/views.py`, `inventory/templates/inventory/low_stock_threshold_configuration.html` |
 | FR11 | `inventory/services.py` (`low_stock_alerts`), `inventory/views.py`, `inventory/templates/inventory/ingredient_list.html` |
+| FR12 | `production/models.py` (`Product`, `ProductionRecord`), `production/forms.py` (`DailyProductionRegistrationForm`), `production/services.py` (`register_product`, `register_daily_production`), `production/views.py` (`daily_production_registration`, `production_list`), `production/templates/production/production_form.html`, `production/templates/production/production_list.html` |
+| FR13 | `production/models.py` (`SalesRecord`), `production/forms.py` (`DailySalesRegistrationForm`), `production/services.py` (`register_daily_sale`), `production/views.py` (`daily_sales_registration`, `sales_list`), `production/templates/production/sales_form.html`, `production/templates/production/sales_list.html` |
 | FR17 | `inventory/models.py` (`BarcodeIdentifier`), `inventory/forms.py`, `inventory/services.py`, `inventory/views.py` |
 | FR22 | `inventory/views.py` (the `q` query parameter on the catalog) |
+| FR23 | `inventory/forms.py` (`ManualInventoryCorrectionForm`), `inventory/services.py` (`register_inventory_correction`), `inventory/views.py` (`manual_inventory_correction`), `inventory/templates/inventory/manual_inventory_correction.html` |
 | FR24 | `inventory/views.py` (the `start_date` and `end_date` query parameters), `inventory/templates/inventory/ingredient_list.html` |
+| FR25 | `production/services.py` (`build_history_tracking`), `production/views.py` (`history_tracking`), `production/templates/production/history_tracking.html` |
 
 ---
 
@@ -270,9 +284,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 **The inventory page is empty and I cannot register anything.** The bakery
 profile has not been created yet. Go to `/bakery/setup/` first.
 
-**Setting up the bakery a second time fails.** By design: Crumb currently serves
-one bakery per deployment, because user accounts (FR31) are not implemented yet.
-Editing the existing profile is FR30.
+**Setting up the bakery a second time fails.** By design: Crumb serves one
+bakery profile per deployment. To change its details, edit the existing profile
+instead (FR30).
 
 **`no such table` after pulling changes.** New migrations arrived with the code.
 Run `python manage.py migrate` again.
@@ -284,8 +298,9 @@ Run `python manage.py migrate` again.
 | Sprint | Scope |
 |---|---|
 | Sprint 1 — Done | Ingredient CRUD, units of measure, inventory viewing, search, stock-in, bakery profile |
-| Sprint 2 — In progress | Stock consumption, low-stock thresholds and alerts, expiration alerts and date filtering, and barcode registration are available; barcode auto-fill and user registration/authentication remain pending |
-| Future sprints — Planned | Production and sales records, spreadsheet import and validation, inventory correction, history, reports and exports, advanced ingredient registration, account controls and analytics |
+| Sprint 2 — Done | Stock consumption, low-stock thresholds and alerts, expiration alerts and date filtering, spreadsheet import, barcode registration and barcode auto-fill |
+| Sprint 3 — Done | Production and sales registration, unsold product calculation, import error validation, inventory correction, production and sales history, business profile editing and user accounts |
+| Future sprints — Planned | Daily closing, reports and exports, activity log, notification preferences and analytics |
 
 ---
 
