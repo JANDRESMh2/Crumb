@@ -24,6 +24,11 @@ urlpatterns = [
         views.low_stock_threshold_configuration,
         name='low_stock_threshold_configuration',
     ),
+    path(
+        'ingredients/<uuid:ingredient_id>/correction/',
+        views.manual_inventory_correction,
+        name='manual_inventory_correction',
+    ),
     path('ingredients/import/', views.ingredient_import_view, name='import'),
     path('ingredients/import/template/', views.download_import_template_view, name='import_template'),
 ]

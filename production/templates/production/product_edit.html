@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Edit product - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Edit product</h1>
+
+<p class="lede">
+    Update {{ product.name }}.
+</p>
+
+<div class="card">
+
+    <form method="post" novalidate>
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {% include "partials/field.html" with field=form.name %}
+
+        {% include "partials/field.html" with field=form.sku %}
+
+        {% include "partials/field.html" with field=form.unit_price %}
+
+        {% include "partials/field.html" with field=form.status %}
+
+        <div class="actions">
+
+            <button type="submit">
+                Save changes
+            </button>
+
+            <a
+                href="{% url 'production:product_list' %}"
+                class="btn btn-secondary"
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

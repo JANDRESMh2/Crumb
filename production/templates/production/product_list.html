@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Products</h1>
+
+<p class="lede">
+    Manage the baked products registered for
+    {{ bakery.name }}.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:product_create' %}"
+        class="btn"
+    >
+        Add product
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    {% if products %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Unit price</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for product in products %}
+
+                    <tr>
+                        <td>{{ product.name }}</td>
+
+                        <td>
+                            {{ product.sku|default:"—" }}
+                        </td>
+
+                        <td>
+                            {{ product.unit_price }}
+                        </td>
+
+                        <td>
+                            {{ product.get_status_display }}
+                        </td>
+
+                        <td>
+                            <a
+                                href="{% url 'production:product_edit' product.id %}"
+                                class="btn btn-secondary"
+                            >
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>No products have been registered yet.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

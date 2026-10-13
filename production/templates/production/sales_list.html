@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Sales records - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Sales</p>
+
+<h1>Sales records</h1>
+
+<p class="lede">
+    Review the sales registered for
+    {{ bakery.name }}.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:sales_register' %}"
+        class="btn"
+    >
+        Register sale
+    </a>
+
+    <a
+        href="{% url 'production:history_tracking' %}"
+        class="btn btn-secondary"
+    >
+        View history
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    {% if records %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit price</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for record in records %}
+
+                    <tr>
+                        <td>{{ record.product.name }}</td>
+                        <td>{{ record.quantity_sold }}</td>
+                        <td>{{ record.unit_price_at_sale }}</td>
+                        <td>{{ record.total_amount }}</td>
+                        <td>{{ record.sale_timestamp }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <p>
+                No sales have been registered yet.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

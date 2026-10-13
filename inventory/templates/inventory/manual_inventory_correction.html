@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Correct inventory - Crumb{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Inventory</p>
+
+<h1>Correct inventory</h1>
+
+<p class="lede">
+  Replace the recorded quantity of {{ ingredient.name }} with the real quantity
+  counted in the bakery. Every correction is logged with its date, user and reason.
+</p>
+
+<div class="card">
+
+  <p>
+    Current quantity:
+    <strong>{{ ingredient.current_quantity }} {{ ingredient.unit.abbreviation }}</strong>
+  </p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% include "partials/field.html" with field=form.new_quantity %}
+    {% include "partials/field.html" with field=form.reason %}
+
+    <div class="actions">
+      <button type="submit">Save correction</button>
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">Cancel</a>
+    </div>
+  </form>
+
+</div>
+
+<div class="card">
+  <h2>Correction history</h2>
+
+  {% if corrections %}
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Before</th>
+        <th>After</th>
+        <th>Reason</th>
+        <th>User</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for correction in corrections %}
+      <tr>
+        <td>{{ correction.movement_date|date:"Y-m-d H:i" }}</td>
+        <td>{{ correction.previous_quantity }} {{ ingredient.unit.abbreviation }}</td>
+        <td>{{ correction.new_quantity }} {{ ingredient.unit.abbreviation }}</td>
+        <td>{{ correction.note }}</td>
+        <td>{{ correction.user.get_username|default:"&#8212;" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No corrections have been recorded for this ingredient yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
