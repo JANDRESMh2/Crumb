@@ -5,13 +5,20 @@
 #   python -m venv .venv
 #   pip install -r requirements.txt
 #
-# Only direct dependencies are listed first; the rest are Django's own runtime
+# Only direct dependencies are listed first; the rest are their own runtime
 # requirements, pinned so every machine builds the same environment.
 
 Django==6.0.7
+pandas==3.0.6
+openpyxl==3.1.5
 
+# Django
 asgiref==3.12.1
 sqlparse==0.5.5
 tzdata==2025.3
-pandas
-openpyxl
+
+# pandas and openpyxl
+et_xmlfile==2.0.0
+numpy==2.5.4
+python-dateutil==2.9.0.post0
+six==1.17.0
