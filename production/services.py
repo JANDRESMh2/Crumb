@@ -167,3 +167,122 @@ def register_daily_sale(
     record.save()
 
     return record
+
+HISTORY_RECORD_TYPES = ('all', 'production', 'sales')
+
+
+def build_history_tracking(
+    *,
+    bakery,
+    record_type='all',
+    product=None,
+    start_date=None,
+    end_date=None,
+):
+    """
+    FR25 - Build the combined history of production and sales records.
+
+    Returns the entries newest first, each one tagged with its kind, plus
+    the totals of the filtered entries.
+    """
+
+    if record_type not in HISTORY_RECORD_TYPES:
+        raise ValidationError('Unknown record type.')
+
+    if start_date and end_date and start_date > end_date:
+        raise ValidationError(
+            'The start date cannot be later than the end date.'
+        )
+
+    entries = []
+
+    if record_type in ('all', 'production'):
+        production = (
+            ProductionRecord.objects
+            .filter(bakery=bakery)
+            .select_related('product', 'user')
+        )
+        if product is not None:
+            production = production.filter(product=product)
+        if start_date:
+            production = production.filter(
+                production_date__date__gte=start_date
+            )
+        if end_date:
+            production = production.filter(
+                production_date__date__lte=end_date
+            )
+
+        entries.extend(
+            {
+                'kind': 'production',
+                'date': record.production_date,
+                'product': record.product,
+                'quantity': record.produced_quantity,
+                'total_amount': None,
+                'status': record.get_status_display(),
+                'user': record.user,
+                'record': record,
+            }
+            for record in production
+        )
+
+    if record_type in ('all', 'sales'):
+        sales = (
+            SalesRecord.objects
+            .filter(bakery=bakery)
+            .select_related('product', 'user')
+        )
+        if product is not None:
+            sales = sales.filter(product=product)
+        if start_date:
+            sales = sales.filter(sale_timestamp__date__gte=start_date)
+        if end_date:
+            sales = sales.filter(sale_timestamp__date__lte=end_date)
+
+        entries.extend(
+            {
+                'kind': 'sale',
+                'date': record.sale_timestamp,
+                'product': record.product,
+                'quantity': record.quantity_sold,
+                'total_amount': record.total_amount,
+                'status': None,
+                'user': record.user,
+                'record': record,
+            }
+            for record in sales
+        )
+
+    entries.sort(key=lambda entry: entry['date'], reverse=True)
+
+    totals = {
+        'produced_quantity': sum(
+            (
+                entry['quantity']
+                for entry in entries
+                if entry['kind'] == 'production'
+                and entry['record'].status
+                == ProductionRecord.Status.COMPLETED
+            ),
+            Decimal('0'),
+        ),
+        'sold_quantity': sum(
+            (
+                entry['quantity']
+                for entry in entries
+                if entry['kind'] == 'sale'
+            ),
+            Decimal('0'),
+        ),
+        'sales_amount': sum(
+            (
+                entry['total_amount']
+                for entry in entries
+                if entry['kind'] == 'sale'
+            ),
+            Decimal('0'),
+        ),
+    }
+
+    return entries, totals

@@ -14,6 +14,7 @@ from .forms import (
 )
 from .models import Product, ProductionRecord, SalesRecord
 from .services import (
+    build_history_tracking,
     register_daily_production,
     register_daily_sale,
     register_product,
@@ -823,3 +824,189 @@ class SalesViewTests(TestCase):
             record.total_amount,
             Decimal('10000.00'),
         )
+
+class ProductionSalesHistoryTests(TestCase):
+    """FR25 - view the history of production and sales records."""
+
+    def setUp(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+        self.croissant = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+        self.bread = register_product(
+            bakery=self.bakery,
+            name='Bread',
+            sku='BRE-001',
+            unit_price=Decimal('2000.00'),
+        )
+
+        now = timezone.now()
+        self.old_date = now - timezone.timedelta(days=10)
+        self.recent_date = now - timezone.timedelta(days=1)
+
+        self.old_production = register_daily_production(
+            bakery=self.bakery,
+            product=self.croissant,
+            produced_quantity=Decimal('40.00'),
+            production_date=self.old_date,
+        )
+        self.recent_production = register_daily_production(
+            bakery=self.bakery,
+            product=self.bread,
+            produced_quantity=Decimal('20.00'),
+            production_date=self.recent_date,
+        )
+        self.sale = register_daily_sale(
+            bakery=self.bakery,
+            product=self.croissant,
+            quantity_sold=Decimal('3.00'),
+            sale_timestamp=now,
+        )
+
+    def test_history_combines_records_newest_first(self):
+        entries, totals = build_history_tracking(
+            bakery=self.bakery,
+        )
+
+        self.assertEqual(
+            [entry['record'] for entry in entries],
+            [self.sale, self.recent_production, self.old_production],
+        )
+        self.assertEqual(totals['produced_quantity'], Decimal('60.00'))
+        self.assertEqual(totals['sold_quantity'], Decimal('3.00'))
+        self.assertEqual(totals['sales_amount'], Decimal('15000.00'))
+
+    def test_history_filters_by_record_type(self):
+        entries, _ = build_history_tracking(
+            bakery=self.bakery,
+            record_type='sales',
+        )
+        self.assertEqual([e['kind'] for e in entries], ['sale'])
+
+        entries, _ = build_history_tracking(
+            bakery=self.bakery,
+            record_type='production',
+        )
+        self.assertEqual(
+            [e['kind'] for e in entries],
+            ['production', 'production'],
+        )
+
+    def test_history_filters_by_product(self):
+        entries, _ = build_history_tracking(
+            bakery=self.bakery,
+            product=self.croissant,
+        )
+        self.assertEqual(
+            [entry['record'] for entry in entries],
+            [self.sale, self.old_production],
+        )
+
+    def test_history_filters_by_date_range(self):
+        entries, _ = build_history_tracking(
+            bakery=self.bakery,
+            start_date=self.recent_date.date(),
+            end_date=self.recent_date.date(),
+        )
+        self.assertEqual(
+            [entry['record'] for entry in entries],
+            [self.recent_production],
+        )
+
+    def test_history_rejects_inverted_date_range(self):
+        with self.assertRaises(ValidationError):
+            build_history_tracking(
+                bakery=self.bakery,
+                start_date=self.recent_date.date(),
+                end_date=self.old_date.date(),
+            )
+
+    def test_cancelled_production_is_not_counted_in_totals(self):
+        self.old_production.status = ProductionRecord.Status.CANCELLED
+        self.old_production.save()
+
+        entries, totals = build_history_tracking(
+            bakery=self.bakery,
+        )
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(totals['produced_quantity'], Decimal('20.00'))
+
+    def test_history_excludes_other_bakeries(self):
+        other_bakery = Bakery.objects.create(
+            name='Other Bakery',
+            address='Other Address',
+        )
+        other_product = register_product(
+            bakery=other_bakery,
+            name='Muffin',
+            sku='MUF-001',
+            unit_price=Decimal('1000.00'),
+        )
+        register_daily_production(
+            bakery=other_bakery,
+            product=other_product,
+            produced_quantity=Decimal('5.00'),
+            production_date=timezone.now(),
+        )
+
+        entries, _ = build_history_tracking(bakery=self.bakery)
+        self.assertNotIn(
+            other_product,
+            [entry['product'] for entry in entries],
+        )
+
+    def test_history_view_lists_records(self):
+        response = self.client.get(reverse('production:history_tracking'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Croissant')
+        self.assertContains(response, 'Bread')
+        self.assertEqual(len(response.context['entries']), 3)
+
+    def test_history_view_applies_filters(self):
+        response = self.client.get(
+            reverse('production:history_tracking'),
+            {'type': 'sales', 'product': str(self.croissant.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [entry['record'] for entry in response.context['entries']],
+            [self.sale],
+        )
+
+    def test_history_view_reports_inverted_date_range(self):
+        response = self.client.get(
+            reverse('production:history_tracking'),
+            {'start_date': '2026-02-10', 'end_date': '2026-02-01'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['entries'], [])
+        self.assertContains(
+            response,
+            'The start date cannot be later than the end date.',
+        )
+
+    def test_history_view_ignores_unknown_product_and_type(self):
+        response = self.client.get(
+            reverse('production:history_tracking'),
+            {'type': 'bogus', 'product': 'not-a-uuid'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['entries']), 3)
+
+    def test_history_view_redirects_without_bakery(self):
+        SalesRecord.objects.all().delete()
+        ProductionRecord.objects.all().delete()
+        Product.objects.all().delete()
+        Bakery.objects.all().delete()
+        response = self.client.get(reverse('production:history_tracking'))
+        self.assertRedirects(response, reverse('bakery:setup'))
