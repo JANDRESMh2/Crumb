@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Production and sales history - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Production and sales history</h1>
+
+<p class="lede">
+    Every production and sale registered for {{ bakery.name }},
+    newest first.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:list' %}"
+        class="btn btn-secondary"
+    >
+        Production records
+    </a>
+
+    <a
+        href="{% url 'production:sales_list' %}"
+        class="btn btn-secondary"
+    >
+        Sales records
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    <form method="get" role="search">
+
+        <div class="field">
+            <label for="history-type">Record type</label>
+            <select class="form-control" id="history-type" name="type">
+                <option value="all" {% if record_type == 'all' %}selected{% endif %}>
+                    Production and sales
+                </option>
+                <option value="production" {% if record_type == 'production' %}selected{% endif %}>
+                    Production only
+                </option>
+                <option value="sales" {% if record_type == 'sales' %}selected{% endif %}>
+                    Sales only
+                </option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="history-product">Product</label>
+            <select class="form-control" id="history-product" name="product">
+                <option value="">All products</option>
+                {% for product in products %}
+                    <option
+                        value="{{ product.pk }}"
+                        {% if product_id == product.pk|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ product.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="history-start-date">From</label>
+            <input
+                class="form-control"
+                id="history-start-date"
+                name="start_date"
+                type="date"
+                value="{{ start_date }}"
+            >
+        </div>
+
+        <div class="field">
+            <label for="history-end-date">To</label>
+            <input
+                class="form-control"
+                id="history-end-date"
+                name="end_date"
+                type="date"
+                value="{{ end_date }}"
+            >
+        </div>
+
+        <button type="submit">Filter</button>
+
+        {% if has_filters %}
+            <a class="btn btn-secondary" href="{% url 'production:history_tracking' %}">
+                Clear filters
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% if entries %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Registered by</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for entry in entries %}
+
+                    <tr>
+                        <td>{{ entry.date }}</td>
+                        <td>
+                            {% if entry.kind == 'production' %}
+                                Production
+                                {% if entry.status != 'Completed' %}({{ entry.status }}){% endif %}
+                            {% else %}
+                                Sale
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.product.name }}</td>
+                        <td>{{ entry.quantity }}</td>
+                        <td>{% if entry.total_amount is not None %}{{ entry.total_amount }}{% else %}&mdash;{% endif %}</td>
+                        <td>{{ entry.user|default:"—" }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <th colspan="3">Totals</th>
+                    <td colspan="3">
+                        Produced: {{ totals.produced_quantity }}
+                        &middot; Sold: {{ totals.sold_quantity }}
+                        &middot; Sales amount: {{ totals.sales_amount }}
+                    </td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+    {% elif has_filters %}
+
+        <div class="empty-state">
+            <p>No records match the selected filters.</p>
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>No production or sales have been registered yet.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

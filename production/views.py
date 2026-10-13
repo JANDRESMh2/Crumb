@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import (
@@ -6,6 +8,7 @@ from django.shortcuts import (
     render,
 )
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from bakery.services import get_current_bakery
 
@@ -17,6 +20,8 @@ from .forms import (
 )
 from .models import Product, ProductionRecord, SalesRecord
 from .services import (
+    HISTORY_RECORD_TYPES,
+    build_history_tracking,
     register_daily_production,
     register_daily_sale,
     register_product,
@@ -297,3 +302,71 @@ def product_edit(request, product_id):
             'bakery': bakery,
         },
     )
+
+def history_tracking(request):
+    """FR25 - view the history of production and sales records."""
+
+    bakery = get_current_bakery()
+
+    if bakery is None:
+        return redirect('bakery:setup')
+
+    record_type = request.GET.get('type', 'all').strip()
+    product_id = request.GET.get('product', '').strip()
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+
+    if record_type not in HISTORY_RECORD_TYPES:
+        record_type = 'all'
+
+    products = Product.objects.filter(bakery=bakery).order_by('name')
+
+    product = None
+    if product_id and _is_uuid(product_id):
+        product = products.filter(pk=product_id).first()
+    if product is None:
+        product_id = ''
+
+    try:
+        entries, totals = build_history_tracking(
+            bakery=bakery,
+            record_type=record_type,
+            product=product,
+            start_date=parse_date(start_date) if start_date else None,
+            end_date=parse_date(end_date) if end_date else None,
+        )
+    except (ValidationError, ValueError) as error:
+        messages.error(
+            request,
+            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+        )
+        entries, totals = [], None
+
+    return render(
+        request,
+        'production/history_tracking.html',
+        {
+            'bakery': bakery,
+            'entries': entries,
+            'totals': totals,
+            'products': products,
+            'record_type': record_type,
+            'product_id': product_id,
+            'start_date': start_date,
+            'end_date': end_date,
+            'has_filters': bool(
+                record_type != 'all'
+                or product_id
+                or start_date
+                or end_date
+            ),
+        },
+    )
+
+
+def _is_uuid(value):
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True

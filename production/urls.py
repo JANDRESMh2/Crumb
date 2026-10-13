@@ -36,6 +36,11 @@ urlpatterns = [
         name='sales_register',
     ),
     path(
+        'history-tracking/',
+        views.history_tracking,
+        name='history_tracking',
+    ),
+    path(
         'sales/',
         views.sales_list,
         name='sales_list',
