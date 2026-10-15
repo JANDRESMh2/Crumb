@@ -14,11 +14,62 @@ from .forms import (
 )
 from .models import Product, ProductionRecord, SalesRecord
 from .services import (
+    build_daily_unsold_products,
     build_history_tracking,
     register_daily_production,
     register_daily_sale,
     register_product,
 )
+
+
+class DailyUnsoldCalculationTests(TestCase):
+    def setUp(self):
+        self.bakery = Bakery.objects.create(name='Test Bakery', address='Test Address')
+        self.product = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+
+    def test_calculates_unsold_quantity_for_each_product_and_day(self):
+        day = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        register_daily_production(
+            bakery=self.bakery,
+            product=self.product,
+            produced_quantity=Decimal('20.00'),
+            production_date=day,
+        )
+        register_daily_sale(
+            bakery=self.bakery,
+            product=self.product,
+            quantity_sold=Decimal('7.00'),
+            sale_timestamp=day.replace(hour=14),
+        )
+
+        daily = build_daily_unsold_products(bakery=self.bakery)
+
+        self.assertEqual(len(daily), 1)
+        self.assertEqual(daily[0]['produced_quantity'], Decimal('20.00'))
+        self.assertEqual(daily[0]['sold_quantity'], Decimal('7.00'))
+        self.assertEqual(daily[0]['unsold_quantity'], Decimal('13.00'))
+
+    def test_unsold_calculation_is_limited_to_the_current_bakery(self):
+        other_bakery = Bakery.objects.create(name='Other Bakery', address='Other Address')
+        other_product = register_product(
+            bakery=other_bakery,
+            name='Croissant',
+            sku='CRO-002',
+            unit_price=Decimal('5000.00'),
+        )
+        register_daily_production(
+            bakery=other_bakery,
+            product=other_product,
+            produced_quantity=Decimal('10.00'),
+            production_date=timezone.now(),
+        )
+
+        self.assertEqual(build_daily_unsold_products(bakery=self.bakery), [])
 
 
 class DailyProductionRegistrationTests(TestCase):

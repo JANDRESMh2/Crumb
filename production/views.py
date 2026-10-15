@@ -21,6 +21,7 @@ from .forms import (
 from .models import Product, ProductionRecord, SalesRecord
 from .services import (
     HISTORY_RECORD_TYPES,
+    build_daily_unsold_products,
     build_history_tracking,
     register_daily_production,
     register_daily_sale,
@@ -227,6 +228,7 @@ def sales_list(request):
         'production/sales_list.html',
         {
             'records': records,
+            'daily_unsold_products': build_daily_unsold_products(bakery=bakery),
             'bakery': bakery,
         },
     )
