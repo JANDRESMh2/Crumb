@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'bakery',
     'inventory',
     'production',
+    'accounts'
 ]
 
 MIDDLEWARE = [
