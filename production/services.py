@@ -1,8 +1,56 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
 from decimal import Decimal, ROUND_HALF_UP
 
 from .models import Product, ProductionRecord, SalesRecord
+
+
+def build_daily_unsold_products(*, bakery):
+    """Calculate unsold quantity per product and local calendar day (FR14)."""
+    production_totals = (
+        ProductionRecord.objects
+        .filter(bakery=bakery, status=ProductionRecord.Status.COMPLETED)
+        .annotate(day=TruncDate('production_date'))
+        .values('product_id', 'product__name', 'day')
+        .annotate(quantity=Sum('produced_quantity'))
+    )
+    sales_totals = (
+        SalesRecord.objects
+        .filter(bakery=bakery)
+        .annotate(day=TruncDate('sale_timestamp'))
+        .values('product_id', 'product__name', 'day')
+        .annotate(quantity=Sum('quantity_sold'))
+    )
+
+    totals = {}
+    for row in production_totals:
+        key = (row['product_id'], row['day'])
+        totals[key] = {
+            'product_name': row['product__name'],
+            'date': row['day'],
+            'produced_quantity': row['quantity'],
+            'sold_quantity': Decimal('0'),
+        }
+    for row in sales_totals:
+        key = (row['product_id'], row['day'])
+        daily = totals.setdefault(key, {
+            'product_name': row['product__name'],
+            'date': row['day'],
+            'produced_quantity': Decimal('0'),
+            'sold_quantity': Decimal('0'),
+        })
+        daily['sold_quantity'] = row['quantity']
+
+    results = []
+    for daily in totals.values():
+        daily['unsold_quantity'] = max(
+            daily['produced_quantity'] - daily['sold_quantity'],
+            Decimal('0'),
+        )
+        results.append(daily)
+    return sorted(results, key=lambda daily: (-daily['date'].toordinal(), daily['product_name']))
 
 
 @transaction.atomic

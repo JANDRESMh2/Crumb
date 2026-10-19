@@ -30,3 +30,14 @@ def setup_bakery_profile(*, name, address, phone='', email='', tax_id=''):
         email=email,
         tax_id=tax_id,
     )
+
+
+@transaction.atomic
+def update_bakery_profile(bakery, *, name, address, phone='', email='', tax_id=''):
+    bakery.name = name
+    bakery.address = address
+    bakery.phone = phone
+    bakery.email = email
+    bakery.tax_id = tax_id
+    bakery.save(update_fields=['name', 'address', 'phone', 'email', 'tax_id', 'updated_at'])
+    return bakery
