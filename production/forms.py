@@ -1,4 +1,6 @@
 from django import forms
+
+from bakery.fields import DecimalInputField, decimal_field_classes
 from decimal import Decimal
 
 from .models import Product, ProductionRecord, SalesRecord
@@ -27,17 +29,10 @@ class ProductForm(forms.Form):
         ),
     )
 
-    unit_price = forms.DecimalField(
+    unit_price = DecimalInputField(
         max_digits=10,
         decimal_places=2,
         min_value=Decimal('0.00'),
-        widget=forms.NumberInput(
-            attrs={
-                'class': 'form-control',
-                'min': '0',
-                'step': '0.01',
-            }
-        ),
     )
 
     def __init__(self, *args, bakery=None, **kwargs):
@@ -74,6 +69,7 @@ class ProductEditForm(forms.ModelForm):
             'unit_price',
             'status',
         ]
+        field_classes = decimal_field_classes('unit_price')
 
         labels = {
             'name': 'Name',
@@ -91,13 +87,6 @@ class ProductEditForm(forms.ModelForm):
             'sku': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                }
-            ),
-            'unit_price': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0',
-                    'step': '0.01',
                 }
             ),
             'status': forms.Select(
@@ -144,6 +133,7 @@ class DailyProductionRegistrationForm(forms.ModelForm):
             'produced_quantity',
             'production_date',
         ]
+        field_classes = decimal_field_classes('produced_quantity')
 
         labels = {
             'product': 'Product',
@@ -155,13 +145,6 @@ class DailyProductionRegistrationForm(forms.ModelForm):
             'product': forms.Select(
                 attrs={
                     'class': 'form-select',
-                }
-            ),
-            'produced_quantity': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0.01',
-                    'step': '0.01',
                 }
             ),
             'production_date': forms.DateTimeInput(
@@ -197,6 +180,7 @@ class DailySalesRegistrationForm(forms.ModelForm):
             'quantity_sold',
             'sale_timestamp',
         ]
+        field_classes = decimal_field_classes('quantity_sold')
 
         labels = {
             'product': 'Product',
@@ -208,13 +192,6 @@ class DailySalesRegistrationForm(forms.ModelForm):
             'product': forms.Select(
                 attrs={
                     'class': 'form-select',
-                }
-            ),
-            'quantity_sold': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0.01',
-                    'step': '0.01',
                 }
             ),
             'sale_timestamp': forms.DateTimeInput(
