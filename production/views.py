@@ -10,6 +10,7 @@ from django.shortcuts import (
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
+from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
 
 from .forms import (
@@ -29,17 +30,11 @@ from .services import (
 )
 
 
+@bakery_required('Set up the bakery profile before registering products.')
 def product_create(request):
     """Register a baked product in the bakery catalog."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before registering products.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = ProductForm(request.POST, bakery=bakery)
@@ -70,19 +65,11 @@ def product_create(request):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required('Set up the bakery profile before registering production.')
 def daily_production_registration(request):
     """FR12 - register daily production."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before registering production.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = DailyProductionRegistrationForm(
@@ -122,15 +109,11 @@ def daily_production_registration(request):
             ).exists(),
         },
     )
-
-
+@bakery_required()
 def production_list(request):
     """Display the production records registered by the bakery."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     records = (
         ProductionRecord.objects
@@ -146,19 +129,11 @@ def production_list(request):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required('Set up the bakery profile before registering sales.')
 def daily_sales_registration(request):
     """FR13 - register daily sales."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before registering sales.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = DailySalesRegistrationForm(
@@ -207,15 +182,11 @@ def daily_sales_registration(request):
             ).exists(),
         },
     )
-
-
+@bakery_required()
 def sales_list(request):
     """Display sales registered by the bakery."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     records = (
         SalesRecord.objects
@@ -232,15 +203,11 @@ def sales_list(request):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required()
 def product_list(request):
     """Display the bakery product catalog."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     products = Product.objects.filter(
         bakery=bakery,
@@ -254,15 +221,11 @@ def product_list(request):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required()
 def product_edit(request, product_id):
     """Edit an existing baked product."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     product = get_object_or_404(
         Product,
@@ -304,14 +267,12 @@ def product_edit(request, product_id):
             'bakery': bakery,
         },
     )
-
+# [FR25: History tracking (production and sales)]
+@bakery_required('Set up the bakery profile before viewing the history.')
 def history_tracking(request):
     """FR25 - view the history of production and sales records."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     record_type = request.GET.get('type', 'all').strip()
     product_id = request.GET.get('product', '').strip()
@@ -364,8 +325,6 @@ def history_tracking(request):
             ),
         },
     )
-
-
 def _is_uuid(value):
     try:
         uuid.UUID(value)

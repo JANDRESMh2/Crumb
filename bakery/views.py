@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
+from .decorators import bakery_required
 from .forms import BakeryProfileForm
 from .services import (
     BakeryAlreadyConfigured,
@@ -31,17 +32,13 @@ def bakery_setup(request):
     return render(request, 'bakery/setup.html', {'form': form})
 
 
+@bakery_required()
 def bakery_detail(request):
-    bakery = get_current_bakery()
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
     return render(request, 'bakery/detail.html', {'bakery': bakery})
-
-
+@bakery_required()
 def bakery_edit(request):
-    bakery = get_current_bakery()
-    if bakery is None:
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = BakeryProfileForm(request.POST, instance=bakery)
