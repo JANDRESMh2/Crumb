@@ -12,9 +12,9 @@ from django.utils import timezone
 from bakery.models import Bakery
 
 from .forms import (
-    Barcode_scanning_for_ingredient_registration,
+    BarcodeScanningForIngredientRegistrationForm,
     IngredientForm,
-    Stock_consumption_registration_form,
+    StockConsumptionRegistrationForm,
     LowStockThresholdConfigurationForm,
     ManualInventoryCorrectionForm,
 )
@@ -1209,7 +1209,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
         )
         BarcodeIdentifier.objects.create(ingredient=existing, barcode_value='7501234567890')
 
-        form = Barcode_scanning_for_ingredient_registration(data={
+        form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
             'unit': unit.pk,
             'current_quantity': '10.00',
@@ -1223,7 +1223,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
     def test_barcode_field_is_optional(self):
         bakery = make_bakery()
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
-        form = Barcode_scanning_for_ingredient_registration(data={
+        form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
             'unit': unit.pk,
             'current_quantity': '10.00',
@@ -1307,7 +1307,7 @@ class StockConsumptionFormTests(TestCase):
             bakery=bakery, unit=unit, name='Flour',
             current_quantity=Decimal('3.00'), expiration_date='2027-01-31',
         )
-        form = Stock_consumption_registration_form(data={
+        form = StockConsumptionRegistrationForm(data={
             'ingredient': ingredient.pk,
             'quantity': '5.00',
             'note': '',
@@ -1384,7 +1384,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
     def test_form_accepts_a_barcode_left_behind_by_a_deleted_ingredient(self):
         deactivate_ingredient(ingredient=self.ingredient)
 
-        form = Barcode_scanning_for_ingredient_registration(data={
+        form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
             'unit': self.unit.pk,
             'current_quantity': '5.00',
@@ -1425,7 +1425,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
         )
 
     def test_a_barcode_linked_to_an_active_ingredient_is_still_rejected(self):
-        form = Barcode_scanning_for_ingredient_registration(data={
+        form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Sugar',
             'unit': self.unit.pk,
             'current_quantity': '5.00',
@@ -1808,3 +1808,60 @@ class ManualInventoryCorrectionViewTests(TestCase):
         ingredient = self.create_ingredient(make_bakery())
         response = self.client.get(reverse('inventory:list'))
         self.assertContains(response, self.url(ingredient))
+
+
+class DecimalSeparatorInFormsTests(TestCase):
+    """A quantity written with a comma must be stored as the same amount.
+
+    Before this, the browser dropped the comma and 12,5 was saved as 125.
+    """
+
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.ingredient = Ingredient.objects.create(
+            bakery=self.bakery, unit=self.unit, name='Flour',
+            current_quantity=Decimal('100.00'), expiration_date='2027-12-31',
+        )
+
+    def test_registering_an_ingredient_with_a_comma(self):
+        self.client.post(reverse('inventory:create'), {
+            'name': 'Sugar', 'unit': str(self.unit.pk), 'current_quantity': '12,5',
+            'expiration_date': '2027-12-31', 'expiration_warning_days': '', 'barcode_value': '',
+        })
+        self.assertEqual(Ingredient.objects.get(name='Sugar').current_quantity, Decimal('12.50'))
+
+    def test_stock_in_with_a_comma(self):
+        self.client.post(reverse('inventory:stock_in'), {
+            'ingredient': str(self.ingredient.pk), 'quantity': '12,5', 'note': ''})
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('112.50'))
+
+    def test_consumption_with_a_comma(self):
+        self.client.post(reverse('inventory:stock_consumption'), {
+            'ingredient': str(self.ingredient.pk), 'quantity': '12,5', 'note': ''})
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('87.50'))
+
+    def test_correction_with_a_comma(self):
+        self.client.post(reverse('inventory:manual_inventory_correction', args=[self.ingredient.pk]), {
+            'new_quantity': '12,5', 'reason': 'Physical count'})
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('12.50'))
+
+    def test_a_comma_and_a_dot_give_exactly_the_same_result(self):
+        for separador in ('12,5', '12.5'):
+            self.ingredient.current_quantity = Decimal('100.00')
+            self.ingredient.save(update_fields=['current_quantity'])
+            self.client.post(reverse('inventory:stock_consumption'), {
+                'ingredient': str(self.ingredient.pk), 'quantity': separador, 'note': ''})
+            self.ingredient.refresh_from_db()
+            self.assertEqual(self.ingredient.current_quantity, Decimal('87.50'), separador)
+
+    def test_an_ambiguous_amount_is_rejected_with_a_message(self):
+        response = self.client.post(reverse('inventory:stock_consumption'), {
+            'ingredient': str(self.ingredient.pk), 'quantity': '1,000', 'note': ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'without a thousands separator')
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.current_quantity, Decimal('100.00'))
