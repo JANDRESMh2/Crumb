@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 from decimal import Decimal
 from django.db import transaction
@@ -380,3 +382,59 @@ def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, u
         note=reason,
         user=user,
     )
+
+
+@transaction.atomic
+def register_stock_in(*, bakery, ingredient, quantity, note='', user=None):
+    """FR07 - register a stock-in movement, increasing the ingredient's stock.
+
+    Shared by the stock-in form (FR07) and the continuous barcode scan (FR18),
+    so both paths update the stock and log the movement in exactly the same way.
+    """
+    if quantity is None or quantity <= 0:
+        raise ValueError('A stock-in quantity must be greater than zero.')
+
+    ingredient.current_quantity += quantity
+    ingredient.save(update_fields=['current_quantity', 'updated_at'])
+
+    return StockMovement.objects.create(
+        bakery=bakery,
+        ingredient=ingredient,
+        movement_type='StockIn',
+        quantity=quantity,
+        note=note,
+        user=user,
+    )
+
+
+def find_ingredient_by_barcode(*, bakery, barcode_value):
+    """FR18 - find the active ingredient a scanned barcode belongs to."""
+    barcode = (
+        BarcodeIdentifier.objects
+        .filter(
+            barcode_value=barcode_value,
+            is_active=True,
+            ingredient__bakery=bakery,
+            ingredient__is_active=True,
+        )
+        .select_related('ingredient', 'ingredient__unit')
+        .first()
+    )
+    return barcode.ingredient if barcode is not None else None
+
+
+IMPORT_TEMPLATE_COLUMNS = [
+    'Name',
+    'Unit',
+    'Quantity',
+    'Expiration date',
+    'Expiration warning days',
+    'Barcode',
+]
+
+
+def build_import_template():
+    """FR15 - build the empty Excel template used to import ingredients."""
+    buffer = io.BytesIO()
+    pd.DataFrame(columns=IMPORT_TEMPLATE_COLUMNS).to_excel(buffer, index=False)
+    return buffer.getvalue()
