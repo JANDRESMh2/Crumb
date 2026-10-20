@@ -1,6 +1,3 @@
-from urllib import request
-import pandas as pd
-
 from django.contrib import messages
 import json
 from decimal import Decimal
@@ -10,15 +7,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
 
+from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
 
 from .forms import (
-    Barcode_scanning_for_ingredient_registration,
+    BarcodeScanningForIngredientRegistrationForm,
     IngredientForm,
     IngredientImportForm,
     LowStockThresholdConfigurationForm,
     ManualInventoryCorrectionForm,
-    Stock_consumption_registration_form,
+    StockConsumptionRegistrationForm,
     StockInForm,
 )
 
@@ -34,45 +32,38 @@ from .services import (
     expiration_alerts,
     low_stock_alerts,
     register_ingredient,
+    build_import_template,
+    find_ingredient_by_barcode,
     register_inventory_correction,
+    register_stock_in,
     register_stock_consumption,
     update_ingredient,
 )
 
 
+@bakery_required('Set up the bakery profile before registering ingredients.')
 def ingredient_create(request):
     """FR01 - register a new ingredient (name, quantity, unit, expiration date).
 
     Also handles FR17 (optional barcode capture) via
-    Barcode_scanning_for_ingredient_registration.
+    BarcodeScanningForIngredientRegistrationForm.
     """
-    bakery = get_current_bakery()
-    if bakery is None:
-        messages.info(request, 'Set up the bakery profile before registering ingredients.')
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
-        form = Barcode_scanning_for_ingredient_registration(request.POST, bakery=bakery)
+        form = BarcodeScanningForIngredientRegistrationForm(request.POST, bakery=bakery)
         if form.is_valid():
             register_ingredient(bakery=bakery, **form.cleaned_data)
             messages.success(request, 'Ingredient registered successfully.')
             return redirect('inventory:list')
     else:
-        form = Barcode_scanning_for_ingredient_registration(bakery=bakery)
+        form = BarcodeScanningForIngredientRegistrationForm(bakery=bakery)
 
     return render(request, 'inventory/ingredient_form.html', {'form': form, 'bakery': bakery})
-
-
+@bakery_required('Set up the bakery profile before editing ingredients.')
 def ingredient_edit(request, ingredient_id):
     """FR03 - edit an existing ingredient."""
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before editing ingredients.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     ingredient = get_object_or_404(
         Ingredient,
@@ -115,18 +106,10 @@ def ingredient_edit(request, ingredient_id):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required('Set up the bakery profile before deleting ingredients.')
 def ingredient_delete(request, ingredient_id):
     """FR04 - remove an existing ingredient from the active inventory."""
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before deleting ingredients.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     ingredient = get_object_or_404(
         Ingredient,
@@ -152,8 +135,6 @@ def ingredient_delete(request, ingredient_id):
             'bakery': bakery,
         },
     )
-
-
 def expiration_date_range_filter(
     *,
     ingredients,
@@ -239,25 +220,23 @@ def ingredient_list(request):
     )
 
 
-@transaction.atomic
+@bakery_required('Set up the bakery profile before registering stock.')
 def stock_in_create(request):
-    bakery = get_current_bakery()
-    if bakery is None:
-        messages.info(request, 'Set up the bakery profile before registering stock.')
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = StockInForm(request.POST, bakery=bakery)
         if form.is_valid():
             movement = form.save(commit=False)
-            movement.movement_type = 'StockIn'
-            movement.bakery = bakery
-
             ingredient = movement.ingredient
-            ingredient.current_quantity += movement.quantity
-            ingredient.save()
 
-            movement.save()
+            register_stock_in(
+                bakery=bakery,
+                ingredient=ingredient,
+                quantity=movement.quantity,
+                note=movement.note or '',
+                user=request.user if request.user.is_authenticated else None,
+            )
             messages.success(
                 request,
                 f'Stock-in successfully registered for {ingredient.name}.',
@@ -274,20 +253,14 @@ def stock_in_create(request):
 
 
 # [FR08: Stock consumption registration]
-def Stock_consumption_registration(request):
+@bakery_required('Set up the bakery profile before registering consumption.')
+def stock_consumption_registration(request):
     """FR08 - register the consumption of an ingredient."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before registering consumption.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
-        form = Stock_consumption_registration_form(
+        form = StockConsumptionRegistrationForm(
             request.POST,
             bakery=bakery,
         )
@@ -317,7 +290,7 @@ def Stock_consumption_registration(request):
                 return redirect('inventory:list')
 
     else:
-        form = Stock_consumption_registration_form(
+        form = StockConsumptionRegistrationForm(
             bakery=bakery
         )
 
@@ -329,19 +302,11 @@ def Stock_consumption_registration(request):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required('Set up the bakery profile before configuring stock thresholds.')
 def low_stock_threshold_configuration(request, ingredient_id):
     """FR10 - configure the low-stock threshold for an ingredient."""
 
-    bakery = get_current_bakery()
-
-    if bakery is None:
-        messages.info(
-            request,
-            'Set up the bakery profile before configuring stock thresholds.'
-        )
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     ingredient = get_object_or_404(
         Ingredient,
@@ -390,14 +355,10 @@ def low_stock_threshold_configuration(request, ingredient_id):
             'bakery': bakery,
         },
     )
-
-
+@bakery_required('Set up the bakery profile before importing ingredients.')
 def ingredient_import_view(request):
     """FR15 - bulk import ingredients from Excel or CSV file."""
-    bakery = get_current_bakery()
-    if bakery is None:
-        messages.info(request, 'Set up the bakery profile before importing ingredients.')
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     if request.method == 'POST':
         form = IngredientImportForm(request.POST, request.FILES)
@@ -413,26 +374,17 @@ def ingredient_import_view(request):
         form = IngredientImportForm()
 
     return render(request, 'inventory/ingredient_import.html', {'form': form, 'bakery': bakery})
-
-
 def download_import_template_view(request):
     """Provides an Excel template for FR15."""
-    df = pd.DataFrame(columns=[
-        'Name', 
-        'Unit', 
-        'Quantity', 
-        'Expiration date', 
-        'Expiration warning days', 
-        'Barcode'
-    ])
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response = HttpResponse(
+        build_import_template(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
     response['Content-Disposition'] = 'attachment; filename="ingredients_template.xlsx"'
-    df.to_excel(response, index=False)
     return response
 
 
 @require_POST
-@transaction.atomic
 def stock_in_barcode_scan(request):
     """FR18 - Continuous barcode scanning for stock-in."""
     bakery = get_current_bakery()
@@ -452,29 +404,19 @@ def stock_in_barcode_scan(request):
     if not barcode_value:
         return JsonResponse({'error': 'No barcode provided.'}, status=400)
 
-    barcode_obj = BarcodeIdentifier.objects.filter(
-        barcode_value=barcode_value,
-        is_active=True,
-        ingredient__bakery=bakery,
-        ingredient__is_active=True
-    ).select_related('ingredient', 'ingredient__unit').first()
+    ingredient = find_ingredient_by_barcode(bakery=bakery, barcode_value=barcode_value)
 
-    if not barcode_obj:
+    if ingredient is None:
         return JsonResponse({
             'error': 'The scanned barcode is not registered. You must register the product as an ingredient first.'
         }, status=404)
 
-    ingredient = barcode_obj.ingredient
-
-    ingredient.current_quantity += quantity
-    ingredient.save(update_fields=['current_quantity', 'updated_at'])
-
-    StockMovement.objects.create(
+    register_stock_in(
         bakery=bakery,
         ingredient=ingredient,
-        movement_type='StockIn',
         quantity=quantity,
-        note='Continuous scan'
+        note='Continuous scan',
+        user=request.user if request.user.is_authenticated else None,
     )
 
     return JsonResponse({
@@ -487,12 +429,10 @@ def stock_in_barcode_scan(request):
 
 
 # [FR23: Manual inventory correction]
+@bakery_required('Set up the bakery profile before correcting the inventory.')
 def manual_inventory_correction(request, ingredient_id):
     """FR23 - manually correct an ingredient's quantity with date, user and reason."""
-    bakery = get_current_bakery()
-    if bakery is None:
-        messages.info(request, 'Set up the bakery profile before correcting the inventory.')
-        return redirect('bakery:setup')
+    bakery = request.bakery
 
     ingredient = get_object_or_404(
         Ingredient.objects.select_related('unit'),
