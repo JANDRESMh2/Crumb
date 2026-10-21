@@ -1,5 +1,7 @@
 from django import forms
 
+from bakery.fields import DecimalInputField, decimal_field_classes
+
 from decimal import Decimal
 
 from .models import (
@@ -36,12 +38,10 @@ class IngredientForm(forms.ModelForm):
             'current_quantity': 'Quantity',
             'unit': 'Unit of measure',
         }
+        field_classes = decimal_field_classes('current_quantity')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': True}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
-            'current_quantity': forms.NumberInput(
-                attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}
-            ),
             'expiration_date': forms.DateInput(
                 attrs={'class': 'form-control', 'type': 'date'}
             ),
@@ -95,7 +95,7 @@ class IngredientForm(forms.ModelForm):
 
 
 # [FR17: Barcode scanning for ingredient registration]
-class Barcode_scanning_for_ingredient_registration(IngredientForm):
+class BarcodeScanningForIngredientRegistrationForm(IngredientForm):
     """Adds an optional barcode field to IngredientForm, scoped to initial
     registration (FR17). Editing an ingredient (FR03) keeps using the base
     IngredientForm unchanged.
@@ -121,12 +121,12 @@ class Barcode_scanning_for_ingredient_registration(IngredientForm):
 
 
 # [FR08: Stock consumption registration]
-class Stock_consumption_registration_form(forms.ModelForm):
+class StockConsumptionRegistrationForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['ingredient', 'quantity', 'note']
+        field_classes = decimal_field_classes('quantity')
         widgets = {
-            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
             'ingredient': forms.Select(attrs={'class': 'form-select'}),
             'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
@@ -158,8 +158,8 @@ class StockInForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['ingredient', 'quantity', 'note']
+        field_classes = decimal_field_classes('quantity')
         widgets = {
-            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
             'ingredient': forms.Select(attrs={'class': 'form-select'}),
             'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
@@ -174,7 +174,7 @@ class StockInForm(forms.ModelForm):
 
 
 class LowStockThresholdConfigurationForm(forms.Form):
-    minimum_stock_threshold = forms.DecimalField(
+    minimum_stock_threshold = DecimalInputField(
         required=False,
         min_value=Decimal('0.01'),
         max_digits=10,
@@ -183,13 +183,6 @@ class LowStockThresholdConfigurationForm(forms.Form):
         help_text=(
             'Enter the minimum quantity before the ingredient is considered '
             'low stock. Leave blank to remove the threshold.'
-        ),
-        widget=forms.NumberInput(
-            attrs={
-                'class': 'form-control',
-                'min': '0.01',
-                'step': '0.01',
-            }
         ),
     )
 
@@ -207,13 +200,12 @@ class IngredientImportForm(forms.Form):
 
 # [FR23: Manual inventory correction]
 class ManualInventoryCorrectionForm(forms.Form):
-    new_quantity = forms.DecimalField(
+    new_quantity = DecimalInputField(
         min_value=Decimal('0'),
         max_digits=10,
         decimal_places=2,
         label='Corrected quantity',
         help_text='The real quantity counted in the bakery. It replaces the current quantity.',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
     )
     reason = forms.CharField(
         max_length=500,

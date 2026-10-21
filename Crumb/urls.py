@@ -9,8 +9,6 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('bakery/', include('bakery.urls', namespace='bakery')),
     path('inventory/', include('inventory.urls', namespace='inventory')),
-    path(
-        'production/',
-        include('production.urls', namespace='production'),
-    ),
+    path('production/', include('production.urls', namespace='production')),
+    path('accounts/', include('accounts.urls')),
 ]
