@@ -1,15 +1,17 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Edit ingredient - Crumb{% endblock %}
+{% block title %}{% translate "Edit ingredient" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Inventory</p>
+<p class="eyebrow">{% translate "Inventory" %}</p>
 
-<h1>Edit ingredient</h1>
+<h1>{% translate "Edit ingredient" %}</h1>
 
 <p class="lede">
-  Update {{ ingredient.name }}'s inventory information.
+  {% blocktranslate trimmed with name=ingredient.name %}Update the inventory information
+  of {{ name }}.{% endblocktranslate %}
 </p>
 
 <div class="card">
@@ -35,10 +37,10 @@
     {% include "partials/field.html" with field=form.expiration_warning_days %}
 
     <div class="actions">
-      <button type="submit">Save changes</button>
+      <button type="submit">{% translate "Save changes" %}</button>
 
       <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
-        Cancel
+        {% translate "Cancel" %}
       </a>
     </div>
 

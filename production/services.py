@@ -1,8 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
+from django.utils.translation import gettext, gettext_lazy as _
 from decimal import Decimal, ROUND_HALF_UP
+
+from bakery.models import ActivityLog
+from bakery.services import record_activity
+
+from inventory.services import build_expired_ingredient_losses
 
 from .models import Product, ProductionRecord, SalesRecord
 
@@ -28,6 +34,7 @@ def build_daily_unsold_products(*, bakery):
     for row in production_totals:
         key = (row['product_id'], row['day'])
         totals[key] = {
+            'product_id': row['product_id'],
             'product_name': row['product__name'],
             'date': row['day'],
             'produced_quantity': row['quantity'],
@@ -36,6 +43,7 @@ def build_daily_unsold_products(*, bakery):
     for row in sales_totals:
         key = (row['product_id'], row['day'])
         daily = totals.setdefault(key, {
+            'product_id': row['product_id'],
             'product_name': row['product__name'],
             'date': row['day'],
             'produced_quantity': Decimal('0'),
@@ -70,7 +78,7 @@ def register_product(
 
     if not name:
         raise ValidationError(
-            'The product name is required.'
+            _('The product name is required.')
         )
 
     existing_product = Product.objects.filter(
@@ -82,7 +90,7 @@ def register_product(
 
         if existing_product.status == Product.Status.ACTIVE:
             raise ValidationError(
-                'This product is already registered.'
+                _('This product is already registered.')
             )
 
         existing_product.name = name
@@ -131,14 +139,14 @@ def register_daily_production(
 
     if product.bakery_id != bakery.pk:
         raise ValidationError(
-            'The selected product does not belong '
-            'to this bakery.'
+            _('The selected product does not belong '
+              'to this bakery.')
         )
 
     if product.status != Product.Status.ACTIVE:
         raise ValidationError(
-            'Inactive products cannot be used '
-            'for production registration.'
+            _('Inactive products cannot be used '
+              'for production registration.')
         )
 
     record = ProductionRecord(
@@ -173,20 +181,20 @@ def register_daily_sale(
 
     if product.bakery_id != bakery.pk:
         raise ValidationError(
-            'The selected product does not belong '
-            'to this bakery.'
+            _('The selected product does not belong '
+              'to this bakery.')
         )
 
     if product.status != Product.Status.ACTIVE:
         raise ValidationError(
-            'Inactive products cannot be used '
-            'for sales registration.'
+            _('Inactive products cannot be used '
+              'for sales registration.')
         )
 
     if product.unit_price is None:
         raise ValidationError(
-            'The selected product does not have '
-            'a unit price configured.'
+            _('The selected product does not have '
+              'a unit price configured.')
         )
 
     unit_price_at_sale = product.unit_price.quantize(
@@ -214,6 +222,18 @@ def register_daily_sale(
     record.full_clean()
     record.save()
 
+    record_activity(
+        user=user,
+        action_type=ActivityLog.ActionType.SALE,
+        description=gettext(
+            'Registered the sale of %(quantity)s %(name)s for %(amount)s.'
+        ) % {
+            'quantity': quantity_sold,
+            'name': product.name,
+            'amount': total_amount,
+        },
+    )
+
     return record
 
 HISTORY_RECORD_TYPES = ('all', 'production', 'sales')
@@ -235,11 +255,11 @@ def build_history_tracking(
     """
 
     if record_type not in HISTORY_RECORD_TYPES:
-        raise ValidationError('Unknown record type.')
+        raise ValidationError(_('Unknown record type.'))
 
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     entries = []
@@ -334,3 +354,181 @@ def build_history_tracking(
     }
 
     return entries, totals
+
+
+def build_sales_analytics(*, bakery, start_date=None, end_date=None):
+    """
+    FR36 - Rank the products of a bakery by how much they sell.
+
+    Every product that was sold at least once inside the date range gets a
+    row, ordered from the best seller down. Alongside the units sold each row
+    carries the revenue it brought in and the share of the total revenue that
+    represents, so the baker can tell apart what sells often from what sells
+    for the most money.
+    """
+
+    if start_date and end_date and start_date > end_date:
+        raise ValidationError(
+            _('The start date cannot be later than the end date.')
+        )
+
+    sales = SalesRecord.objects.filter(bakery=bakery)
+
+    if start_date:
+        sales = sales.filter(sale_timestamp__date__gte=start_date)
+    if end_date:
+        sales = sales.filter(sale_timestamp__date__lte=end_date)
+
+    rows = list(
+        sales
+        .values('product_id', 'product__name')
+        .annotate(
+            units_sold=Sum('quantity_sold'),
+            revenue=Sum('total_amount'),
+            sale_count=Count('id'),
+        )
+        .order_by('-units_sold', 'product__name')
+    )
+
+    total_units = sum(
+        (row['units_sold'] for row in rows),
+        Decimal('0'),
+    )
+    total_revenue = sum(
+        (row['revenue'] for row in rows),
+        Decimal('0'),
+    )
+
+    best_units = rows[0]['units_sold'] if rows else Decimal('0')
+
+    rankings = []
+
+    for position, row in enumerate(rows, start=1):
+        revenue = row['revenue']
+
+        revenue_share = (
+            (revenue / total_revenue * 100).quantize(
+                Decimal('0.1'),
+                rounding=ROUND_HALF_UP,
+            )
+            if total_revenue
+            else Decimal('0.0')
+        )
+
+        units_share = (
+            (row['units_sold'] / best_units * 100).quantize(
+                Decimal('0.1'),
+                rounding=ROUND_HALF_UP,
+            )
+            if best_units
+            else Decimal('0.0')
+        )
+
+        rankings.append({
+            'position': position,
+            'product_id': row['product_id'],
+            'product_name': row['product__name'],
+            'units_sold': row['units_sold'],
+            'revenue': revenue,
+            'sale_count': row['sale_count'],
+            'revenue_share': revenue_share,
+            'units_share': units_share,
+        })
+
+    totals = {
+        'units_sold': total_units,
+        'revenue': total_revenue,
+        'product_count': len(rankings),
+        'sale_count': sum(row['sale_count'] for row in rows),
+        # la suma de las participaciones, para el pie de la tabla
+        'revenue_share': sum(
+            (row['revenue_share'] for row in rankings),
+            Decimal('0.0'),
+        ),
+    }
+
+    return rankings, totals
+
+
+def build_loss_report(*, bakery, start_date=None, end_date=None):
+    """
+    FR26 - Report what the bakery lost, from its two sources.
+
+    The first source is the inventory: ingredients that expired with stock
+    still on hand (FR06 decides what counts as expired). The second is
+    production: the products that were baked and never sold, which FR14
+    already works out per product and day. Overproduction is also valued in
+    money, using the current price of the product, because that is what the
+    bakery stopped earning.
+
+    Expired ingredients are not valued, since the inventory does not record
+    what each ingredient costs.
+    """
+
+    if start_date and end_date and start_date > end_date:
+        raise ValidationError(
+            _('The start date cannot be later than the end date.')
+        )
+
+    expired_ingredients = build_expired_ingredient_losses(
+        bakery=bakery,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    unit_prices = dict(
+        Product.objects
+        .filter(bakery=bakery)
+        .values_list('pk', 'unit_price')
+    )
+
+    overproduction = []
+
+    for daily in build_daily_unsold_products(bakery=bakery):
+        if daily['unsold_quantity'] <= 0:
+            continue
+        if start_date and daily['date'] < start_date:
+            continue
+        if end_date and daily['date'] > end_date:
+            continue
+
+        unit_price = unit_prices.get(daily['product_id']) or Decimal('0')
+
+        overproduction.append({
+            'product_id': daily['product_id'],
+            'product_name': daily['product_name'],
+            'date': daily['date'],
+            'produced_quantity': daily['produced_quantity'],
+            'sold_quantity': daily['sold_quantity'],
+            'unsold_quantity': daily['unsold_quantity'],
+            'unit_price': unit_price,
+            'lost_value': (
+                daily['unsold_quantity'] * unit_price
+            ).quantize(
+                Decimal('0.01'),
+                rounding=ROUND_HALF_UP,
+            ),
+        })
+
+    totals = {
+        'expired_ingredient_count': len(expired_ingredients),
+        'expired_quantity': sum(
+            (row['quantity'] for row in expired_ingredients),
+            Decimal('0'),
+        ),
+        'overproduction_days': len(overproduction),
+        'unsold_quantity': sum(
+            (row['unsold_quantity'] for row in overproduction),
+            Decimal('0'),
+        ),
+        'lost_value': sum(
+            (row['lost_value'] for row in overproduction),
+            Decimal('0'),
+        ),
+    }
+
+    return {
+        'expired_ingredients': expired_ingredients,
+        'overproduction': overproduction,
+        'totals': totals,
+    }

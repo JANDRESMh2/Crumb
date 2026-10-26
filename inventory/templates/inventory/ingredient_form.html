@@ -1,9 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Register ingredient - Crumb{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Register ingredient" %} - Crumb{% endblock %}
 {% block content %}
-<p class="eyebrow">Inventory</p>
-<h1>Register ingredient</h1>
-<p class="lede">Add a raw material to {{ bakery.name }}'s inventory.</p>
+<p class="eyebrow">{% translate "Inventory" %}</p>
+<h1>{% translate "Register ingredient" %}</h1>
+<p class="lede">{% blocktranslate trimmed with name=bakery.name %}Add a raw material to the
+  inventory of {{ name }}.{% endblocktranslate %}</p>
 <div class="card">
   <form method="post" novalidate>
     {% csrf_token %}
@@ -18,7 +20,7 @@
     {% include "partials/field.html" with field=form.expiration_date %}
     {% include "partials/field.html" with field=form.expiration_warning_days %}
     {% include "partials/field.html" with field=form.barcode_value %}
-    <button type="submit">Register ingredient</button>
+    <button type="submit">{% translate "Register ingredient" %}</button>
   </form>
 </div>
 {% endblock %}

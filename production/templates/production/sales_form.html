@@ -1,34 +1,35 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Register daily sales - Crumb{% endblock %}
+{% block title %}{% translate "Register daily sales" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Sales</p>
+<p class="eyebrow">{% translate "Sales" %}</p>
 
-<h1>Register daily sales</h1>
+<h1>{% translate "Register daily sales" %}</h1>
 
 <p class="lede">
-    Record baked products sold by
-    {{ bakery.name }}.
+    {% blocktranslate trimmed with name=bakery.name %}Record baked products sold by
+    {{ name }}.{% endblocktranslate %}
 </p>
 
 {% if not has_products %}
 
     <div class="card">
 
-        <h2>No products registered</h2>
+        <h2>{% translate "No products registered" %}</h2>
 
         <p>
-            Register a baked product before
-            recording sales.
+            {% blocktranslate trimmed %}Register a baked product before
+            recording sales.{% endblocktranslate %}
         </p>
 
         <a
             href="{% url 'production:product_create' %}"
             class="btn"
         >
-            Register product
+            {% translate "Register product" %}
         </a>
 
     </div>
@@ -56,14 +57,14 @@
             <div class="actions">
 
                 <button type="submit">
-                    Register sale
+                    {% translate "Register sale" %}
                 </button>
 
                 <a
                     href="{% url 'production:sales_list' %}"
                     class="btn btn-secondary"
                 >
-                    View sales
+                    {% translate "View sales" %}
                 </a>
 
             </div>

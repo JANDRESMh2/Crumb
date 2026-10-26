@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "User activity log" %} - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">{% translate "Bakery" %}</p>
+
+<h1>{% translate "User activity log" %}</h1>
+
+<p class="lede">
+    {% blocktranslate trimmed with name=bakery.name %}What each user did in {{ name }},
+    newest first.{% endblocktranslate %}
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'bakery:detail' %}"
+        class="btn btn-secondary"
+    >
+        {% translate "Bakery profile" %}
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    <form method="get" role="search">
+
+        <div class="field">
+            <label for="activity-action">{% translate "Action" %}</label>
+            <select class="form-control" id="activity-action" name="action_type">
+                <option value="">{% translate "All actions" %}</option>
+                {% for value, label in action_types %}
+                    <option
+                        value="{{ value }}"
+                        {% if action_type == value %}selected{% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="activity-user">{% translate "User" %}</label>
+            <select class="form-control" id="activity-user" name="user">
+                <option value="">{% translate "All users" %}</option>
+                {% for person in users %}
+                    <option
+                        value="{{ person.pk }}"
+                        {% if user_id == person.pk|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ person.get_username }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="activity-start-date">{% translate "From" %}</label>
+            <input
+                class="form-control"
+                id="activity-start-date"
+                name="start_date"
+                type="date"
+                value="{{ start_date }}"
+            >
+        </div>
+
+        <div class="field">
+            <label for="activity-end-date">{% translate "To" %}</label>
+            <input
+                class="form-control"
+                id="activity-end-date"
+                name="end_date"
+                type="date"
+                value="{{ end_date }}"
+            >
+        </div>
+
+        <button type="submit">{% translate "Filter" %}</button>
+
+        {% if has_filters %}
+            <a class="btn btn-secondary" href="{% url 'bakery:activity_log' %}">
+                {% translate "Clear filters" %}
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% if entries %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>{% translate "When" %}</th>
+                    <th>{% translate "User" %}</th>
+                    <th>{% translate "Action" %}</th>
+                    <th>{% translate "Description" %}</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for entry in entries %}
+
+                    <tr>
+                        <td>{{ entry.created_at }}</td>
+                        <td>
+                            {% if entry.user %}
+                                {{ entry.user.get_username }}
+                            {% else %}
+                                <span style="color: var(--muted);">{% translate "Not signed in" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.get_action_type_display }}</td>
+                        <td>{{ entry.description }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% if hidden %}
+            <p class="help">
+                {% blocktranslate trimmed with shown=entries|length %}Showing the {{ shown }}
+                most recent entries out of {{ total }}. Narrow the filters to see
+                the other {{ hidden }}.{% endblocktranslate %}
+            </p>
+        {% else %}
+            <p class="help">
+                {% blocktranslate trimmed count counter=total %}{{ counter }} entry recorded.
+                {% plural %}{{ counter }} entries recorded.{% endblocktranslate %}
+            </p>
+        {% endif %}
+
+    {% elif has_filters %}
+
+        <div class="empty-state">
+            <p>{% translate "No activity matches the selected filters." %}</p>
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>{% translate "No activity has been recorded yet." %}</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

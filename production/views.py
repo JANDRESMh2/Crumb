@@ -9,6 +9,7 @@ from django.shortcuts import (
 )
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext_lazy as _
 
 from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
@@ -24,6 +25,8 @@ from .services import (
     HISTORY_RECORD_TYPES,
     build_daily_unsold_products,
     build_history_tracking,
+    build_loss_report,
+    build_sales_analytics,
     register_daily_production,
     register_daily_sale,
     register_product,
@@ -50,7 +53,7 @@ def product_create(request):
             else:
                 messages.success(
                     request,
-                    'Product registered successfully.',
+                    _('Product registered successfully.'),
                 )
                 return redirect('production:register')
 
@@ -88,7 +91,7 @@ def daily_production_registration(request):
             else:
                 messages.success(
                     request,
-                    'Daily production registered successfully.',
+                    _('Daily production registered successfully.'),
                 )
                 return redirect('production:list')
 
@@ -155,7 +158,7 @@ def daily_sales_registration(request):
             else:
                 messages.success(
                     request,
-                    'Daily sale registered successfully.',
+                    _('Daily sale registered successfully.'),
                 )
 
                 return redirect(
@@ -245,7 +248,7 @@ def product_edit(request, product_id):
 
             messages.success(
                 request,
-                'Product updated successfully.',
+                _('Product updated successfully.'),
             )
 
             return redirect(
@@ -301,7 +304,7 @@ def history_tracking(request):
     except (ValidationError, ValueError) as error:
         messages.error(
             request,
-            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
         )
         entries, totals = [], None
 
@@ -331,3 +334,83 @@ def _is_uuid(value):
     except ValueError:
         return False
     return True
+
+
+@bakery_required(
+    'Set up the bakery profile before reviewing sales analytics.'
+)
+def sales_analytics(request):
+    """FR36 - rank the products of the bakery by how much they sell."""
+
+    bakery = request.bakery
+
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+
+    try:
+        rankings, totals = build_sales_analytics(
+            bakery=bakery,
+            start_date=parse_date(start_date) if start_date else None,
+            end_date=parse_date(end_date) if end_date else None,
+        )
+    except (ValidationError, ValueError) as error:
+        messages.error(
+            request,
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
+        )
+        rankings, totals = [], None
+
+    return render(
+        request,
+        'production/sales_analytics.html',
+        {
+            'bakery': bakery,
+            'rankings': rankings,
+            'totals': totals,
+            'best_seller': rankings[0] if rankings else None,
+            'start_date': start_date,
+            'end_date': end_date,
+            'has_filters': bool(start_date or end_date),
+        },
+    )
+
+
+@bakery_required('Set up the bakery profile before reviewing losses.')
+def loss_report(request):
+    """FR26 - report the expired ingredients and the overproduction."""
+
+    bakery = request.bakery
+
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+
+    try:
+        report = build_loss_report(
+            bakery=bakery,
+            start_date=parse_date(start_date) if start_date else None,
+            end_date=parse_date(end_date) if end_date else None,
+        )
+    except (ValidationError, ValueError) as error:
+        messages.error(
+            request,
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
+        )
+        report = {
+            'expired_ingredients': [],
+            'overproduction': [],
+            'totals': None,
+        }
+
+    return render(
+        request,
+        'production/loss_report.html',
+        {
+            'bakery': bakery,
+            'expired_ingredients': report['expired_ingredients'],
+            'overproduction': report['overproduction'],
+            'totals': report['totals'],
+            'start_date': start_date,
+            'end_date': end_date,
+            'has_filters': bool(start_date or end_date),
+        },
+    )

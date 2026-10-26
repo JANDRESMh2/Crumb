@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Edit product - Crumb{% endblock %}
+{% block title %}{% translate "Edit product" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Edit product</h1>
+<h1>{% translate "Edit product" %}</h1>
 
 <p class="lede">
-    Update {{ product.name }}.
+    {% blocktranslate trimmed with name=product.name %}Update {{ name }}.{% endblocktranslate %}
 </p>
 
 <div class="card">
@@ -35,14 +36,14 @@
         <div class="actions">
 
             <button type="submit">
-                Save changes
+                {% translate "Save changes" %}
             </button>
 
             <a
                 href="{% url 'production:product_list' %}"
                 class="btn btn-secondary"
             >
-                Cancel
+                {% translate "Cancel" %}
             </a>
 
         </div>

@@ -1,33 +1,35 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ bakery.name }} - Crumb{% endblock %}
 {% block content %}
-<p class="eyebrow">Bakery profile</p>
+<p class="eyebrow">{% translate "Bakery profile" %}</p>
 <h1>{{ bakery.name }}</h1>
 <div class="card">
   <dl class="profile">
     <div>
-      <dt>Address</dt>
+      <dt>{% translate "Address" %}</dt>
       <dd>{{ bakery.address }}</dd>
     </div>
     {% if bakery.phone %}
     <div>
-      <dt>Phone</dt>
+      <dt>{% translate "Phone" %}</dt>
       <dd>{{ bakery.phone }}</dd>
     </div>
     {% endif %}
     {% if bakery.email %}
     <div>
-      <dt>Email</dt>
+      <dt>{% translate "Email" %}</dt>
       <dd>{{ bakery.email }}</dd>
     </div>
     {% endif %}
     {% if bakery.tax_id %}
     <div>
-      <dt>Tax ID</dt>
+      <dt>{% translate "Tax ID" %}</dt>
       <dd>{{ bakery.tax_id }}</dd>
     </div>
     {% endif %}
   </dl>
-  <a class="btn" href="{% url 'bakery:edit' %}">Edit profile</a>
+  <a class="btn" href="{% url 'bakery:edit' %}">{% translate "Edit profile" %}</a>
+  <a class="btn btn-secondary" href="{% url 'bakery:activity_log' %}">{% translate "User activity log" %}</a>
 </div>
 {% endblock %}

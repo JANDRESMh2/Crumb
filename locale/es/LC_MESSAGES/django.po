@@ -1,0 +1,860 @@
+# Spanish translation of the Crumb interface.
+# This file is distributed under the same license as the Crumb package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Crumb\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "%% of revenue"
+msgstr "%% de los ingresos"
+
+msgid "%(units)s units sold"
+msgstr "%(units)s unidades vendidas"
+
+msgid "A reason is required to correct the inventory."
+msgstr "Se necesita un motivo para corregir el inventario."
+
+msgid "A stock-in quantity must be greater than zero."
+msgstr "La cantidad de una entrada debe ser mayor que cero."
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Actions"
+msgstr "Acciones"
+
+msgid "Active"
+msgstr "Activo"
+
+msgid "Add a baked product to the catalog of %(name)s."
+msgstr "Agrega un producto al catálogo de %(name)s."
+
+msgid "Add a new ingredient with quantity, unit, and expiration date."
+msgstr ""
+"Agrega un ingrediente nuevo con su cantidad, unidad y fecha de "
+"vencimiento."
+
+msgid "Add a raw material to the inventory of %(name)s."
+msgstr "Agrega una materia prima al inventario de %(name)s."
+
+msgid "Add product"
+msgstr "Agregar producto"
+
+msgid "Address"
+msgstr "Dirección"
+
+msgid "After"
+msgstr "Después de"
+
+msgid "All actions"
+msgstr "Todas las acciones"
+
+msgid "All products"
+msgstr "Todos los productos"
+
+msgid "All users"
+msgstr "Todos los usuarios"
+
+msgid "Are you sure you want to remove %(name)s from the inventory?"
+msgstr "¿Seguro que quieres quitar %(name)s del inventario?"
+
+msgid "Authenticate to access the Crumb system."
+msgstr "Identifícate para entrar a Crumb."
+
+msgid "Bakery"
+msgstr "Panadería"
+
+msgid "Bakery profile"
+msgstr "Perfil de la panadería"
+
+msgid "Barcode"
+msgstr "Código de barras"
+
+msgid "Before"
+msgstr "Antes de"
+
+msgid "Best seller"
+msgstr "Lo más vendido"
+
+msgid "Business profile created successfully."
+msgstr "El perfil del negocio se creó correctamente."
+
+msgid "Business profile updated successfully."
+msgstr "El perfil del negocio se actualizó correctamente."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Cancelled"
+msgstr "Cancelada"
+
+msgid "Clear filters"
+msgstr "Quitar filtros"
+
+msgid "Completed"
+msgstr "Completada"
+
+msgid "Configure low-stock threshold"
+msgstr "Configurar el mínimo de existencias"
+
+msgid ""
+"Configure the minimum stock level for %(name)s. The threshold uses the "
+"same unit as the ingredient (%(unit)s)."
+msgstr ""
+"Configura el nivel mínimo de existencias de %(name)s. El mínimo usa la "
+"misma unidad del ingrediente (%(unit)s)."
+
+msgid "Consumption"
+msgstr "Consumo"
+
+msgid "Correct inventory"
+msgstr "Corregir el inventario"
+
+msgid "Correct quantity"
+msgstr "Corregir la cantidad"
+
+msgid "Corrected quantity"
+msgstr "Cantidad corregida"
+
+msgid "Corrected the stock of %(name)s from %(before)s to %(after)s."
+msgstr "Se corrigieron las existencias de %(name)s de %(before)s a %(after)s."
+
+msgid "Correction"
+msgstr "Corrección"
+
+msgid "Correction history"
+msgstr "Historial de correcciones"
+
+msgid "Count"
+msgstr "Conteo"
+
+msgid "Create a new user account for the bakery administrators or staff."
+msgstr "Crea una cuenta para el personal o la administración de la panadería."
+
+msgid "Current quantity:"
+msgstr "Cantidad actual:"
+
+msgid "Daily production registered successfully."
+msgstr "La producción del día se registró correctamente."
+
+msgid "Daily sale registered successfully."
+msgstr "La venta del día se registró correctamente."
+
+msgid "Dashboard"
+msgstr "Panel"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Days expired"
+msgstr "Días vencido"
+
+msgid "Delete"
+msgstr "Eliminar"
+
+msgid "Delete ingredient"
+msgstr "Eliminar el ingrediente"
+
+msgid "Description"
+msgstr "Descripción"
+
+msgid "Don't have an account?"
+msgstr "¿No tienes cuenta?"
+
+msgid "Download Template"
+msgstr "Descargar la plantilla"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Edit business profile"
+msgstr "Editar el perfil del negocio"
+
+msgid "Edit ingredient"
+msgstr "Editar el ingrediente"
+
+msgid "Edit product"
+msgstr "Editar el producto"
+
+msgid "Edit profile"
+msgstr "Editar el perfil"
+
+msgid "Email"
+msgstr "Correo electrónico"
+
+msgid "Enable Scan Mode"
+msgstr "Activar el modo escáner"
+
+msgid "Enter a valid phone number (digits, spaces, +, -, ( and ) only)."
+msgstr "Escribe un teléfono válido (solo dígitos, espacios, +, -, ( y ))."
+
+msgid "Every product produced so far has been sold."
+msgstr "Todo lo que se ha producido hasta ahora se vendió."
+
+msgid "Every production and sale registered for %(name)s, newest first."
+msgstr ""
+"Toda la producción y las ventas registradas en %(name)s, de lo más "
+"reciente a lo más antiguo."
+
+msgid "Excel or CSV File"
+msgstr "Archivo de Excel o CSV"
+
+msgid "Expiration date"
+msgstr "Fecha de vencimiento"
+
+msgid "Expiration date from"
+msgstr "Vence desde"
+
+msgid "Expiration date to"
+msgstr "Vence hasta"
+
+msgid "Expiration warning days"
+msgstr "Días de aviso antes del vencimiento"
+
+msgid "Expired"
+msgstr "Vencido"
+
+msgid "Expired ingredients"
+msgstr "Ingredientes vencidos"
+
+msgid "Expired on"
+msgstr "Venció el"
+
+msgid "Expires"
+msgstr "Vence"
+
+msgid "Expiring soon"
+msgstr "Por vencer"
+
+msgid ""
+"Explain why the quantity is being corrected, for example a physical "
+"count."
+msgstr "Explica por qué se corrige la cantidad, por ejemplo un conteo físico."
+
+msgid "Filter"
+msgstr "Filtrar"
+
+msgid "For example, flour or sugar"
+msgstr "Por ejemplo, harina o azúcar"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "Getting started"
+msgstr "Para empezar"
+
+msgid "Gram"
+msgstr "Gramo"
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "Import Ingredients"
+msgstr "Importar ingredientes"
+
+msgid "Import from Excel"
+msgstr "Importar desde Excel"
+
+msgid "Inactive"
+msgstr "Inactivo"
+
+msgid "Ingredient"
+msgstr "Ingrediente"
+
+msgid "Ingredient deleted successfully."
+msgstr "El ingrediente se eliminó correctamente."
+
+msgid "Ingredient registered successfully."
+msgstr "El ingrediente se registró correctamente."
+
+msgid "Ingredient updated successfully."
+msgstr "El ingrediente se actualizó correctamente."
+
+msgid "Ingredients"
+msgstr "Ingredientes"
+
+msgid "Invalid date."
+msgstr "Fecha inválida."
+
+msgid "Invalid username or password."
+msgstr "El usuario o la contraseña no son correctos."
+
+msgid "Inventory"
+msgstr "Inventario"
+
+msgid "Inventory corrected"
+msgstr "Inventario corregido"
+
+msgid "Inventory for small bakeries"
+msgstr "Inventario para panaderías pequeñas"
+
+msgid "Inventory management for small bakeries"
+msgstr "Gestión de inventario para panaderías pequeñas"
+
+msgid "Kilogram"
+msgstr "Kilogramo"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Liter"
+msgstr "Litro"
+
+msgid "Login"
+msgstr "Entrar"
+
+msgid "Loss"
+msgstr "Pérdida"
+
+msgid "Loss reporting"
+msgstr "Reporte de pérdidas"
+
+msgid "Low stock"
+msgstr "Existencias bajas"
+
+msgid "Low-stock threshold"
+msgstr "Mínimo de existencias"
+
+msgid "Low-stock threshold updated successfully."
+msgstr "El mínimo de existencias se actualizó correctamente."
+
+msgid "Manage products"
+msgstr "Gestionar los productos"
+
+msgid "Manage the baked products registered for %(name)s."
+msgstr "Gestiona los productos registrados en %(name)s."
+
+msgid "Mass"
+msgstr "Masa"
+
+msgid "Name"
+msgstr "Nombre"
+
+msgid "No activity has been recorded yet."
+msgstr "Todavía no se ha registrado ninguna actividad."
+
+msgid "No activity matches the selected filters."
+msgstr "Ninguna actividad coincide con los filtros seleccionados."
+
+msgid "No corrections have been recorded for this ingredient yet."
+msgstr "Todavía no se ha registrado ninguna corrección para este ingrediente."
+
+msgid "No daily production or sales have been recorded yet."
+msgstr "Todavía no se ha registrado producción ni ventas del día."
+
+msgid "No ingredient expired with stock left."
+msgstr "Ningún ingrediente se venció con existencias."
+
+msgid "No ingredients match the selected filters."
+msgstr "Ningún ingrediente coincide con los filtros seleccionados."
+
+msgid "No ingredients match “%(query)s”."
+msgstr "Ningún ingrediente coincide con “%(query)s”."
+
+msgid "No ingredients registered yet."
+msgstr "Todavía no hay ingredientes registrados."
+
+msgid "No inventory alert"
+msgstr "Sin alertas de inventario"
+
+msgid "No product was left unsold in the selected date range."
+msgstr "En el rango de fechas seleccionado no quedó ningún producto sin vender."
+
+msgid "No production or sales have been registered yet."
+msgstr "Todavía no se ha registrado producción ni ventas."
+
+msgid "No production records have been registered yet."
+msgstr "Todavía no hay registros de producción."
+
+msgid "No products have been registered yet."
+msgstr "Todavía no hay productos registrados."
+
+msgid "No products registered"
+msgstr "Sin productos registrados"
+
+msgid "No records match the selected filters."
+msgstr "Ningún registro coincide con los filtros seleccionados."
+
+msgid "No sales have been registered yet."
+msgstr "Todavía no se ha registrado ninguna venta."
+
+msgid "No sales were registered in the selected date range."
+msgstr "En el rango de fechas seleccionado no se registró ninguna venta."
+
+msgid "Not signed in"
+msgstr "Sin iniciar sesión"
+
+msgid "Note"
+msgstr "Nota"
+
+msgid "Optional."
+msgstr "Opcional."
+
+msgid "Optional. Scan or type a barcode to link it to this ingredient."
+msgstr ""
+"Opcional. Escanea o escribe un código de barras para vincularlo a este "
+"ingrediente."
+
+msgid "Overproduction"
+msgstr "Sobreproducción"
+
+msgid "Phone"
+msgstr "Teléfono"
+
+msgid "Produced"
+msgstr "Producido"
+
+msgid ""
+"Produced: %(produced)s &middot; Sold: %(sold)s &middot; Sales amount: "
+"%(amount)s"
+msgstr ""
+"Producido: %(produced)s &middot; Vendido: %(sold)s &middot; Total "
+"vendido: %(amount)s"
+
+msgid "Product"
+msgstr "Producto"
+
+msgid "Product registered successfully."
+msgstr "El producto se registró correctamente."
+
+msgid "Product updated successfully."
+msgstr "El producto se actualizó correctamente."
+
+msgid "Production"
+msgstr "Producción"
+
+msgid "Production and sales"
+msgstr "Producción y ventas"
+
+msgid "Production and sales history"
+msgstr "Historial de producción y ventas"
+
+msgid "Production date"
+msgstr "Fecha de producción"
+
+msgid "Production date and time"
+msgstr "Fecha y hora de producción"
+
+msgid "Production only"
+msgstr "Solo producción"
+
+msgid "Production records"
+msgstr "Registros de producción"
+
+msgid "Products"
+msgstr "Productos"
+
+msgid ""
+"Quantities are not valued in money because the inventory does not record "
+"what each ingredient costs."
+msgstr ""
+"Las cantidades no se valoran en dinero porque el inventario no guarda "
+"cuánto cuesta cada ingrediente."
+
+msgid "Quantity"
+msgstr "Cantidad"
+
+msgid "Quantity left"
+msgstr "Cantidad restante"
+
+msgid "Quantity produced"
+msgstr "Cantidad producida"
+
+msgid "Quantity sold"
+msgstr "Cantidad vendida"
+
+msgid "Reason"
+msgstr "Motivo"
+
+msgid "Record a purchase and update the ingredient's current stock."
+msgstr "Registra una compra y actualiza las existencias del ingrediente."
+
+msgid "Record baked products sold by %(name)s."
+msgstr "Registra los productos vendidos por %(name)s."
+
+msgid "Record ingredients used from the inventory of %(name)s."
+msgstr "Registra los ingredientes usados del inventario de %(name)s."
+
+msgid "Record the baked products manufactured by %(name)s."
+msgstr "Registra los productos elaborados por %(name)s."
+
+msgid "Record type"
+msgstr "Tipo de registro"
+
+msgid "Register Stock-In"
+msgstr "Registrar una entrada"
+
+msgid "Register Stock-In (Ingredient Purchase)"
+msgstr "Registrar una entrada (compra de ingredientes)"
+
+msgid "Register User"
+msgstr "Registrar un usuario"
+
+msgid "Register a baked product before recording sales."
+msgstr "Registra un producto antes de registrar ventas."
+
+msgid "Register consumption"
+msgstr "Registrar consumo"
+
+msgid "Register daily production"
+msgstr "Registrar la producción del día"
+
+msgid "Register daily sales"
+msgstr "Registrar las ventas del día"
+
+msgid "Register here"
+msgstr "Regístrate aquí"
+
+msgid "Register ingredient"
+msgstr "Registrar un ingrediente"
+
+msgid "Register product"
+msgstr "Registrar un producto"
+
+msgid "Register production"
+msgstr "Registrar producción"
+
+msgid "Register sale"
+msgstr "Registrar una venta"
+
+msgid "Register your first baked product before recording daily production."
+msgstr "Registra tu primer producto antes de registrar la producción del día."
+
+msgid "Registered %(quantity)s of %(name)s into the stock."
+msgstr "Se registró una entrada de %(quantity)s de %(name)s."
+
+msgid "Registered by"
+msgstr "Registrado por"
+
+msgid "Registered the sale of %(quantity)s %(name)s for %(amount)s."
+msgstr "Se registró la venta de %(quantity)s %(name)s por %(amount)s."
+
+msgid ""
+"Replace the recorded quantity of %(name)s with the real quantity counted "
+"in the bakery. Every correction is logged with its date, user and "
+"reason."
+msgstr ""
+"Reemplaza la cantidad registrada de %(name)s por la cantidad real "
+"contada en la panadería. Cada corrección queda guardada con su fecha, "
+"usuario y motivo."
+
+msgid "Revenue"
+msgstr "Ingresos"
+
+msgid "Review the daily production registered for %(name)s."
+msgstr "Revisa la producción diaria registrada en %(name)s."
+
+msgid "Review the sales registered for %(name)s."
+msgstr "Revisa las ventas registradas en %(name)s."
+
+msgid "SKU"
+msgstr "SKU"
+
+msgid "Sale"
+msgstr "Venta"
+
+msgid "Sale date and time"
+msgstr "Fecha y hora de la venta"
+
+msgid "Sale registered"
+msgstr "Venta registrada"
+
+msgid "Sales"
+msgstr "Ventas"
+
+msgid "Sales analytics"
+msgstr "Análisis de ventas"
+
+msgid "Sales only"
+msgstr "Solo ventas"
+
+msgid "Sales records"
+msgstr "Registros de ventas"
+
+msgid "Save Stock-In"
+msgstr "Guardar la entrada"
+
+msgid "Save changes"
+msgstr "Guardar los cambios"
+
+msgid "Save correction"
+msgstr "Guardar la corrección"
+
+msgid "Save profile"
+msgstr "Guardar el perfil"
+
+msgid "Save threshold"
+msgstr "Guardar el mínimo"
+
+msgid "Scan Mode Enabled:"
+msgstr "Modo escáner activado:"
+
+msgid "Search"
+msgstr "Buscar"
+
+msgid "Search ingredients by name"
+msgstr "Buscar ingredientes por nombre"
+
+msgid "See all your registered ingredients and their current stock levels."
+msgstr "Consulta todos tus ingredientes registrados y sus existencias actuales."
+
+msgid "Select a product"
+msgstr "Selecciona un producto"
+
+msgid "Select a unit"
+msgstr "Selecciona una unidad"
+
+msgid "Select an ingredient"
+msgstr "Selecciona un ingrediente"
+
+msgid "Set up your bakery"
+msgstr "Configura tu panadería"
+
+msgid "Set up your bakery profile"
+msgstr "Configura el perfil de tu panadería"
+
+msgid "Set up your name, address, and contact details."
+msgstr "Registra tu nombre, dirección y datos de contacto."
+
+msgid "Share of the best seller"
+msgstr "Proporción frente a lo más vendido"
+
+msgid "Show an alert this many days before the expiration date."
+msgstr "Muestra una alerta estos días antes de la fecha de vencimiento."
+
+msgid ""
+"Showing the %(shown)s most recent entries out of %(total)s. Narrow the "
+"filters to see the other %(hidden)s."
+msgstr ""
+"Se muestran las %(shown)s entradas más recientes de %(total)s. Ajusta "
+"los filtros para ver las otras %(hidden)s."
+
+msgid "Signed in"
+msgstr "Inició sesión"
+
+msgid "Signed out"
+msgstr "Cerró sesión"
+
+msgid "Sold"
+msgstr "Vendido"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Stock-In (Purchase)"
+msgstr "Entrada (compra)"
+
+msgid "Stock-in registered"
+msgstr "Entrada registrada"
+
+msgid "Tax ID"
+msgstr "NIT"
+
+msgid "The bakery address is required."
+msgstr "La dirección de la panadería es obligatoria."
+
+msgid "The bakery name is required."
+msgstr "El nombre de la panadería es obligatorio."
+
+msgid "The bakery profile has already been set up."
+msgstr "El perfil de la panadería ya fue configurado."
+
+msgid "The bakery profile was already set up."
+msgstr "El perfil de la panadería ya estaba configurado."
+
+msgid "The corrected quantity cannot be negative."
+msgstr "La cantidad corregida no puede ser negativa."
+
+msgid "The corrected quantity must be different from the current quantity."
+msgstr "La cantidad corregida debe ser distinta de la cantidad actual."
+
+msgid "The ingredient name is required."
+msgstr "El nombre del ingrediente es obligatorio."
+
+msgid "The product name is required."
+msgstr "El nombre del producto es obligatorio."
+
+msgid ""
+"The real quantity counted in the bakery. It replaces the current "
+"quantity."
+msgstr "La cantidad real contada en la panadería. Reemplaza la cantidad actual."
+
+msgid "The start date cannot be later than the end date."
+msgstr "La fecha inicial no puede ser posterior a la fecha final."
+
+msgid "This barcode is already linked to another ingredient."
+msgstr "Este código de barras ya está vinculado a otro ingrediente."
+
+msgid ""
+"This information identifies your bakery across Crumb. You can always add "
+"contact details later."
+msgstr ""
+"Esta información identifica a tu panadería dentro de Crumb. Los datos de "
+"contacto los puedes agregar después."
+
+msgid "This product is already registered."
+msgstr "Este producto ya está registrado."
+
+msgid "To"
+msgstr "Hasta"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Totals"
+msgstr "Totales"
+
+msgid ""
+"Track ingredients, stock, and expiration dates in one place. Start by "
+"setting up your bakery's profile."
+msgstr ""
+"Lleva en un solo lugar tus ingredientes, existencias y fechas de "
+"vencimiento. Empieza configurando el perfil de tu panadería."
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Unit"
+msgstr "Unidad"
+
+msgid "Unit of measure"
+msgstr "Unidad de medida"
+
+msgid "Unit price"
+msgstr "Precio unitario"
+
+msgid "Units sold"
+msgstr "Unidades vendidas"
+
+msgid "Unknown record type."
+msgstr "Tipo de registro desconocido."
+
+msgid "Unsold"
+msgstr "Sin vender"
+
+msgid "Unsold products"
+msgstr "Productos sin vender"
+
+msgid "Unsold products by day"
+msgstr "Productos sin vender por día"
+
+msgid "Update %(name)s."
+msgstr "Actualiza %(name)s."
+
+msgid "Update the inventory information of %(name)s."
+msgstr "Actualiza la información de inventario de %(name)s."
+
+msgid "Update your bakery's contact and business information."
+msgstr "Actualiza los datos de contacto y del negocio de tu panadería."
+
+msgid "Upload an .xlsx, .xls, or .csv file."
+msgstr "Sube un archivo .xlsx, .xls o .csv."
+
+msgid ""
+"Upload an Excel or CSV file to bulk import ingredients. If an ingredient "
+"already exists, its quantity will be added and the expiration date "
+"updated."
+msgstr ""
+"Sube un archivo de Excel o CSV para importar ingredientes en lote. Si un "
+"ingrediente ya existe, se suma su cantidad y se actualiza la fecha de "
+"vencimiento."
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "User account registered successfully."
+msgstr "La cuenta de usuario se registró correctamente."
+
+msgid "User activity log"
+msgstr "Registro de actividad de los usuarios"
+
+msgid "Username"
+msgstr "Usuario"
+
+msgid "Value not earned"
+msgstr "Valor no percibido"
+
+msgid "View Inventory"
+msgstr "Ver el inventario"
+
+msgid "View history"
+msgstr "Ver el historial"
+
+msgid "View production records"
+msgstr "Ver los registros de producción"
+
+msgid "View sales"
+msgstr "Ver las ventas"
+
+msgid "View your business information."
+msgstr "Consulta la información de tu negocio."
+
+msgid "Volume"
+msgstr "Volumen"
+
+msgid "Waiting for scan..."
+msgstr "Esperando el escaneo..."
+
+msgid "Welcome back, %(name)s"
+msgstr "Hola de nuevo, %(name)s"
+
+msgid ""
+"What %(name)s lost: ingredients that expired with stock left, and "
+"products that were baked and never sold."
+msgstr ""
+"Lo que perdió %(name)s: ingredientes que se vencieron con existencias y "
+"productos que se hornearon y nunca se vendieron."
+
+msgid "What each user did in %(name)s, newest first."
+msgstr ""
+"Lo que hizo cada usuario en %(name)s, de lo más reciente a lo más "
+"antiguo."
+
+msgid "When"
+msgstr "Cuándo"
+
+msgid "Which products of %(name)s sell best, ordered from the best seller down."
+msgstr "Cuáles productos de %(name)s se venden más, del más vendido hacia abajo."
+
+msgid "You can scan products continuously."
+msgstr "Puedes escanear productos de forma continua."
+
+msgid "from the unsold products"
+msgstr "de los productos sin vender"
+
+msgid "still holding stock"
+msgstr "que todavía tienen existencias"
+
+msgid "will no longer appear in the active inventory."
+msgstr "ya no aparecerá en el inventario activo."
+
+msgid "%(counter)s entry recorded."
+msgid_plural "%(counter)s entries recorded."
+msgstr[0] "%(counter)s entrada registrada."
+msgstr[1] "%(counter)s entradas registradas."
+
+msgid "across %(counter)s ingredient"
+msgid_plural "across %(counter)s ingredients"
+msgstr[0] "en %(counter)s ingrediente"
+msgstr[1] "en %(counter)s ingredientes"
+
+msgid "across %(counter)s sale"
+msgid_plural "across %(counter)s sales"
+msgstr[0] "en %(counter)s venta"
+msgstr[1] "en %(counter)s ventas"
+
+msgid "from %(counter)s product"
+msgid_plural "from %(counter)s products"
+msgstr[0] "de %(counter)s producto"
+msgstr[1] "de %(counter)s productos"
+
+msgid "over %(counter)s product-day"
+msgid_plural "over %(counter)s product-days"
+msgstr[0] "en %(counter)s producto-día"
+msgstr[1] "en %(counter)s productos-día"

@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Sales records - Crumb{% endblock %}
+{% block title %}{% translate "Sales records" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Sales</p>
+<p class="eyebrow">{% translate "Sales" %}</p>
 
-<h1>Sales records</h1>
+<h1>{% translate "Sales records" %}</h1>
 
 <p class="lede">
-    Review the sales registered for
-    {{ bakery.name }}.
+    {% blocktranslate trimmed with name=bakery.name %}Review the sales registered for
+    {{ name }}.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -21,14 +22,21 @@
         href="{% url 'production:sales_register' %}"
         class="btn"
     >
-        Register sale
+        {% translate "Register sale" %}
     </a>
 
     <a
         href="{% url 'production:history_tracking' %}"
         class="btn btn-secondary"
     >
-        View history
+        {% translate "View history" %}
+    </a>
+
+    <a
+        href="{% url 'production:sales_analytics' %}"
+        class="btn btn-secondary"
+    >
+        {% translate "Sales analytics" %}
     </a>
 
 </div>
@@ -41,11 +49,11 @@
 
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Unit price</th>
-                    <th>Total</th>
-                    <th>Date</th>
+                    <th>{% translate "Product" %}</th>
+                    <th>{% translate "Quantity" %}</th>
+                    <th>{% translate "Unit price" %}</th>
+                    <th>{% translate "Total" %}</th>
+                    <th>{% translate "Date" %}</th>
                 </tr>
             </thead>
 
@@ -72,7 +80,7 @@
         <div class="empty-state">
 
             <p>
-                No sales have been registered yet.
+                {% translate "No sales have been registered yet." %}
             </p>
 
         </div>
@@ -81,17 +89,17 @@
 
 </div>
 
-<h2 style="margin-top: 2rem;">Unsold products by day</h2>
+<h2 style="margin-top: 2rem;">{% translate "Unsold products by day" %}</h2>
 <div class="card">
     {% if daily_unsold_products %}
         <table>
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Product</th>
-                    <th>Produced</th>
-                    <th>Sold</th>
-                    <th>Unsold</th>
+                    <th>{% translate "Date" %}</th>
+                    <th>{% translate "Product" %}</th>
+                    <th>{% translate "Produced" %}</th>
+                    <th>{% translate "Sold" %}</th>
+                    <th>{% translate "Unsold" %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -107,7 +115,7 @@
             </tbody>
         </table>
     {% else %}
-        <div class="empty-state"><p>No daily production or sales have been recorded yet.</p></div>
+        <div class="empty-state"><p>{% translate "No daily production or sales have been recorded yet." %}</p></div>
     {% endif %}
 </div>
 

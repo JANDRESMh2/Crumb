@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Products - Crumb{% endblock %}
+{% block title %}{% translate "Products" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Products</h1>
+<h1>{% translate "Products" %}</h1>
 
 <p class="lede">
-    Manage the baked products registered for
-    {{ bakery.name }}.
+    {% blocktranslate trimmed with name=bakery.name %}Manage the baked products registered
+    for {{ name }}.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -21,7 +22,7 @@
         href="{% url 'production:product_create' %}"
         class="btn"
     >
-        Add product
+        {% translate "Add product" %}
     </a>
 
 </div>
@@ -34,10 +35,10 @@
 
             <thead>
                 <tr>
-                    <th>Product</th>
+                    <th>{% translate "Product" %}</th>
                     <th>SKU</th>
-                    <th>Unit price</th>
-                    <th>Status</th>
+                    <th>{% translate "Unit price" %}</th>
+                    <th>{% translate "Status" %}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -66,7 +67,7 @@
                                 href="{% url 'production:product_edit' product.id %}"
                                 class="btn btn-secondary"
                             >
-                                Edit
+                                {% translate "Edit" %}
                             </a>
                         </td>
                     </tr>
@@ -80,7 +81,7 @@
     {% else %}
 
         <div class="empty-state">
-            <p>No products have been registered yet.</p>
+            <p>{% translate "No products have been registered yet." %}</p>
         </div>
 
     {% endif %}

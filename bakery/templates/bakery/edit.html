@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}Edit {{ bakery.name }} - Crumb{% endblock %}
 {% block content %}
-<p class="eyebrow">Bakery profile</p>
-<h1>Edit business profile</h1>
-<p class="lede">Update your bakery's contact and business information.</p>
+<p class="eyebrow">{% translate "Bakery profile" %}</p>
+<h1>{% translate "Edit business profile" %}</h1>
+<p class="lede">{% translate "Update your bakery's contact and business information." %}</p>
 <div class="card">
   <form method="post" novalidate>
     {% csrf_token %}
@@ -17,8 +18,8 @@
       {% include "partials/field.html" with field=form.email %}
     </div>
     {% include "partials/field.html" with field=form.tax_id %}
-    <button type="submit">Save changes</button>
-    <a class="btn btn-secondary" href="{% url 'bakery:detail' %}">Cancel</a>
+    <button type="submit">{% translate "Save changes" %}</button>
+    <a class="btn btn-secondary" href="{% url 'bakery:detail' %}">{% translate "Cancel" %}</a>
   </form>
 </div>
 {% endblock %}

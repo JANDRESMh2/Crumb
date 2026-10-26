@@ -1,15 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Crumb - Inventory for small bakeries{% endblock %}
+{% load i18n %}
+{% block title %}Crumb - {% translate "Inventory for small bakeries" %}{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
 {% if bakery %}
-  <p class="eyebrow">Dashboard</p>
-  <h1>Welcome back, {{ bakery.name }}</h1>
+  <p class="eyebrow">{% translate "Dashboard" %}</p>
+  <h1>{% blocktranslate trimmed with name=bakery.name %}Welcome back, {{ name }}{% endblocktranslate %}</h1>
   <p class="lede">{{ bakery.address }}</p>
 {% else %}
   <p class="eyebrow">Crumb</p>
-  <h1>Inventory management for small bakeries</h1>
-  <p class="lede">Track ingredients, stock, and expiration dates in one place. Start by setting up your bakery's profile.</p>
+  <h1>{% translate "Inventory management for small bakeries" %}</h1>
+  <p class="lede">{% translate "Track ingredients, stock, and expiration dates in one place. Start by setting up your bakery's profile." %}</p>
 {% endif %}
 
 <div class="card-grid">
@@ -17,29 +18,29 @@
     <span class="icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
     </span>
-    <h2>Bakery profile</h2>
-    <p>{% if bakery %}View your business information.{% else %}Set up your name, address, and contact details.{% endif %}</p>
+    <h2>{% translate "Bakery profile" %}</h2>
+    <p>{% if bakery %}{% translate "View your business information." %}{% else %}{% translate "Set up your name, address, and contact details." %}{% endif %}</p>
   </a>
   <a class="action-card" href="{% url 'inventory:create' %}">
     <span class="icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
     </span>
-    <h2>Register ingredient</h2>
-    <p>Add a new ingredient with quantity, unit, and expiration date.</p>
+    <h2>{% translate "Register ingredient" %}</h2>
+    <p>{% translate "Add a new ingredient with quantity, unit, and expiration date." %}</p>
   </a>
   <a class="action-card" href="{% url 'inventory:stock_in' %}">
     <span class="icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
     </span>
-    <h2>Register Stock-In</h2>
-    <p>Record a purchase and update the ingredient's current stock.</p>
+    <h2>{% translate "Register Stock-In" %}</h2>
+    <p>{% translate "Record a purchase and update the ingredient's current stock." %}</p>
   </a>
   <a class="action-card" href="{% url 'inventory:list' %}">
     <span class="icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><circle cx="7" cy="5" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="19" r="1" fill="currentColor"/></svg>
     </span>
-    <h2>View Inventory</h2>
-    <p>See all your registered ingredients and their current stock levels.</p>
+    <h2>{% translate "View Inventory" %}</h2>
+    <p>{% translate "See all your registered ingredients and their current stock levels." %}</p>
   </a>
 </div>
 {% endblock %}
