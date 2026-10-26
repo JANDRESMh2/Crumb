@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
+from django.utils.translation import gettext, gettext_lazy as _
 from decimal import Decimal, ROUND_HALF_UP
 
 from bakery.models import ActivityLog
@@ -77,7 +78,7 @@ def register_product(
 
     if not name:
         raise ValidationError(
-            'The product name is required.'
+            _('The product name is required.')
         )
 
     existing_product = Product.objects.filter(
@@ -89,7 +90,7 @@ def register_product(
 
         if existing_product.status == Product.Status.ACTIVE:
             raise ValidationError(
-                'This product is already registered.'
+                _('This product is already registered.')
             )
 
         existing_product.name = name
@@ -138,14 +139,14 @@ def register_daily_production(
 
     if product.bakery_id != bakery.pk:
         raise ValidationError(
-            'The selected product does not belong '
-            'to this bakery.'
+            _('The selected product does not belong '
+              'to this bakery.')
         )
 
     if product.status != Product.Status.ACTIVE:
         raise ValidationError(
-            'Inactive products cannot be used '
-            'for production registration.'
+            _('Inactive products cannot be used '
+              'for production registration.')
         )
 
     record = ProductionRecord(
@@ -180,20 +181,20 @@ def register_daily_sale(
 
     if product.bakery_id != bakery.pk:
         raise ValidationError(
-            'The selected product does not belong '
-            'to this bakery.'
+            _('The selected product does not belong '
+              'to this bakery.')
         )
 
     if product.status != Product.Status.ACTIVE:
         raise ValidationError(
-            'Inactive products cannot be used '
-            'for sales registration.'
+            _('Inactive products cannot be used '
+              'for sales registration.')
         )
 
     if product.unit_price is None:
         raise ValidationError(
-            'The selected product does not have '
-            'a unit price configured.'
+            _('The selected product does not have '
+              'a unit price configured.')
         )
 
     unit_price_at_sale = product.unit_price.quantize(
@@ -224,10 +225,13 @@ def register_daily_sale(
     record_activity(
         user=user,
         action_type=ActivityLog.ActionType.SALE,
-        description=(
-            f'Registered the sale of {quantity_sold} {product.name} '
-            f'for {total_amount}.'
-        ),
+        description=gettext(
+            'Registered the sale of %(quantity)s %(name)s for %(amount)s.'
+        ) % {
+            'quantity': quantity_sold,
+            'name': product.name,
+            'amount': total_amount,
+        },
     )
 
     return record
@@ -251,11 +255,11 @@ def build_history_tracking(
     """
 
     if record_type not in HISTORY_RECORD_TYPES:
-        raise ValidationError('Unknown record type.')
+        raise ValidationError(_('Unknown record type.'))
 
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     entries = []
@@ -365,7 +369,7 @@ def build_sales_analytics(*, bakery, start_date=None, end_date=None):
 
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     sales = SalesRecord.objects.filter(bakery=bakery)
@@ -436,6 +440,11 @@ def build_sales_analytics(*, bakery, start_date=None, end_date=None):
         'revenue': total_revenue,
         'product_count': len(rankings),
         'sale_count': sum(row['sale_count'] for row in rows),
+        # la suma de las participaciones, para el pie de la tabla
+        'revenue_share': sum(
+            (row['revenue_share'] for row in rankings),
+            Decimal('0.0'),
+        ),
     }
 
     return rankings, totals
@@ -458,7 +467,7 @@ def build_loss_report(*, bakery, start_date=None, end_date=None):
 
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     expired_ingredients = build_expired_ingredient_losses(

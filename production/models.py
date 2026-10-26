@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from bakery.models import Bakery
 
@@ -13,8 +14,8 @@ class Product(models.Model):
     """Finished bakery product used for production and sales tracking."""
 
     class Status(models.TextChoices):
-        ACTIVE = 'Active', 'Active'
-        INACTIVE = 'Inactive', 'Inactive'
+        ACTIVE = 'Active', _('Active')
+        INACTIVE = 'Inactive', _('Inactive')
 
     id = models.UUIDField(
         primary_key=True,
@@ -90,8 +91,8 @@ class ProductionRecord(models.Model):
     """Historical record of a product production event."""
 
     class Status(models.TextChoices):
-        COMPLETED = 'Completed', 'Completed'
-        CANCELLED = 'Cancelled', 'Cancelled'
+        COMPLETED = 'Completed', _('Completed')
+        CANCELLED = 'Cancelled', _('Cancelled')
 
     id = models.UUIDField(
         primary_key=True,

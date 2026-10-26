@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Production records - Crumb{% endblock %}
+{% block title %}{% translate "Production records" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Production records</h1>
+<h1>{% translate "Production records" %}</h1>
 
 <p class="lede">
-    Review the daily production registered
-    for {{ bakery.name }}.
+    {% blocktranslate trimmed with name=bakery.name %}Review the daily production registered
+    for {{ name }}.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -21,41 +22,41 @@
         href="{% url 'production:register' %}"
         class="btn"
     >
-        Register production
+        {% translate "Register production" %}
     </a>
 
     <a
         href="{% url 'production:product_list' %}"
         class="btn btn-secondary"
     >
-        Manage products
+        {% translate "Manage products" %}
     </a>
     <a
         href="{% url 'production:sales_register' %}"
         class="btn btn-secondary"
     >
-        Register sale
+        {% translate "Register sale" %}
     </a>
 
     <a
         href="{% url 'production:history_tracking' %}"
         class="btn btn-secondary"
     >
-        View history
+        {% translate "View history" %}
     </a>
 
     <a
         href="{% url 'production:sales_analytics' %}"
         class="btn btn-secondary"
     >
-        Sales analytics
+        {% translate "Sales analytics" %}
     </a>
 
     <a
         href="{% url 'production:loss_report' %}"
         class="btn btn-secondary"
     >
-        Loss reporting
+        {% translate "Loss reporting" %}
     </a>
 
 </div>
@@ -68,9 +69,9 @@
 
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Production date</th>
+                    <th>{% translate "Product" %}</th>
+                    <th>{% translate "Quantity" %}</th>
+                    <th>{% translate "Production date" %}</th>
                 </tr>
             </thead>
 
@@ -95,7 +96,7 @@
         <div class="empty-state">
 
             <p>
-                No production records have been registered yet.
+                {% translate "No production records have been registered yet." %}
             </p>
 
         </div>

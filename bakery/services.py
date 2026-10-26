@@ -8,6 +8,7 @@ user instead of assuming a single row.
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 
 from .models import ActivityLog, Bakery
 
@@ -23,7 +24,7 @@ def get_current_bakery():
 @transaction.atomic
 def setup_bakery_profile(*, name, address, phone='', email='', tax_id=''):
     if Bakery.objects.exists():
-        raise BakeryAlreadyConfigured('The bakery profile has already been set up.')
+        raise BakeryAlreadyConfigured(_('The bakery profile has already been set up.'))
     return Bakery.objects.create(
         name=name,
         address=address,
@@ -73,7 +74,7 @@ def build_activity_log(
 
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     entries = ActivityLog.objects.select_related('user')

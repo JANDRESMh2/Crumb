@@ -1,23 +1,24 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Configure low-stock threshold - Crumb{% endblock %}
+{% block title %}{% translate "Configure low-stock threshold" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Inventory</p>
+<p class="eyebrow">{% translate "Inventory" %}</p>
 
-<h1>Configure low-stock threshold</h1>
+<h1>{% translate "Configure low-stock threshold" %}</h1>
 
 <p class="lede">
-  Configure the minimum stock level for {{ ingredient.name }}.
-  The threshold uses the same unit as the ingredient
-  ({{ ingredient.unit.abbreviation }}).
+  {% blocktranslate trimmed with name=ingredient.name unit=ingredient.unit.abbreviation %}Configure
+  the minimum stock level for {{ name }}. The threshold uses the same unit
+  as the ingredient ({{ unit }}).{% endblocktranslate %}
 </p>
 
 <div class="card">
 
   <p>
-    Current quantity:
+    {% translate "Current quantity:" %}
     <strong>
       {{ ingredient.current_quantity }}
       {{ ingredient.unit.abbreviation }}
@@ -38,11 +39,11 @@
 
     <div class="actions">
       <button type="submit">
-        Save threshold
+        {% translate "Save threshold" %}
       </button>
 
       <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
-        Cancel
+        {% translate "Cancel" %}
       </a>
     </div>
 

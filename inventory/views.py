@@ -6,6 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext_lazy as _
 
 from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
@@ -54,7 +55,7 @@ def ingredient_create(request):
         form = BarcodeScanningForIngredientRegistrationForm(request.POST, bakery=bakery)
         if form.is_valid():
             register_ingredient(bakery=bakery, **form.cleaned_data)
-            messages.success(request, 'Ingredient registered successfully.')
+            messages.success(request, _('Ingredient registered successfully.'))
             return redirect('inventory:list')
     else:
         form = BarcodeScanningForIngredientRegistrationForm(bakery=bakery)
@@ -87,7 +88,7 @@ def ingredient_edit(request, ingredient_id):
 
             messages.success(
                 request,
-                'Ingredient updated successfully.'
+                _('Ingredient updated successfully.')
             )
             return redirect('inventory:list')
 
@@ -123,7 +124,7 @@ def ingredient_delete(request, ingredient_id):
 
         messages.success(
             request,
-            'Ingredient deleted successfully.'
+            _('Ingredient deleted successfully.')
         )
         return redirect('inventory:list')
 
@@ -192,7 +193,7 @@ def ingredient_list(request):
     if not valid_date_range:
         messages.error(
             request,
-            'The start date cannot be later than the end date.'
+            _('The start date cannot be later than the end date.')
         )
 
     ingredients = list(ingredients)
@@ -334,7 +335,7 @@ def low_stock_threshold_configuration(request, ingredient_id):
 
             messages.success(
                 request,
-                'Low-stock threshold updated successfully.'
+                _('Low-stock threshold updated successfully.')
             )
 
             return redirect('inventory:list')
