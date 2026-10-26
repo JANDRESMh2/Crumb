@@ -5,6 +5,9 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from bakery.models import ActivityLog
+from bakery.services import record_activity
+
 from .models import AlertConfiguration, BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure, SUPPORTED_UNIT_ABBREVIATIONS
 
 
@@ -372,7 +375,7 @@ def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, u
     ingredient.current_quantity = new_quantity
     ingredient.save(update_fields=['current_quantity', 'updated_at'])
 
-    return StockMovement.objects.create(
+    movement = StockMovement.objects.create(
         bakery=bakery,
         ingredient=ingredient,
         movement_type='Correction',
@@ -382,6 +385,17 @@ def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, u
         note=reason,
         user=user,
     )
+
+    record_activity(
+        user=user,
+        action_type=ActivityLog.ActionType.CORRECTION,
+        description=(
+            f'Corrected the stock of {ingredient.name} '
+            f'from {previous_quantity} to {new_quantity}.'
+        ),
+    )
+
+    return movement
 
 
 @transaction.atomic
@@ -397,7 +411,7 @@ def register_stock_in(*, bakery, ingredient, quantity, note='', user=None):
     ingredient.current_quantity += quantity
     ingredient.save(update_fields=['current_quantity', 'updated_at'])
 
-    return StockMovement.objects.create(
+    movement = StockMovement.objects.create(
         bakery=bakery,
         ingredient=ingredient,
         movement_type='StockIn',
@@ -405,6 +419,14 @@ def register_stock_in(*, bakery, ingredient, quantity, note='', user=None):
         note=note,
         user=user,
     )
+
+    record_activity(
+        user=user,
+        action_type=ActivityLog.ActionType.STOCK_IN,
+        description=f'Registered {quantity} of {ingredient.name} into the stock.',
+    )
+
+    return movement
 
 
 def find_ingredient_by_barcode(*, bakery, barcode_value):
@@ -438,3 +460,55 @@ def build_import_template():
     buffer = io.BytesIO()
     pd.DataFrame(columns=IMPORT_TEMPLATE_COLUMNS).to_excel(buffer, index=False)
     return buffer.getvalue()
+
+
+def build_expired_ingredient_losses(
+    *,
+    bakery,
+    start_date=None,
+    end_date=None,
+    today=None,
+):
+    """
+    FR26 - List the ingredients that expired while still holding stock.
+
+    An ingredient counts as a loss when its expiration date has already
+    passed, which is the same rule FR06 applies in `is_ingredient_expired`,
+    and some quantity is still on hand. The optional dates narrow the report
+    to the ingredients that expired inside that range.
+
+    Only active ingredients are reported. Deactivating an ingredient (FR04)
+    takes it out of the inventory without touching its quantity, so the
+    stored amount is no longer a reliable measure of what was lost.
+    """
+
+    today = today or timezone.localdate()
+
+    ingredients = (
+        Ingredient.objects
+        .filter(
+            bakery=bakery,
+            is_active=True,
+            expiration_date__lt=today,
+            current_quantity__gt=0,
+        )
+        .select_related('unit')
+        .order_by('expiration_date', 'name')
+    )
+
+    if start_date:
+        ingredients = ingredients.filter(expiration_date__gte=start_date)
+    if end_date:
+        ingredients = ingredients.filter(expiration_date__lte=end_date)
+
+    return [
+        {
+            'ingredient_id': ingredient.pk,
+            'ingredient_name': ingredient.name,
+            'unit_abbreviation': ingredient.unit.abbreviation,
+            'quantity': ingredient.current_quantity,
+            'expiration_date': ingredient.expiration_date,
+            'days_expired': (today - ingredient.expiration_date).days,
+        }
+        for ingredient in ingredients
+    ]

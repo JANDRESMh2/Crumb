@@ -28,6 +28,7 @@ from .models import (
 from .services import (
     InsufficientStockError,
     InventoryCorrectionError,
+    build_expired_ingredient_losses,
     configure_expiration_alert,
     deactivate_ingredient,
     is_ingredient_expired,
@@ -1865,3 +1866,107 @@ class DecimalSeparatorInFormsTests(TestCase):
         self.assertContains(response, 'without a thousands separator')
         self.ingredient.refresh_from_db()
         self.assertEqual(self.ingredient.current_quantity, Decimal('100.00'))
+
+
+class ExpiredIngredientLossTests(TestCase):
+    """FR26 - the inventory half of the loss report."""
+
+    def setUp(self):
+        self.today = date(2026, 8, 31)
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+    def make_ingredient(
+        self,
+        name,
+        *,
+        days_ago,
+        quantity='4.00',
+        is_active=True,
+    ):
+        return Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=Decimal(quantity),
+            expiration_date=self.today - timedelta(days=days_ago),
+            is_active=is_active,
+        )
+
+    def losses(self, **kwargs):
+        return build_expired_ingredient_losses(
+            bakery=self.bakery,
+            today=self.today,
+            **kwargs,
+        )
+
+    def test_reports_an_ingredient_that_expired_holding_stock(self):
+        self.make_ingredient('Flour', days_ago=3, quantity='4.50')
+
+        losses = self.losses()
+
+        self.assertEqual(len(losses), 1)
+        self.assertEqual(losses[0]['ingredient_name'], 'Flour')
+        self.assertEqual(losses[0]['quantity'], Decimal('4.50'))
+        self.assertEqual(losses[0]['unit_abbreviation'], 'kg')
+        self.assertEqual(losses[0]['days_expired'], 3)
+
+    def test_leaves_out_an_ingredient_that_has_not_expired(self):
+        self.make_ingredient('Butter', days_ago=-5)
+
+        self.assertEqual(self.losses(), [])
+
+    def test_an_ingredient_expiring_today_is_not_a_loss_yet(self):
+        self.make_ingredient('Milk', days_ago=0)
+
+        self.assertEqual(self.losses(), [])
+
+    def test_leaves_out_an_expired_ingredient_with_no_stock_left(self):
+        self.make_ingredient('Yeast', days_ago=2, quantity='0.00')
+
+        self.assertEqual(self.losses(), [])
+
+    def test_leaves_out_an_ingredient_removed_from_the_inventory(self):
+        self.make_ingredient('Sugar', days_ago=2, is_active=False)
+
+        self.assertEqual(self.losses(), [])
+
+    def test_keeps_only_what_expired_inside_the_range(self):
+        self.make_ingredient('Old flour', days_ago=20)
+        self.make_ingredient('Recent milk', days_ago=2)
+
+        losses = self.losses(start_date=self.today - timedelta(days=5))
+
+        self.assertEqual(
+            [row['ingredient_name'] for row in losses],
+            ['Recent milk'],
+        )
+
+    def test_orders_the_oldest_expiration_first(self):
+        self.make_ingredient('Recent milk', days_ago=2)
+        self.make_ingredient('Old flour', days_ago=20)
+
+        losses = self.losses()
+
+        self.assertEqual(
+            [row['ingredient_name'] for row in losses],
+            ['Old flour', 'Recent milk'],
+        )
+
+    def test_leaves_out_the_ingredients_of_another_bakery(self):
+        other = Bakery.objects.create(name='Other', address='Other address')
+        Ingredient.objects.create(
+            bakery=other,
+            unit=self.unit,
+            name='Foreign flour',
+            current_quantity=Decimal('9.00'),
+            expiration_date=self.today - timedelta(days=4),
+        )
+        self.make_ingredient('Flour', days_ago=4)
+
+        losses = self.losses()
+
+        self.assertEqual(
+            [row['ingredient_name'] for row in losses],
+            ['Flour'],
+        )

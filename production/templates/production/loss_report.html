@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Loss reporting - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Production</p>
+
+<h1>Loss reporting</h1>
+
+<p class="lede">
+    What {{ bakery.name }} lost: ingredients that expired with stock left,
+    and products that were baked and never sold.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'inventory:list' %}"
+        class="btn btn-secondary"
+    >
+        Ingredients
+    </a>
+
+    <a
+        href="{% url 'production:sales_analytics' %}"
+        class="btn btn-secondary"
+    >
+        Sales analytics
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    <form method="get" role="search">
+
+        <div class="field">
+            <label for="losses-start-date">From</label>
+            <input
+                class="form-control"
+                id="losses-start-date"
+                name="start_date"
+                type="date"
+                value="{{ start_date }}"
+            >
+        </div>
+
+        <div class="field">
+            <label for="losses-end-date">To</label>
+            <input
+                class="form-control"
+                id="losses-end-date"
+                name="end_date"
+                type="date"
+                value="{{ end_date }}"
+            >
+        </div>
+
+        <button type="submit">Filter</button>
+
+        {% if has_filters %}
+            <a class="btn btn-secondary" href="{% url 'production:loss_report' %}">
+                Clear filters
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% if totals %}
+
+        <div
+            style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+                margin: 1.5rem 0;
+            "
+        >
+
+            <div
+                style="
+                    flex: 1 1 200px;
+                    background: var(--warning-bg);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    Expired ingredients
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ totals.expired_ingredient_count }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    still holding stock
+                </p>
+            </div>
+
+            <div
+                style="
+                    flex: 1 1 200px;
+                    background: var(--surface-alt);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    Unsold products
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ totals.unsold_quantity }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    over {{ totals.overproduction_days }} product-day{{ totals.overproduction_days|pluralize }}
+                </p>
+            </div>
+
+            <div
+                style="
+                    flex: 1 1 200px;
+                    background: var(--error-bg);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    Value not earned
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ totals.lost_value }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    from the unsold products
+                </p>
+            </div>
+
+        </div>
+
+    {% endif %}
+
+    <h2 style="margin-top: 2rem;">Expired ingredients</h2>
+
+    {% if expired_ingredients %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th style="text-align: right;">Quantity left</th>
+                    <th>Unit</th>
+                    <th>Expired on</th>
+                    <th style="text-align: right;">Days expired</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for row in expired_ingredients %}
+
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }}</td>
+                        <td>{{ row.unit_abbreviation }}</td>
+                        <td>{{ row.expiration_date }}</td>
+                        <td style="text-align: right;">{{ row.days_expired }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <th>Total</th>
+                    <td style="text-align: right;">{{ totals.expired_quantity }}</td>
+                    <td colspan="3">
+                        across {{ totals.expired_ingredient_count }} ingredient{{ totals.expired_ingredient_count|pluralize }}
+                    </td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+        <p class="help">
+            Quantities are not valued in money because the inventory does not
+            record what each ingredient costs.
+        </p>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>No ingredient expired with stock left.</p>
+        </div>
+
+    {% endif %}
+
+    <h2 style="margin-top: 2.5rem;">Overproduction</h2>
+
+    {% if overproduction %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th style="text-align: right;">Produced</th>
+                    <th style="text-align: right;">Sold</th>
+                    <th style="text-align: right;">Unsold</th>
+                    <th style="text-align: right;">Unit price</th>
+                    <th style="text-align: right;">Value not earned</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for row in overproduction %}
+
+                    <tr>
+                        <td>{{ row.date }}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td style="text-align: right;">{{ row.produced_quantity }}</td>
+                        <td style="text-align: right;">{{ row.sold_quantity }}</td>
+                        <td style="text-align: right;">{{ row.unsold_quantity }}</td>
+                        <td style="text-align: right;">{{ row.unit_price }}</td>
+                        <td style="text-align: right;">{{ row.lost_value }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <th colspan="4">Totals</th>
+                    <td style="text-align: right;">{{ totals.unsold_quantity }}</td>
+                    <td></td>
+                    <td style="text-align: right;">{{ totals.lost_value }}</td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+    {% elif has_filters %}
+
+        <div class="empty-state">
+            <p>No product was left unsold in the selected date range.</p>
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>Every product produced so far has been sold.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

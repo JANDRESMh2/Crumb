@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -6,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from bakery.models import Bakery
+from inventory.models import Ingredient, UnitOfMeasure
 
 from .forms import (
     DailyProductionRegistrationForm,
@@ -16,6 +18,8 @@ from .models import Product, ProductionRecord, SalesRecord
 from .services import (
     build_daily_unsold_products,
     build_history_tracking,
+    build_loss_report,
+    build_sales_analytics,
     register_daily_production,
     register_daily_sale,
     register_product,
@@ -1060,4 +1064,419 @@ class ProductionSalesHistoryTests(TestCase):
         Product.objects.all().delete()
         Bakery.objects.all().delete()
         response = self.client.get(reverse('production:history_tracking'))
+        self.assertRedirects(response, reverse('bakery:setup'))
+
+
+class SalesAnalyticsTests(TestCase):
+    """FR36 - Sales analytics (best-selling products)."""
+
+    def setUp(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+
+        self.croissant = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+
+        self.bread = register_product(
+            bakery=self.bakery,
+            name='Sourdough bread',
+            sku='BRE-001',
+            unit_price=Decimal('12000.00'),
+        )
+
+    def _sell(self, product, quantity, when=None):
+        return register_daily_sale(
+            bakery=self.bakery,
+            product=product,
+            quantity_sold=Decimal(quantity),
+            sale_timestamp=when or timezone.now(),
+        )
+
+    def test_ranks_products_from_the_best_seller_down(self):
+        self._sell(self.croissant, '30.00')
+        self._sell(self.bread, '4.00')
+
+        rankings, _ = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(
+            [row['product_name'] for row in rankings],
+            ['Croissant', 'Sourdough bread'],
+        )
+        self.assertEqual(rankings[0]['position'], 1)
+        self.assertEqual(rankings[0]['units_sold'], Decimal('30.00'))
+
+    def test_adds_up_several_sales_of_the_same_product(self):
+        self._sell(self.croissant, '10.00')
+        self._sell(self.croissant, '5.00')
+
+        rankings, totals = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(len(rankings), 1)
+        self.assertEqual(rankings[0]['units_sold'], Decimal('15.00'))
+        self.assertEqual(rankings[0]['sale_count'], 2)
+        self.assertEqual(totals['sale_count'], 2)
+
+    def test_the_best_seller_fills_the_whole_bar(self):
+        self._sell(self.croissant, '20.00')
+        self._sell(self.bread, '5.00')
+
+        rankings, _ = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(rankings[0]['units_share'], Decimal('100.0'))
+        self.assertEqual(rankings[1]['units_share'], Decimal('25.0'))
+
+    def test_revenue_share_is_measured_against_the_total(self):
+        # 10 croissants at 5000 = 50000; 5 breads at 12000 = 60000.
+        self._sell(self.croissant, '10.00')
+        self._sell(self.bread, '5.00')
+
+        rankings, totals = build_sales_analytics(bakery=self.bakery)
+
+        by_name = {row['product_name']: row for row in rankings}
+
+        self.assertEqual(totals['revenue'], Decimal('110000.00'))
+        self.assertEqual(
+            by_name['Sourdough bread']['revenue_share'],
+            Decimal('54.5'),
+        )
+        self.assertEqual(
+            by_name['Croissant']['revenue_share'],
+            Decimal('45.5'),
+        )
+
+    def test_the_product_that_sells_most_is_not_the_one_that_earns_most(self):
+        self._sell(self.croissant, '10.00')
+        self._sell(self.bread, '5.00')
+
+        rankings, _ = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(rankings[0]['product_name'], 'Croissant')
+        self.assertLess(rankings[0]['revenue'], rankings[1]['revenue'])
+
+    def test_keeps_only_the_sales_inside_the_date_range(self):
+        today = timezone.localdate()
+        old = timezone.now() - timedelta(days=10)
+
+        self._sell(self.croissant, '7.00', when=old)
+        self._sell(self.bread, '2.00')
+
+        rankings, totals = build_sales_analytics(
+            bakery=self.bakery,
+            start_date=today,
+        )
+
+        self.assertEqual(len(rankings), 1)
+        self.assertEqual(rankings[0]['product_name'], 'Sourdough bread')
+        self.assertEqual(totals['units_sold'], Decimal('2.00'))
+
+    def test_rejects_a_range_that_ends_before_it_starts(self):
+        today = timezone.localdate()
+
+        with self.assertRaises(ValidationError):
+            build_sales_analytics(
+                bakery=self.bakery,
+                start_date=today,
+                end_date=today - timedelta(days=1),
+            )
+
+    def test_a_bakery_without_sales_reports_nothing(self):
+        rankings, totals = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(rankings, [])
+        self.assertEqual(totals['units_sold'], Decimal('0'))
+        self.assertEqual(totals['revenue'], Decimal('0'))
+        self.assertEqual(totals['product_count'], 0)
+
+    def test_leaves_out_the_sales_of_another_bakery(self):
+        other = Bakery.objects.create(
+            name='Other Bakery',
+            address='Other Address',
+        )
+        other_product = register_product(
+            bakery=other,
+            name='Baguette',
+            sku='BAG-001',
+            unit_price=Decimal('3000.00'),
+        )
+        register_daily_sale(
+            bakery=other,
+            product=other_product,
+            quantity_sold=Decimal('50.00'),
+            sale_timestamp=timezone.now(),
+        )
+        self._sell(self.croissant, '1.00')
+
+        rankings, _ = build_sales_analytics(bakery=self.bakery)
+
+        self.assertEqual(
+            [row['product_name'] for row in rankings],
+            ['Croissant'],
+        )
+
+
+class SalesAnalyticsViewTests(TestCase):
+    """FR36 - the screen that shows the ranking."""
+
+    def setUp(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+        self.product = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+
+    def _sell(self, quantity='12.00'):
+        return register_daily_sale(
+            bakery=self.bakery,
+            product=self.product,
+            quantity_sold=Decimal(quantity),
+            sale_timestamp=timezone.now(),
+        )
+
+    def test_shows_the_ranking(self):
+        self._sell()
+
+        response = self.client.get(reverse('production:sales_analytics'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Croissant')
+        self.assertContains(response, 'Best seller')
+
+    def test_tells_the_user_when_there_are_no_sales_yet(self):
+        response = self.client.get(reverse('production:sales_analytics'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No sales have been registered yet.')
+
+    def test_reports_an_invalid_date_range_instead_of_failing(self):
+        today = timezone.localdate()
+
+        response = self.client.get(
+            reverse('production:sales_analytics'),
+            {
+                'start_date': today.isoformat(),
+                'end_date': (today - timedelta(days=1)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'The start date cannot be later than the end date.',
+        )
+
+    def test_the_bar_width_always_uses_a_decimal_point(self):
+        self._sell()
+
+        response = self.client.get(reverse('production:sales_analytics'))
+
+        self.assertContains(response, 'width: 100.0%')
+
+    def test_redirects_when_the_bakery_is_not_set_up(self):
+        SalesRecord.objects.all().delete()
+        Product.objects.all().delete()
+        Bakery.objects.all().delete()
+
+        response = self.client.get(reverse('production:sales_analytics'))
+
+        self.assertRedirects(response, reverse('bakery:setup'))
+
+
+class LossReportTests(TestCase):
+    """FR26 - Loss reporting (expired ingredients and overproduction)."""
+
+    def setUp(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+        self.product = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+
+    def expire_ingredient(self, name, *, days_ago=3, quantity='4.00'):
+        return Ingredient.objects.create(
+            bakery=self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=Decimal(quantity),
+            expiration_date=timezone.localdate() - timedelta(days=days_ago),
+        )
+
+    def overproduce(self, produced, sold, *, days_ago=0):
+        when = timezone.now() - timedelta(days=days_ago)
+        register_daily_production(
+            bakery=self.bakery,
+            product=self.product,
+            produced_quantity=Decimal(produced),
+            production_date=when,
+        )
+        if Decimal(sold) > 0:
+            register_daily_sale(
+                bakery=self.bakery,
+                product=self.product,
+                quantity_sold=Decimal(sold),
+                sale_timestamp=when,
+            )
+        return when
+
+    def test_reports_both_sources_of_loss_together(self):
+        self.expire_ingredient('Flour')
+        self.overproduce('20.00', '12.00')
+
+        report = build_loss_report(bakery=self.bakery)
+
+        self.assertEqual(len(report['expired_ingredients']), 1)
+        self.assertEqual(len(report['overproduction']), 1)
+
+    def test_values_the_unsold_products_at_their_price(self):
+        self.overproduce('20.00', '12.00')
+
+        report = build_loss_report(bakery=self.bakery)
+        row = report['overproduction'][0]
+
+        self.assertEqual(row['unsold_quantity'], Decimal('8.00'))
+        self.assertEqual(row['unit_price'], Decimal('5000.00'))
+        self.assertEqual(row['lost_value'], Decimal('40000.00'))
+        self.assertEqual(report['totals']['lost_value'], Decimal('40000.00'))
+
+    def test_a_day_sold_out_is_not_overproduction(self):
+        self.overproduce('10.00', '10.00')
+
+        report = build_loss_report(bakery=self.bakery)
+
+        self.assertEqual(report['overproduction'], [])
+        self.assertEqual(report['totals']['lost_value'], Decimal('0'))
+
+    def test_adds_up_the_totals_of_both_sources(self):
+        self.expire_ingredient('Flour', quantity='4.00')
+        self.expire_ingredient('Sugar', quantity='1.50')
+        self.overproduce('20.00', '12.00')
+
+        totals = build_loss_report(bakery=self.bakery)['totals']
+
+        self.assertEqual(totals['expired_ingredient_count'], 2)
+        self.assertEqual(totals['expired_quantity'], Decimal('5.50'))
+        self.assertEqual(totals['unsold_quantity'], Decimal('8.00'))
+        self.assertEqual(totals['overproduction_days'], 1)
+
+    def test_keeps_only_the_overproduction_inside_the_range(self):
+        self.overproduce('20.00', '12.00', days_ago=10)
+        self.overproduce('5.00', '1.00', days_ago=0)
+
+        report = build_loss_report(
+            bakery=self.bakery,
+            start_date=timezone.localdate(),
+        )
+
+        self.assertEqual(len(report['overproduction']), 1)
+        self.assertEqual(
+            report['overproduction'][0]['unsold_quantity'],
+            Decimal('4.00'),
+        )
+
+    def test_rejects_a_range_that_ends_before_it_starts(self):
+        today = timezone.localdate()
+
+        with self.assertRaises(ValidationError):
+            build_loss_report(
+                bakery=self.bakery,
+                start_date=today,
+                end_date=today - timedelta(days=1),
+            )
+
+    def test_a_bakery_with_nothing_lost_reports_zeros(self):
+        report = build_loss_report(bakery=self.bakery)
+
+        self.assertEqual(report['expired_ingredients'], [])
+        self.assertEqual(report['overproduction'], [])
+        self.assertEqual(report['totals']['lost_value'], Decimal('0'))
+        self.assertEqual(report['totals']['expired_quantity'], Decimal('0'))
+
+
+class LossReportViewTests(TestCase):
+    """FR26 - the screen that shows the losses."""
+
+    def setUp(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+        self.product = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+
+    def test_shows_the_overproduction(self):
+        when = timezone.now()
+        register_daily_production(
+            bakery=self.bakery,
+            product=self.product,
+            produced_quantity=Decimal('20.00'),
+            production_date=when,
+        )
+        register_daily_sale(
+            bakery=self.bakery,
+            product=self.product,
+            quantity_sold=Decimal('12.00'),
+            sale_timestamp=when,
+        )
+
+        response = self.client.get(reverse('production:loss_report'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Croissant')
+        self.assertContains(response, 'Value not earned')
+
+    def test_says_so_when_nothing_was_lost(self):
+        response = self.client.get(reverse('production:loss_report'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No ingredient expired with stock left.')
+        self.assertContains(
+            response,
+            'Every product produced so far has been sold.',
+        )
+
+    def test_reports_an_invalid_date_range_instead_of_failing(self):
+        today = timezone.localdate()
+
+        response = self.client.get(
+            reverse('production:loss_report'),
+            {
+                'start_date': today.isoformat(),
+                'end_date': (today - timedelta(days=1)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'The start date cannot be later than the end date.',
+        )
+
+    def test_redirects_when_the_bakery_is_not_set_up(self):
+        SalesRecord.objects.all().delete()
+        ProductionRecord.objects.all().delete()
+        Product.objects.all().delete()
+        Bakery.objects.all().delete()
+
+        response = self.client.get(reverse('production:loss_report'))
+
         self.assertRedirects(response, reverse('bakery:setup'))
