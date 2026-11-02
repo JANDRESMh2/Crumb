@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% load l10n %}
 
-{% block title %}Sales analytics - Crumb{% endblock %}
+{% block title %}{% translate "Sales analytics" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Sales analytics</h1>
+<h1>{% translate "Sales analytics" %}</h1>
 
 <p class="lede">
-    Which products of {{ bakery.name }} sell best, ordered from the
-    best seller down.
+    {% blocktranslate trimmed with name=bakery.name %}Which products of {{ name }} sell best,
+    ordered from the best seller down.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -22,14 +23,14 @@
         href="{% url 'production:sales_list' %}"
         class="btn btn-secondary"
     >
-        Sales records
+        {% translate "Sales records" %}
     </a>
 
     <a
         href="{% url 'production:history_tracking' %}"
         class="btn btn-secondary"
     >
-        Production and sales history
+        {% translate "Production and sales history" %}
     </a>
 
 </div>
@@ -39,7 +40,7 @@
     <form method="get" role="search">
 
         <div class="field">
-            <label for="analytics-start-date">From</label>
+            <label for="analytics-start-date">{% translate "From" %}</label>
             <input
                 class="form-control"
                 id="analytics-start-date"
@@ -50,7 +51,7 @@
         </div>
 
         <div class="field">
-            <label for="analytics-end-date">To</label>
+            <label for="analytics-end-date">{% translate "To" %}</label>
             <input
                 class="form-control"
                 id="analytics-end-date"
@@ -60,11 +61,11 @@
             >
         </div>
 
-        <button type="submit">Filter</button>
+        <button type="submit">{% translate "Filter" %}</button>
 
         {% if has_filters %}
             <a class="btn btn-secondary" href="{% url 'production:sales_analytics' %}">
-                Clear filters
+                {% translate "Clear filters" %}
             </a>
         {% endif %}
 
@@ -99,7 +100,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Best seller
+                    {% translate "Best seller" %}
                 </p>
                 <p
                     style="
@@ -112,7 +113,7 @@
                     {{ best_seller.product_name }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    {{ best_seller.units_sold }} units sold
+                    {% blocktranslate trimmed with units=best_seller.units_sold %}{{ units }} units sold{% endblocktranslate %}
                 </p>
             </div>
 
@@ -134,7 +135,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Units sold
+                    {% translate "Units sold" %}
                 </p>
                 <p
                     style="
@@ -147,7 +148,7 @@
                     {{ totals.units_sold }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    across {{ totals.sale_count }} sale{{ totals.sale_count|pluralize }}
+                    {% blocktranslate trimmed count counter=totals.sale_count %}across {{ counter }} sale{% plural %}across {{ counter }} sales{% endblocktranslate %}
                 </p>
             </div>
 
@@ -169,7 +170,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Revenue
+                    {% translate "Revenue" %}
                 </p>
                 <p
                     style="
@@ -182,7 +183,7 @@
                     {{ totals.revenue }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    from {{ totals.product_count }} product{{ totals.product_count|pluralize }}
+                    {% blocktranslate trimmed count counter=totals.product_count %}from {{ counter }} product{% plural %}from {{ counter }} products{% endblocktranslate %}
                 </p>
             </div>
 
@@ -193,12 +194,12 @@
             <thead>
                 <tr>
                     <th style="width: 3rem;">#</th>
-                    <th>Product</th>
-                    <th style="text-align: right;">Units sold</th>
-                    <th style="width: 30%;">Share of the best seller</th>
-                    <th style="text-align: right;">Sales</th>
-                    <th style="text-align: right;">Revenue</th>
-                    <th style="text-align: right;">% of revenue</th>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Units sold" %}</th>
+                    <th style="width: 30%;">{% translate "Share of the best seller" %}</th>
+                    <th style="text-align: right;">{% translate "Sales" %}</th>
+                    <th style="text-align: right;">{% translate "Revenue" %}</th>
+                    <th style="text-align: right;">{% translate "% of revenue" %}</th>
                 </tr>
             </thead>
 
@@ -242,12 +243,12 @@
 
             <tfoot>
                 <tr>
-                    <th colspan="2">Totals</th>
+                    <th colspan="2">{% translate "Totals" %}</th>
                     <td style="text-align: right;">{{ totals.units_sold }}</td>
                     <td></td>
                     <td style="text-align: right;">{{ totals.sale_count }}</td>
                     <td style="text-align: right;">{{ totals.revenue }}</td>
-                    <td style="text-align: right;">100.0%</td>
+                    <td style="text-align: right;">{{ totals.revenue_share }}%</td>
                 </tr>
             </tfoot>
 
@@ -256,13 +257,13 @@
     {% elif has_filters %}
 
         <div class="empty-state">
-            <p>No sales were registered in the selected date range.</p>
+            <p>{% translate "No sales were registered in the selected date range." %}</p>
         </div>
 
     {% else %}
 
         <div class="empty-state">
-            <p>No sales have been registered yet.</p>
+            <p>{% translate "No sales have been registered yet." %}</p>
         </div>
 
     {% endif %}

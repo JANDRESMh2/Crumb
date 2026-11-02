@@ -1,17 +1,19 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}User activity log - Crumb{% endblock %}
+{% block title %}{% translate "User activity log" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Bakery</p>
+<p class="eyebrow">{% translate "Bakery" %}</p>
 
-<h1>User activity log</h1>
+<h1>{% translate "User activity log" %}</h1>
 
 <p class="lede">
-    What each user did in {{ bakery.name }}, newest first.
+    {% blocktranslate trimmed with name=bakery.name %}What each user did in {{ name }},
+    newest first.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -20,7 +22,7 @@
         href="{% url 'bakery:detail' %}"
         class="btn btn-secondary"
     >
-        Bakery profile
+        {% translate "Bakery profile" %}
     </a>
 
 </div>
@@ -30,9 +32,9 @@
     <form method="get" role="search">
 
         <div class="field">
-            <label for="activity-action">Action</label>
+            <label for="activity-action">{% translate "Action" %}</label>
             <select class="form-control" id="activity-action" name="action_type">
-                <option value="">All actions</option>
+                <option value="">{% translate "All actions" %}</option>
                 {% for value, label in action_types %}
                     <option
                         value="{{ value }}"
@@ -45,9 +47,9 @@
         </div>
 
         <div class="field">
-            <label for="activity-user">User</label>
+            <label for="activity-user">{% translate "User" %}</label>
             <select class="form-control" id="activity-user" name="user">
-                <option value="">All users</option>
+                <option value="">{% translate "All users" %}</option>
                 {% for person in users %}
                     <option
                         value="{{ person.pk }}"
@@ -60,7 +62,7 @@
         </div>
 
         <div class="field">
-            <label for="activity-start-date">From</label>
+            <label for="activity-start-date">{% translate "From" %}</label>
             <input
                 class="form-control"
                 id="activity-start-date"
@@ -71,7 +73,7 @@
         </div>
 
         <div class="field">
-            <label for="activity-end-date">To</label>
+            <label for="activity-end-date">{% translate "To" %}</label>
             <input
                 class="form-control"
                 id="activity-end-date"
@@ -81,11 +83,11 @@
             >
         </div>
 
-        <button type="submit">Filter</button>
+        <button type="submit">{% translate "Filter" %}</button>
 
         {% if has_filters %}
             <a class="btn btn-secondary" href="{% url 'bakery:activity_log' %}">
-                Clear filters
+                {% translate "Clear filters" %}
             </a>
         {% endif %}
 
@@ -97,10 +99,10 @@
 
             <thead>
                 <tr>
-                    <th>When</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Description</th>
+                    <th>{% translate "When" %}</th>
+                    <th>{% translate "User" %}</th>
+                    <th>{% translate "Action" %}</th>
+                    <th>{% translate "Description" %}</th>
                 </tr>
             </thead>
 
@@ -114,7 +116,7 @@
                             {% if entry.user %}
                                 {{ entry.user.get_username }}
                             {% else %}
-                                <span style="color: var(--muted);">Not signed in</span>
+                                <span style="color: var(--muted);">{% translate "Not signed in" %}</span>
                             {% endif %}
                         </td>
                         <td>{{ entry.get_action_type_display }}</td>
@@ -129,25 +131,27 @@
 
         {% if hidden %}
             <p class="help">
-                Showing the {{ entries|length }} most recent entries out of
-                {{ total }}. Narrow the filters to see the other {{ hidden }}.
+                {% blocktranslate trimmed with shown=entries|length %}Showing the {{ shown }}
+                most recent entries out of {{ total }}. Narrow the filters to see
+                the other {{ hidden }}.{% endblocktranslate %}
             </p>
         {% else %}
             <p class="help">
-                {{ total }} entr{{ total|pluralize:"y,ies" }} recorded.
+                {% blocktranslate trimmed count counter=total %}{{ counter }} entry recorded.
+                {% plural %}{{ counter }} entries recorded.{% endblocktranslate %}
             </p>
         {% endif %}
 
     {% elif has_filters %}
 
         <div class="empty-state">
-            <p>No activity matches the selected filters.</p>
+            <p>{% translate "No activity matches the selected filters." %}</p>
         </div>
 
     {% else %}
 
         <div class="empty-state">
-            <p>No activity has been recorded yet.</p>
+            <p>{% translate "No activity has been recorded yet." %}</p>
         </div>
 
     {% endif %}

@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Loss reporting - Crumb{% endblock %}
+{% block title %}{% translate "Loss reporting" %} - Crumb{% endblock %}
 
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Loss reporting</h1>
+<h1>{% translate "Loss reporting" %}</h1>
 
 <p class="lede">
-    What {{ bakery.name }} lost: ingredients that expired with stock left,
-    and products that were baked and never sold.
+    {% blocktranslate trimmed with name=bakery.name %}What {{ name }} lost: ingredients that
+    expired with stock left, and products that were baked and never sold.{% endblocktranslate %}
 </p>
 
 <div class="actions">
@@ -21,14 +22,14 @@
         href="{% url 'inventory:list' %}"
         class="btn btn-secondary"
     >
-        Ingredients
+        {% translate "Ingredients" %}
     </a>
 
     <a
         href="{% url 'production:sales_analytics' %}"
         class="btn btn-secondary"
     >
-        Sales analytics
+        {% translate "Sales analytics" %}
     </a>
 
 </div>
@@ -38,7 +39,7 @@
     <form method="get" role="search">
 
         <div class="field">
-            <label for="losses-start-date">From</label>
+            <label for="losses-start-date">{% translate "From" %}</label>
             <input
                 class="form-control"
                 id="losses-start-date"
@@ -49,7 +50,7 @@
         </div>
 
         <div class="field">
-            <label for="losses-end-date">To</label>
+            <label for="losses-end-date">{% translate "To" %}</label>
             <input
                 class="form-control"
                 id="losses-end-date"
@@ -59,11 +60,11 @@
             >
         </div>
 
-        <button type="submit">Filter</button>
+        <button type="submit">{% translate "Filter" %}</button>
 
         {% if has_filters %}
             <a class="btn btn-secondary" href="{% url 'production:loss_report' %}">
-                Clear filters
+                {% translate "Clear filters" %}
             </a>
         {% endif %}
 
@@ -98,7 +99,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Expired ingredients
+                    {% translate "Expired ingredients" %}
                 </p>
                 <p
                     style="
@@ -111,7 +112,7 @@
                     {{ totals.expired_ingredient_count }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    still holding stock
+                    {% translate "still holding stock" %}
                 </p>
             </div>
 
@@ -133,7 +134,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Unsold products
+                    {% translate "Unsold products" %}
                 </p>
                 <p
                     style="
@@ -146,7 +147,7 @@
                     {{ totals.unsold_quantity }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    over {{ totals.overproduction_days }} product-day{{ totals.overproduction_days|pluralize }}
+                    {% blocktranslate trimmed count counter=totals.overproduction_days %}over {{ counter }} product-day{% plural %}over {{ counter }} product-days{% endblocktranslate %}
                 </p>
             </div>
 
@@ -168,7 +169,7 @@
                         letter-spacing: 0.06em;
                     "
                 >
-                    Value not earned
+                    {% translate "Value not earned" %}
                 </p>
                 <p
                     style="
@@ -181,7 +182,7 @@
                     {{ totals.lost_value }}
                 </p>
                 <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
-                    from the unsold products
+                    {% translate "from the unsold products" %}
                 </p>
             </div>
 
@@ -189,7 +190,7 @@
 
     {% endif %}
 
-    <h2 style="margin-top: 2rem;">Expired ingredients</h2>
+    <h2 style="margin-top: 2rem;">{% translate "Expired ingredients" %}</h2>
 
     {% if expired_ingredients %}
 
@@ -197,11 +198,11 @@
 
             <thead>
                 <tr>
-                    <th>Ingredient</th>
-                    <th style="text-align: right;">Quantity left</th>
-                    <th>Unit</th>
-                    <th>Expired on</th>
-                    <th style="text-align: right;">Days expired</th>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity left" %}</th>
+                    <th>{% translate "Unit" %}</th>
+                    <th>{% translate "Expired on" %}</th>
+                    <th style="text-align: right;">{% translate "Days expired" %}</th>
                 </tr>
             </thead>
 
@@ -223,10 +224,10 @@
 
             <tfoot>
                 <tr>
-                    <th>Total</th>
+                    <th>{% translate "Total" %}</th>
                     <td style="text-align: right;">{{ totals.expired_quantity }}</td>
                     <td colspan="3">
-                        across {{ totals.expired_ingredient_count }} ingredient{{ totals.expired_ingredient_count|pluralize }}
+                        {% blocktranslate trimmed count counter=totals.expired_ingredient_count %}across {{ counter }} ingredient{% plural %}across {{ counter }} ingredients{% endblocktranslate %}
                     </td>
                 </tr>
             </tfoot>
@@ -234,19 +235,19 @@
         </table>
 
         <p class="help">
-            Quantities are not valued in money because the inventory does not
-            record what each ingredient costs.
+            {% blocktranslate trimmed %}Quantities are not valued in money because the inventory does not
+            record what each ingredient costs.{% endblocktranslate %}
         </p>
 
     {% else %}
 
         <div class="empty-state">
-            <p>No ingredient expired with stock left.</p>
+            <p>{% translate "No ingredient expired with stock left." %}</p>
         </div>
 
     {% endif %}
 
-    <h2 style="margin-top: 2.5rem;">Overproduction</h2>
+    <h2 style="margin-top: 2.5rem;">{% translate "Overproduction" %}</h2>
 
     {% if overproduction %}
 
@@ -254,13 +255,13 @@
 
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Product</th>
-                    <th style="text-align: right;">Produced</th>
-                    <th style="text-align: right;">Sold</th>
-                    <th style="text-align: right;">Unsold</th>
-                    <th style="text-align: right;">Unit price</th>
-                    <th style="text-align: right;">Value not earned</th>
+                    <th>{% translate "Date" %}</th>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Produced" %}</th>
+                    <th style="text-align: right;">{% translate "Sold" %}</th>
+                    <th style="text-align: right;">{% translate "Unsold" %}</th>
+                    <th style="text-align: right;">{% translate "Unit price" %}</th>
+                    <th style="text-align: right;">{% translate "Value not earned" %}</th>
                 </tr>
             </thead>
 
@@ -284,7 +285,7 @@
 
             <tfoot>
                 <tr>
-                    <th colspan="4">Totals</th>
+                    <th colspan="4">{% translate "Totals" %}</th>
                     <td style="text-align: right;">{{ totals.unsold_quantity }}</td>
                     <td></td>
                     <td style="text-align: right;">{{ totals.lost_value }}</td>
@@ -296,13 +297,13 @@
     {% elif has_filters %}
 
         <div class="empty-state">
-            <p>No product was left unsold in the selected date range.</p>
+            <p>{% translate "No product was left unsold in the selected date range." %}</p>
         </div>
 
     {% else %}
 
         <div class="empty-state">
-            <p>Every product produced so far has been sold.</p>
+            <p>{% translate "Every product produced so far has been sold." %}</p>
         </div>
 
     {% endif %}

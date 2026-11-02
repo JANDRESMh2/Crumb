@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from bakery.fields import DecimalInputField, decimal_field_classes
 from decimal import Decimal
@@ -11,6 +12,7 @@ class ProductForm(forms.Form):
 
     name = forms.CharField(
         max_length=120,
+        label=_('Name'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -22,6 +24,7 @@ class ProductForm(forms.Form):
     sku = forms.CharField(
         max_length=50,
         required=False,
+        label=_('SKU'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -33,6 +36,7 @@ class ProductForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         min_value=Decimal('0.00'),
+        label=_('Unit price'),
     )
 
     def __init__(self, *args, bakery=None, **kwargs):
@@ -51,7 +55,7 @@ class ProductForm(forms.Form):
 
             if duplicate:
                 raise forms.ValidationError(
-                    'This product is already registered.'
+                    _('This product is already registered.')
                 )
 
         return name
@@ -72,10 +76,10 @@ class ProductEditForm(forms.ModelForm):
         field_classes = decimal_field_classes('unit_price')
 
         labels = {
-            'name': 'Name',
-            'sku': 'SKU',
-            'unit_price': 'Unit price',
-            'status': 'Status',
+            'name': _('Name'),
+            'sku': _('SKU'),
+            'unit_price': _('Unit price'),
+            'status': _('Status'),
         }
 
         widgets = {
@@ -116,7 +120,7 @@ class ProductEditForm(forms.ModelForm):
 
             if duplicate:
                 raise forms.ValidationError(
-                    'This product is already registered.'
+                    _('This product is already registered.')
                 )
 
         return name
@@ -136,9 +140,9 @@ class DailyProductionRegistrationForm(forms.ModelForm):
         field_classes = decimal_field_classes('produced_quantity')
 
         labels = {
-            'product': 'Product',
-            'produced_quantity': 'Quantity produced',
-            'production_date': 'Production date and time',
+            'product': _('Product'),
+            'produced_quantity': _('Quantity produced'),
+            'production_date': _('Production date and time'),
         }
 
         widgets = {
@@ -167,6 +171,7 @@ class DailyProductionRegistrationForm(forms.ModelForm):
             if bakery is not None
             else Product.objects.none()
         )
+        self.fields['product'].empty_label = _('Select a product')
 
 
 class DailySalesRegistrationForm(forms.ModelForm):
@@ -183,9 +188,9 @@ class DailySalesRegistrationForm(forms.ModelForm):
         field_classes = decimal_field_classes('quantity_sold')
 
         labels = {
-            'product': 'Product',
-            'quantity_sold': 'Quantity sold',
-            'sale_timestamp': 'Sale date and time',
+            'product': _('Product'),
+            'quantity_sold': _('Quantity sold'),
+            'sale_timestamp': _('Sale date and time'),
         }
 
         widgets = {
@@ -214,3 +219,4 @@ class DailySalesRegistrationForm(forms.ModelForm):
             if bakery is not None
             else Product.objects.none()
         )
+        self.fields['product'].empty_label = _('Select a product')

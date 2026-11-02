@@ -3,10 +3,11 @@ import uuid
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 phone_validator = RegexValidator(
     regex=r'^\+?[0-9 ()-]{7,20}$',
-    message='Enter a valid phone number (digits, spaces, +, -, ( and ) only).',
+    message=_('Enter a valid phone number (digits, spaces, +, -, ( and ) only).'),
 )
 
 
@@ -40,11 +41,11 @@ class ActivityLog(models.Model):
     """
 
     class ActionType(models.TextChoices):
-        LOGIN = 'Login', 'Signed in'
-        LOGOUT = 'Logout', 'Signed out'
-        STOCK_IN = 'StockIn', 'Stock-in registered'
-        CORRECTION = 'Correction', 'Inventory corrected'
-        SALE = 'Sale', 'Sale registered'
+        LOGIN = 'Login', _('Signed in')
+        LOGOUT = 'Logout', _('Signed out')
+        STOCK_IN = 'StockIn', _('Stock-in registered')
+        CORRECTION = 'Correction', _('Inventory corrected')
+        SALE = 'Sale', _('Sale registered')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

@@ -9,6 +9,7 @@ from django.shortcuts import (
 )
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext_lazy as _
 
 from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
@@ -52,7 +53,7 @@ def product_create(request):
             else:
                 messages.success(
                     request,
-                    'Product registered successfully.',
+                    _('Product registered successfully.'),
                 )
                 return redirect('production:register')
 
@@ -90,7 +91,7 @@ def daily_production_registration(request):
             else:
                 messages.success(
                     request,
-                    'Daily production registered successfully.',
+                    _('Daily production registered successfully.'),
                 )
                 return redirect('production:list')
 
@@ -157,7 +158,7 @@ def daily_sales_registration(request):
             else:
                 messages.success(
                     request,
-                    'Daily sale registered successfully.',
+                    _('Daily sale registered successfully.'),
                 )
 
                 return redirect(
@@ -247,7 +248,7 @@ def product_edit(request, product_id):
 
             messages.success(
                 request,
-                'Product updated successfully.',
+                _('Product updated successfully.'),
             )
 
             return redirect(
@@ -303,7 +304,7 @@ def history_tracking(request):
     except (ValidationError, ValueError) as error:
         messages.error(
             request,
-            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
         )
         entries, totals = [], None
 
@@ -355,7 +356,7 @@ def sales_analytics(request):
     except (ValidationError, ValueError) as error:
         messages.error(
             request,
-            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
         )
         rankings, totals = [], None
 
@@ -392,7 +393,7 @@ def loss_report(request):
     except (ValidationError, ValueError) as error:
         messages.error(
             request,
-            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
         )
         report = {
             'expired_ingredients': [],

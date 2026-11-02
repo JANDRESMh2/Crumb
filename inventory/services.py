@@ -4,6 +4,7 @@ import pandas as pd
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import gettext, gettext_lazy as _
 
 from bakery.models import ActivityLog
 from bakery.services import record_activity
@@ -364,13 +365,13 @@ def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, u
     reason = (reason or '').strip()
 
     if new_quantity is None or new_quantity < 0:
-        raise InventoryCorrectionError('The corrected quantity cannot be negative.')
+        raise InventoryCorrectionError(_('The corrected quantity cannot be negative.'))
     if new_quantity == previous_quantity:
         raise InventoryCorrectionError(
-            'The corrected quantity must be different from the current quantity.'
+            _('The corrected quantity must be different from the current quantity.')
         )
     if not reason:
-        raise InventoryCorrectionError('A reason is required to correct the inventory.')
+        raise InventoryCorrectionError(_('A reason is required to correct the inventory.'))
 
     ingredient.current_quantity = new_quantity
     ingredient.save(update_fields=['current_quantity', 'updated_at'])
@@ -389,10 +390,13 @@ def register_inventory_correction(*, bakery, ingredient, new_quantity, reason, u
     record_activity(
         user=user,
         action_type=ActivityLog.ActionType.CORRECTION,
-        description=(
-            f'Corrected the stock of {ingredient.name} '
-            f'from {previous_quantity} to {new_quantity}.'
-        ),
+        description=gettext(
+            'Corrected the stock of %(name)s from %(before)s to %(after)s.'
+        ) % {
+            'name': ingredient.name,
+            'before': previous_quantity,
+            'after': new_quantity,
+        },
     )
 
     return movement
@@ -406,7 +410,7 @@ def register_stock_in(*, bakery, ingredient, quantity, note='', user=None):
     so both paths update the stock and log the movement in exactly the same way.
     """
     if quantity is None or quantity <= 0:
-        raise ValueError('A stock-in quantity must be greater than zero.')
+        raise ValueError(_('A stock-in quantity must be greater than zero.'))
 
     ingredient.current_quantity += quantity
     ingredient.save(update_fields=['current_quantity', 'updated_at'])
@@ -423,7 +427,9 @@ def register_stock_in(*, bakery, ingredient, quantity, note='', user=None):
     record_activity(
         user=user,
         action_type=ActivityLog.ActionType.STOCK_IN,
-        description=f'Registered {quantity} of {ingredient.name} into the stock.',
+        description=gettext(
+            'Registered %(quantity)s of %(name)s into the stock.'
+        ) % {'quantity': quantity, 'name': ingredient.name},
     )
 
     return movement

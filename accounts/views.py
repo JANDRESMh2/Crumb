@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from bakery.services import get_current_bakery
 from .forms import UserRegistrationForm
 from .services import register_new_user
@@ -17,7 +18,7 @@ def user_registration_view(request):
         if form.is_valid():
             # Delegamos la creación a la capa de servicios
             register_new_user(form)
-            messages.success(request, 'User account registered successfully.')
+            messages.success(request, _('User account registered successfully.'))
             return redirect('home') # Redirige al inicio o al panel de control
     else:
         form = UserRegistrationForm()
@@ -43,7 +44,7 @@ def user_login_view(request):
                 messages.success(request, f'Welcome back, {username}!')
                 return redirect('home')
             else:
-                messages.error(request, 'Invalid username or password.')
+                messages.error(request, _('Invalid username or password.'))
     else:
         form = UserLoginForm()
 

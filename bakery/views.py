@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext_lazy as _
 
 from .decorators import bakery_required
 from .forms import BakeryProfileForm
@@ -29,9 +30,9 @@ def bakery_setup(request):
             try:
                 setup_bakery_profile(**form.cleaned_data)
             except BakeryAlreadyConfigured:
-                messages.warning(request, 'The bakery profile was already set up.')
+                messages.warning(request, _('The bakery profile was already set up.'))
                 return redirect('bakery:detail')
-            messages.success(request, 'Business profile created successfully.')
+            messages.success(request, _('Business profile created successfully.'))
             return redirect('bakery:detail')
     else:
         form = BakeryProfileForm()
@@ -51,7 +52,7 @@ def bakery_edit(request):
         form = BakeryProfileForm(request.POST, instance=bakery)
         if form.is_valid():
             update_bakery_profile(bakery, **form.cleaned_data)
-            messages.success(request, 'Business profile updated successfully.')
+            messages.success(request, _('Business profile updated successfully.'))
             return redirect('bakery:detail')
     else:
         form = BakeryProfileForm(instance=bakery)
@@ -98,7 +99,7 @@ def activity_log(request):
     except (ValidationError, ValueError) as error:
         messages.error(
             request,
-            ' '.join(getattr(error, 'messages', ['Invalid date.'])),
+            ' '.join(getattr(error, 'messages', [_('Invalid date.')])),
         )
         entries, total = [], 0
 
