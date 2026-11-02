@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}User activity log - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">Bakery</p>
+
+<h1>User activity log</h1>
+
+<p class="lede">
+    What each user did in {{ bakery.name }}, newest first.
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'bakery:detail' %}"
+        class="btn btn-secondary"
+    >
+        Bakery profile
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    <form method="get" role="search">
+
+        <div class="field">
+            <label for="activity-action">Action</label>
+            <select class="form-control" id="activity-action" name="action_type">
+                <option value="">All actions</option>
+                {% for value, label in action_types %}
+                    <option
+                        value="{{ value }}"
+                        {% if action_type == value %}selected{% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="activity-user">User</label>
+            <select class="form-control" id="activity-user" name="user">
+                <option value="">All users</option>
+                {% for person in users %}
+                    <option
+                        value="{{ person.pk }}"
+                        {% if user_id == person.pk|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ person.get_username }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="activity-start-date">From</label>
+            <input
+                class="form-control"
+                id="activity-start-date"
+                name="start_date"
+                type="date"
+                value="{{ start_date }}"
+            >
+        </div>
+
+        <div class="field">
+            <label for="activity-end-date">To</label>
+            <input
+                class="form-control"
+                id="activity-end-date"
+                name="end_date"
+                type="date"
+                value="{{ end_date }}"
+            >
+        </div>
+
+        <button type="submit">Filter</button>
+
+        {% if has_filters %}
+            <a class="btn btn-secondary" href="{% url 'bakery:activity_log' %}">
+                Clear filters
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% if entries %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for entry in entries %}
+
+                    <tr>
+                        <td>{{ entry.created_at }}</td>
+                        <td>
+                            {% if entry.user %}
+                                {{ entry.user.get_username }}
+                            {% else %}
+                                <span style="color: var(--muted);">Not signed in</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.get_action_type_display }}</td>
+                        <td>{{ entry.description }}</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% if hidden %}
+            <p class="help">
+                Showing the {{ entries|length }} most recent entries out of
+                {{ total }}. Narrow the filters to see the other {{ hidden }}.
+            </p>
+        {% else %}
+            <p class="help">
+                {{ total }} entr{{ total|pluralize:"y,ies" }} recorded.
+            </p>
+        {% endif %}
+
+    {% elif has_filters %}
+
+        <div class="empty-state">
+            <p>No activity matches the selected filters.</p>
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>No activity has been recorded yet.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

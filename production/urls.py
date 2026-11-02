@@ -45,4 +45,14 @@ urlpatterns = [
         views.sales_list,
         name='sales_list',
     ),
+    path(
+        'sales/analytics/',
+        views.sales_analytics,
+        name='sales_analytics',
+    ),
+    path(
+        'losses/',
+        views.loss_report,
+        name='loss_report',
+    ),
 ]

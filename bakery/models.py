@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -27,3 +28,43 @@ class Bakery(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ActivityLog(models.Model):
+    """Trace of what each user did in the system (FR28).
+
+    One row per action worth remembering: who did it, what kind of action it
+    was, a sentence describing it, and when it happened. The user is kept
+    optional so the trace survives the account being deleted, and so actions
+    performed before anyone signs in are still recorded.
+    """
+
+    class ActionType(models.TextChoices):
+        LOGIN = 'Login', 'Signed in'
+        LOGOUT = 'Logout', 'Signed out'
+        STOCK_IN = 'StockIn', 'Stock-in registered'
+        CORRECTION = 'Correction', 'Inventory corrected'
+        SALE = 'Sale', 'Sale registered'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='activity_logs',
+    )
+    action_type = models.CharField(max_length=20, choices=ActionType.choices)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'activity log entry'
+        verbose_name_plural = 'activity log'
+        indexes = [
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}'
