@@ -27,6 +27,7 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
 - [Running the tests](#running-the-tests)
+- [Languages](#languages)
 - [Project structure](#project-structure)
 - [Architecture](#architecture)
 - [Requirements traceability](#requirements-traceability)
@@ -164,6 +165,44 @@ and the HTTP behaviour of each view. It must finish with `OK`.
 Tests are named after the behaviour they protect rather than the file they live
 in, so a failure says what broke — `test_search_does_not_expose_ingredients_from_another_bakery`
 tells you more than `test_view_2`.
+
+---
+
+## Languages
+
+The interface ships in English and in Spanish. Every visitor gets the language
+their browser asks for, and the `EN / ES` switch in the header overrides that
+choice and keeps it for the rest of the session.
+
+English is the source language: text is written in English in the templates and
+in the Python modules, and the Spanish translation lives in
+`locale/es/LC_MESSAGES/django.po`. The compiled `django.mo` next to it is what
+Django actually reads, and it is committed so the project runs straight after a
+clone.
+
+To change a translation, edit the `.po` file and compile it again:
+
+```bash
+python manage.py compilemessages
+```
+
+To pick up text that was added since the last time, regenerate the `.po` first:
+
+```bash
+python manage.py makemessages -l es
+```
+
+Both commands need the GNU `gettext` tools on the `PATH`. On Windows they are
+not installed by default; the binaries are available from
+https://mlocati.github.io/articles/gettext-iconv-windows.html.
+
+Two rules keep the translation from breaking the pages:
+
+- Text that mixes words and values goes inside `{% blocktranslate trimmed %}`,
+  never built by joining strings, so the translator can move the value to
+  wherever the sentence needs it in Spanish.
+- A number written into a `style` attribute is piped through `|unlocalize`.
+  Spanish writes decimals with a comma, and CSS rejects `width: 12,5%`.
 
 ---
 

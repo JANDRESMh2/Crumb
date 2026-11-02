@@ -1,19 +1,20 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block content %}
 <div style="margin-top: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h1 style="margin: 0; font-size: 1.8rem;">Register Stock-In (Ingredient Purchase)</h1>
+        <h1 style="margin: 0; font-size: 1.8rem;">{% translate "Register Stock-In (Ingredient Purchase)" %}</h1>
         <button id="toggle-scan-mode" type="button" class="btn btn-secondary">
-            Enable Scan Mode
+            {% translate "Enable Scan Mode" %}
         </button>
     </div>
     
     <ul id="scan-alert-container" class="messages"></ul>
     
     <div id="scan-mode-container" style="display: none; background: var(--success-bg); color: var(--success); padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; border-left: 3px solid var(--success);">
-        <strong>Scan Mode Enabled:</strong> You can scan products continuously.
-        <input type="text" id="hidden-barcode-input" class="form-control" style="margin-top: 0.75rem;" placeholder="Waiting for scan..." autocomplete="off">
+        <strong>{% translate "Scan Mode Enabled:" %}</strong> {% translate "You can scan products continuously." %}
+        <input type="text" id="hidden-barcode-input" class="form-control" style="margin-top: 0.75rem;" placeholder="{% translate "Waiting for scan..." %}" autocomplete="off">
     </div>
 
     <form method="post" style="margin-top: 1rem;">
@@ -23,8 +24,8 @@
         </div>
         
         <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-            <button type="submit" class="btn">Save Stock-In</button>
-            <a href="{% url 'inventory:list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn">{% translate "Save Stock-In" %}</button>
+            <a href="{% url 'inventory:list' %}" class="btn btn-secondary">{% translate "Cancel" %}</a>
         </div>
     </form>
 </div>

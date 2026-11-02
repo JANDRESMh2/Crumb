@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load l10n %}
+
+{% block title %}{% translate "Sales analytics" %} - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">{% translate "Production" %}</p>
+
+<h1>{% translate "Sales analytics" %}</h1>
+
+<p class="lede">
+    {% blocktranslate trimmed with name=bakery.name %}Which products of {{ name }} sell best,
+    ordered from the best seller down.{% endblocktranslate %}
+</p>
+
+<div class="actions">
+
+    <a
+        href="{% url 'production:sales_list' %}"
+        class="btn btn-secondary"
+    >
+        {% translate "Sales records" %}
+    </a>
+
+    <a
+        href="{% url 'production:history_tracking' %}"
+        class="btn btn-secondary"
+    >
+        {% translate "Production and sales history" %}
+    </a>
+
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+
+    <form method="get" role="search">
+
+        <div class="field">
+            <label for="analytics-start-date">{% translate "From" %}</label>
+            <input
+                class="form-control"
+                id="analytics-start-date"
+                name="start_date"
+                type="date"
+                value="{{ start_date }}"
+            >
+        </div>
+
+        <div class="field">
+            <label for="analytics-end-date">{% translate "To" %}</label>
+            <input
+                class="form-control"
+                id="analytics-end-date"
+                name="end_date"
+                type="date"
+                value="{{ end_date }}"
+            >
+        </div>
+
+        <button type="submit">{% translate "Filter" %}</button>
+
+        {% if has_filters %}
+            <a class="btn btn-secondary" href="{% url 'production:sales_analytics' %}">
+                {% translate "Clear filters" %}
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% if rankings %}
+
+        <div
+            style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+                margin: 1.5rem 0;
+            "
+        >
+
+            <div
+                style="
+                    flex: 1 1 220px;
+                    background: var(--primary-tint);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    {% translate "Best seller" %}
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ best_seller.product_name }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    {% blocktranslate trimmed with units=best_seller.units_sold %}{{ units }} units sold{% endblocktranslate %}
+                </p>
+            </div>
+
+            <div
+                style="
+                    flex: 1 1 160px;
+                    background: var(--surface-alt);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    {% translate "Units sold" %}
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ totals.units_sold }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    {% blocktranslate trimmed count counter=totals.sale_count %}across {{ counter }} sale{% plural %}across {{ counter }} sales{% endblocktranslate %}
+                </p>
+            </div>
+
+            <div
+                style="
+                    flex: 1 1 160px;
+                    background: var(--surface-alt);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-md);
+                    padding: 1rem 1.15rem;
+                "
+            >
+                <p
+                    style="
+                        margin: 0;
+                        color: var(--muted);
+                        font-size: 0.8rem;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    "
+                >
+                    {% translate "Revenue" %}
+                </p>
+                <p
+                    style="
+                        margin: 0.35rem 0 0;
+                        font-family: var(--font-display);
+                        font-size: 1.5rem;
+                        color: var(--text);
+                    "
+                >
+                    {{ totals.revenue }}
+                </p>
+                <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+                    {% blocktranslate trimmed count counter=totals.product_count %}from {{ counter }} product{% plural %}from {{ counter }} products{% endblocktranslate %}
+                </p>
+            </div>
+
+        </div>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th style="width: 3rem;">#</th>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Units sold" %}</th>
+                    <th style="width: 30%;">{% translate "Share of the best seller" %}</th>
+                    <th style="text-align: right;">{% translate "Sales" %}</th>
+                    <th style="text-align: right;">{% translate "Revenue" %}</th>
+                    <th style="text-align: right;">{% translate "% of revenue" %}</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for row in rankings %}
+
+                    <tr>
+                        <td style="color: var(--muted);">{{ row.position }}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td style="text-align: right;">{{ row.units_sold }}</td>
+                        <td>
+                            <div
+                                title="{{ row.product_name }}: {{ row.units_sold }} units, {{ row.units_share }}% of the best seller"
+                                style="
+                                    background: var(--surface-alt);
+                                    border-radius: 4px;
+                                    height: 10px;
+                                    overflow: hidden;
+                                    width: 100%;
+                                "
+                            >
+                                <div
+                                    style="
+                                        background: var(--primary);
+                                        border-radius: 0 4px 4px 0;
+                                        height: 100%;
+                                        width: {{ row.units_share|unlocalize }}%;
+                                    "
+                                ></div>
+                            </div>
+                        </td>
+                        <td style="text-align: right;">{{ row.sale_count }}</td>
+                        <td style="text-align: right;">{{ row.revenue }}</td>
+                        <td style="text-align: right;">{{ row.revenue_share }}%</td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <th colspan="2">{% translate "Totals" %}</th>
+                    <td style="text-align: right;">{{ totals.units_sold }}</td>
+                    <td></td>
+                    <td style="text-align: right;">{{ totals.sale_count }}</td>
+                    <td style="text-align: right;">{{ totals.revenue }}</td>
+                    <td style="text-align: right;">{{ totals.revenue_share }}%</td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+    {% elif has_filters %}
+
+        <div class="empty-state">
+            <p>{% translate "No sales were registered in the selected date range." %}</p>
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>{% translate "No sales have been registered yet." %}</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

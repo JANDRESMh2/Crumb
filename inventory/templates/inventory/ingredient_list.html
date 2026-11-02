@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Ingredients - Crumb{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Ingredients" %} - Crumb{% endblock %}
 {% block content %}
-<p class="eyebrow">Inventory</p>
-<h1>Ingredients</h1>
+<p class="eyebrow">{% translate "Inventory" %}</p>
+<h1>{% translate "Ingredients" %}</h1>
 <div class="card">
   <form method="get" role="search">
     <div class="field">
-      <label for="ingredient-search">Search ingredients by name</label>
+      <label for="ingredient-search">{% translate "Search ingredients by name" %}</label>
       <input
         class="form-control"
         id="ingredient-search"
@@ -14,12 +15,12 @@
         type="search"
         value="{{ query }}"
         maxlength="120"
-        placeholder="For example, flour or sugar"
+        placeholder="{% translate "For example, flour or sugar" %}"
       >
     </div>
     <div class="field">
       <label for="expiration-start-date">
-        Expiration date from
+        {% translate "Expiration date from" %}
       </label>
 
       <input
@@ -33,7 +34,7 @@
 
     <div class="field">
       <label for="expiration-end-date">
-        Expiration date to
+        {% translate "Expiration date to" %}
       </label>
 
       <input
@@ -44,10 +45,10 @@
         value="{{ end_date }}"
       >
     </div>
-    <button type="submit">Search</button>
+    <button type="submit">{% translate "Search" %}</button>
     {% if query or start_date or end_date %}
     <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
-      Clear filters
+      {% translate "Clear filters" %}
     </a>
     {% endif %}
   </form>
@@ -56,13 +57,13 @@
   <table>
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Quantity</th>
-        <th>Unit</th>
-        <th>Expires</th>
-        <th>Barcode</th>
-        <th>Status</th>
-        <th>Actions</th>
+        <th>{% translate "Name" %}</th>
+        <th>{% translate "Quantity" %}</th>
+        <th>{% translate "Unit" %}</th>
+        <th>{% translate "Expires" %}</th>
+        <th>{% translate "Barcode" %}</th>
+        <th>{% translate "Status" %}</th>
+        <th>{% translate "Actions" %}</th>
     </tr>
     </thead>
     <tbody>
@@ -82,7 +83,7 @@
               <path d="M12 9v4" />
               <path d="M12 17h.01" />
             </svg>
-            Low stock
+            {% translate "Low stock" %}
           </span>
           {% endif %}
           {% if ingredient.is_expired %}
@@ -92,7 +93,7 @@
               <path d="m9 9 6 6" />
               <path d="m15 9-6 6" />
             </svg>
-            Expired
+            {% translate "Expired" %}
           </span>
           {% elif ingredient.is_expiring_soon %}
           <span class="status-badge status-badge-warning">
@@ -100,11 +101,11 @@
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 2" />
             </svg>
-            Expiring soon
+            {% translate "Expiring soon" %}
           </span>
           {% endif %}
           {% if not ingredient.is_low_stock and not ingredient.is_expired and not ingredient.is_expiring_soon %}
-          <span class="status-empty" aria-label="No inventory alert">—</span>
+          <span class="status-empty" aria-label="{% translate "No inventory alert" %}">—</span>
           {% endif %}
           </div>
         </td>
@@ -113,26 +114,26 @@
             class="btn btn-secondary"
             href="{% url 'inventory:edit' ingredient.id %}"
           >
-            Edit
+            {% translate "Edit" %}
           </a>
 
           <a
             class="btn btn-secondary"
             href="{% url 'inventory:delete' ingredient.id %}"
           >
-            Delete
+            {% translate "Delete" %}
           </a>
           <a
             class="btn btn-secondary"
             href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
           >
-            Low-stock threshold
+            {% translate "Low-stock threshold" %}
           </a>
           <a
             class="btn btn-secondary"
             href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
           >
-            Correct quantity
+            {% translate "Correct quantity" %}
           </a>
         </td>
       </tr>
@@ -143,18 +144,18 @@
   <div class="empty-state">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
     {% if query and not start_date and not end_date %}
-    <p>No ingredients match “{{ query }}”.</p>
+    <p>{% blocktranslate trimmed %}No ingredients match “{{ query }}”.{% endblocktranslate %}</p>
     {% elif start_date or end_date %}
-    <p>No ingredients match the selected filters.</p>
+    <p>{% translate "No ingredients match the selected filters." %}</p>
     {% else %}
-    <p>No ingredients registered yet.</p>
+    <p>{% translate "No ingredients registered yet." %}</p>
     {% endif %}
   </div>
   {% endif %}
   <div class="actions">
-    <a class="btn" href="{% url 'inventory:create' %}">Register ingredient</a>
-    <a class="btn btn-secondary" href="{% url 'inventory:stock_in' %}">Register Stock-In</a>
-    <a class="btn btn-secondary" href="{% url 'inventory:import' %}">Import from Excel</a>
+    <a class="btn" href="{% url 'inventory:create' %}">{% translate "Register ingredient" %}</a>
+    <a class="btn btn-secondary" href="{% url 'inventory:stock_in' %}">{% translate "Register Stock-In" %}</a>
+    <a class="btn btn-secondary" href="{% url 'inventory:import' %}">{% translate "Import from Excel" %}</a>
   </div>
 </div>
 {% endblock %}

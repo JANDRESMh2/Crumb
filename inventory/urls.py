@@ -7,7 +7,7 @@ app_name = 'inventory'
 urlpatterns = [
     path('ingredients/new/', views.ingredient_create, name='create'),
     path('stock-in/', views.stock_in_create, name='stock_in'),
-    path('stock-consumption/', views.Stock_consumption_registration, name='stock_consumption'),
+    path('stock-consumption/', views.stock_consumption_registration, name='stock_consumption'),
     path('api/stock-in-barcode/', views.stock_in_barcode_scan, name='stock_in_barcode_scan'),
     path('ingredients/', views.ingredient_list, name='list'),
 

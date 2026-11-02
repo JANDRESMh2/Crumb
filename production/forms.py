@@ -1,4 +1,7 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
+
+from bakery.fields import DecimalInputField, decimal_field_classes
 from decimal import Decimal
 
 from .models import Product, ProductionRecord, SalesRecord
@@ -9,6 +12,7 @@ class ProductForm(forms.Form):
 
     name = forms.CharField(
         max_length=120,
+        label=_('Name'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -20,6 +24,7 @@ class ProductForm(forms.Form):
     sku = forms.CharField(
         max_length=50,
         required=False,
+        label=_('SKU'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -27,17 +32,11 @@ class ProductForm(forms.Form):
         ),
     )
 
-    unit_price = forms.DecimalField(
+    unit_price = DecimalInputField(
         max_digits=10,
         decimal_places=2,
         min_value=Decimal('0.00'),
-        widget=forms.NumberInput(
-            attrs={
-                'class': 'form-control',
-                'min': '0',
-                'step': '0.01',
-            }
-        ),
+        label=_('Unit price'),
     )
 
     def __init__(self, *args, bakery=None, **kwargs):
@@ -56,7 +55,7 @@ class ProductForm(forms.Form):
 
             if duplicate:
                 raise forms.ValidationError(
-                    'This product is already registered.'
+                    _('This product is already registered.')
                 )
 
         return name
@@ -74,12 +73,13 @@ class ProductEditForm(forms.ModelForm):
             'unit_price',
             'status',
         ]
+        field_classes = decimal_field_classes('unit_price')
 
         labels = {
-            'name': 'Name',
-            'sku': 'SKU',
-            'unit_price': 'Unit price',
-            'status': 'Status',
+            'name': _('Name'),
+            'sku': _('SKU'),
+            'unit_price': _('Unit price'),
+            'status': _('Status'),
         }
 
         widgets = {
@@ -91,13 +91,6 @@ class ProductEditForm(forms.ModelForm):
             'sku': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                }
-            ),
-            'unit_price': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0',
-                    'step': '0.01',
                 }
             ),
             'status': forms.Select(
@@ -127,7 +120,7 @@ class ProductEditForm(forms.ModelForm):
 
             if duplicate:
                 raise forms.ValidationError(
-                    'This product is already registered.'
+                    _('This product is already registered.')
                 )
 
         return name
@@ -144,24 +137,18 @@ class DailyProductionRegistrationForm(forms.ModelForm):
             'produced_quantity',
             'production_date',
         ]
+        field_classes = decimal_field_classes('produced_quantity')
 
         labels = {
-            'product': 'Product',
-            'produced_quantity': 'Quantity produced',
-            'production_date': 'Production date and time',
+            'product': _('Product'),
+            'produced_quantity': _('Quantity produced'),
+            'production_date': _('Production date and time'),
         }
 
         widgets = {
             'product': forms.Select(
                 attrs={
                     'class': 'form-select',
-                }
-            ),
-            'produced_quantity': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0.01',
-                    'step': '0.01',
                 }
             ),
             'production_date': forms.DateTimeInput(
@@ -184,6 +171,7 @@ class DailyProductionRegistrationForm(forms.ModelForm):
             if bakery is not None
             else Product.objects.none()
         )
+        self.fields['product'].empty_label = _('Select a product')
 
 
 class DailySalesRegistrationForm(forms.ModelForm):
@@ -197,24 +185,18 @@ class DailySalesRegistrationForm(forms.ModelForm):
             'quantity_sold',
             'sale_timestamp',
         ]
+        field_classes = decimal_field_classes('quantity_sold')
 
         labels = {
-            'product': 'Product',
-            'quantity_sold': 'Quantity sold',
-            'sale_timestamp': 'Sale date and time',
+            'product': _('Product'),
+            'quantity_sold': _('Quantity sold'),
+            'sale_timestamp': _('Sale date and time'),
         }
 
         widgets = {
             'product': forms.Select(
                 attrs={
                     'class': 'form-select',
-                }
-            ),
-            'quantity_sold': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0.01',
-                    'step': '0.01',
                 }
             ),
             'sale_timestamp': forms.DateTimeInput(
@@ -237,3 +219,4 @@ class DailySalesRegistrationForm(forms.ModelForm):
             if bakery is not None
             else Product.objects.none()
         )
+        self.fields['product'].empty_label = _('Select a product')

@@ -4,11 +4,22 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.translation import gettext, gettext_lazy as _
 
 from bakery.models import Bakery
 
 
 SUPPORTED_UNIT_ABBREVIATIONS = ('kg', 'g', 'u', 'L')
+
+
+# Los nombres de las unidades viven en la base, sembrados por la migracion
+# 0002. Se declaran aqui para que entren al catalogo de traduccion.
+SEEDED_UNIT_NAMES = (
+    _('Kilogram'),
+    _('Gram'),
+    _('Unit'),
+    _('Liter'),
+)
 
 
 class UnitOfMeasure(models.Model):
@@ -21,9 +32,9 @@ class UnitOfMeasure(models.Model):
     """
 
     class UnitType(models.TextChoices):
-        MASS = 'mass', 'Mass'
-        VOLUME = 'volume', 'Volume'
-        COUNT = 'count', 'Count'
+        MASS = 'mass', _('Mass')
+        VOLUME = 'volume', _('Volume')
+        COUNT = 'count', _('Count')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=30, unique=True)
@@ -42,7 +53,9 @@ class UnitOfMeasure(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.name} ({self.abbreviation})'
+        # Una unidad que alguien agregue despues y no este en el catalogo
+        # se muestra tal cual quedo escrita.
+        return f'{gettext(self.name)} ({self.abbreviation})'
 
 
 class Ingredient(models.Model):
@@ -157,10 +170,10 @@ class AlertConfiguration(models.Model):
 class StockMovement(models.Model):
     # Declaración de la lista de opciones
     MOVEMENT_TYPES = [
-        ('StockIn', 'Stock-In (Purchase)'),
-        ('Consumption', 'Consumption'),
-        ('Correction', 'Correction'),
-        ('Loss', 'Loss'),
+        ('StockIn', _('Stock-In (Purchase)')),
+        ('Consumption', _('Consumption')),
+        ('Correction', _('Correction')),
+        ('Loss', _('Loss')),
     ]
 
     movement_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -1,34 +1,35 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Register daily production - Crumb{% endblock %}
+{% block title %}{% translate "Register daily production" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Production</p>
+<p class="eyebrow">{% translate "Production" %}</p>
 
-<h1>Register daily production</h1>
+<h1>{% translate "Register daily production" %}</h1>
 
 <p class="lede">
-    Record the baked products manufactured by
-    {{ bakery.name }}.
+    {% blocktranslate trimmed with name=bakery.name %}Record the baked products manufactured
+    by {{ name }}.{% endblocktranslate %}
 </p>
 
 {% if not has_products %}
 
     <div class="card">
 
-        <h2>No products registered</h2>
+        <h2>{% translate "No products registered" %}</h2>
 
         <p>
-            Register your first baked product before
-            recording daily production.
+            {% blocktranslate trimmed %}Register your first baked product before
+            recording daily production.{% endblocktranslate %}
         </p>
 
         <a
             href="{% url 'production:product_create' %}"
             class="btn"
         >
-            Register product
+            {% translate "Register product" %}
         </a>
 
     </div>
@@ -56,14 +57,14 @@
             <div class="actions">
 
                 <button type="submit">
-                    Register production
+                    {% translate "Register production" %}
                 </button>
 
                 <a
                     href="{% url 'production:product_create' %}"
                     class="btn btn-secondary"
                 >
-                    Add product
+                    {% translate "Add product" %}
                 </a>
 
             </div>
@@ -80,7 +81,7 @@
         href="{% url 'production:list' %}"
         class="btn btn-secondary"
     >
-        View production records
+        {% translate "View production records" %}
     </a>
 
 </div>

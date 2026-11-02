@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="container">
+    <h2>{% translate "Register User" %}</h2>
+    <p>{% translate "Create a new user account for the bakery administrators or staff." %}</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <!-- Usamos el renderizado estándar o el partial field.html si lo prefieres[cite: 1] -->
+        {{ form.as_p }}
+        
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary" style="background-color: var(--primary);">{% translate "Register User" %}</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary">{% translate "Cancel" %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,22 +1,24 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Delete ingredient - Crumb{% endblock %}
+{% block title %}{% translate "Delete ingredient" %} - Crumb{% endblock %}
 
 {% block content %}
 
-<p class="eyebrow">Inventory</p>
+<p class="eyebrow">{% translate "Inventory" %}</p>
 
-<h1>Delete ingredient</h1>
+<h1>{% translate "Delete ingredient" %}</h1>
 
 <p class="lede">
-  Are you sure you want to remove {{ ingredient.name }} from the inventory?
+  {% blocktranslate trimmed with name=ingredient.name %}Are you sure you want to remove
+  {{ name }} from the inventory?{% endblocktranslate %}
 </p>
 
 <div class="card">
 
   <p>
     <strong>{{ ingredient.name }}</strong>
-    will no longer appear in the active inventory.
+    {% translate "will no longer appear in the active inventory." %}
   </p>
 
   <form method="post">
@@ -25,11 +27,11 @@
 
     <div class="actions">
       <button type="submit">
-        Delete ingredient
+        {% translate "Delete ingredient" %}
       </button>
 
       <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
-        Cancel
+        {% translate "Cancel" %}
       </a>
     </div>
 

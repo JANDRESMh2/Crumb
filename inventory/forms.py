@@ -1,4 +1,7 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
+
+from bakery.fields import DecimalInputField, decimal_field_classes
 
 from decimal import Decimal
 
@@ -16,8 +19,8 @@ class IngredientForm(forms.ModelForm):
     expiration_warning_days = forms.IntegerField(
         required=False,
         min_value=0,
-        label='Expiration warning days',
-        help_text='Show an alert this many days before the expiration date.',
+        label=_('Expiration warning days'),
+        help_text=_('Show an alert this many days before the expiration date.'),
         widget=forms.NumberInput(
             attrs={'class': 'form-control', 'min': '0', 'step': '1'}
         ),
@@ -33,15 +36,15 @@ class IngredientForm(forms.ModelForm):
             'expiration_warning_days',
         ]
         labels = {
-            'current_quantity': 'Quantity',
-            'unit': 'Unit of measure',
+            'name': _('Name'),
+            'current_quantity': _('Quantity'),
+            'unit': _('Unit of measure'),
+            'expiration_date': _('Expiration date'),
         }
+        field_classes = decimal_field_classes('current_quantity')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': True}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
-            'current_quantity': forms.NumberInput(
-                attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}
-            ),
             'expiration_date': forms.DateInput(
                 attrs={'class': 'form-control', 'type': 'date'}
             ),
@@ -53,7 +56,7 @@ class IngredientForm(forms.ModelForm):
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )
-        self.fields['unit'].empty_label = 'Select a unit'
+        self.fields['unit'].empty_label = _('Select a unit')
 
         if not self.instance._state.adding:
             try:
@@ -68,7 +71,7 @@ class IngredientForm(forms.ModelForm):
     def clean_name(self):
         name = self.cleaned_data['name'].strip()
         if not name:
-            raise forms.ValidationError('The ingredient name is required.')
+            raise forms.ValidationError(_('The ingredient name is required.'))
         return name
 
     def clean(self):
@@ -95,7 +98,7 @@ class IngredientForm(forms.ModelForm):
 
 
 # [FR17: Barcode scanning for ingredient registration]
-class Barcode_scanning_for_ingredient_registration(IngredientForm):
+class BarcodeScanningForIngredientRegistrationForm(IngredientForm):
     """Adds an optional barcode field to IngredientForm, scoped to initial
     registration (FR17). Editing an ingredient (FR03) keeps using the base
     IngredientForm unchanged.
@@ -103,8 +106,8 @@ class Barcode_scanning_for_ingredient_registration(IngredientForm):
 
     barcode_value = forms.CharField(
         required=False,
-        label='Barcode',
-        help_text='Optional. Scan or type a barcode to link it to this ingredient.',
+        label=_('Barcode'),
+        help_text=_('Optional. Scan or type a barcode to link it to this ingredient.'),
         widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
     )
 
@@ -116,17 +119,22 @@ class Barcode_scanning_for_ingredient_registration(IngredientForm):
             ingredient__is_active=True,
         ).exists()
         if taken:
-            raise forms.ValidationError('This barcode is already linked to another ingredient.')
+            raise forms.ValidationError(_('This barcode is already linked to another ingredient.'))
         return value
 
 
 # [FR08: Stock consumption registration]
-class Stock_consumption_registration_form(forms.ModelForm):
+class StockConsumptionRegistrationForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['ingredient', 'quantity', 'note']
+        labels = {
+            'ingredient': _('Ingredient'),
+            'quantity': _('Quantity'),
+            'note': _('Note'),
+        }
+        field_classes = decimal_field_classes('quantity')
         widgets = {
-            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
             'ingredient': forms.Select(attrs={'class': 'form-select'}),
             'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
@@ -138,6 +146,7 @@ class Stock_consumption_registration_form(forms.ModelForm):
             if bakery is not None
             else Ingredient.objects.none()
         )
+        self.fields['ingredient'].empty_label = _('Select an ingredient')
 
     def clean(self):
         cleaned = super().clean()
@@ -158,8 +167,13 @@ class StockInForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['ingredient', 'quantity', 'note']
+        labels = {
+            'ingredient': _('Ingredient'),
+            'quantity': _('Quantity'),
+            'note': _('Note'),
+        }
+        field_classes = decimal_field_classes('quantity')
         widgets = {
-            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01', 'class': 'form-control'}),
             'ingredient': forms.Select(attrs={'class': 'form-select'}),
             'note': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
@@ -171,33 +185,27 @@ class StockInForm(forms.ModelForm):
             if bakery is not None
             else Ingredient.objects.none()
         )
+        self.fields['ingredient'].empty_label = _('Select an ingredient')
 
 
 class LowStockThresholdConfigurationForm(forms.Form):
-    minimum_stock_threshold = forms.DecimalField(
+    minimum_stock_threshold = DecimalInputField(
         required=False,
         min_value=Decimal('0.01'),
         max_digits=10,
         decimal_places=2,
-        label='Low-stock threshold',
+        label=_('Low-stock threshold'),
         help_text=(
             'Enter the minimum quantity before the ingredient is considered '
             'low stock. Leave blank to remove the threshold.'
-        ),
-        widget=forms.NumberInput(
-            attrs={
-                'class': 'form-control',
-                'min': '0.01',
-                'step': '0.01',
-            }
         ),
     )
 
 
 class IngredientImportForm(forms.Form):
     file = forms.FileField(
-        label='Excel or CSV File',
-        help_text='Upload an .xlsx, .xls, or .csv file.',
+        label=_('Excel or CSV File'),
+        help_text=_('Upload an .xlsx, .xls, or .csv file.'),
         widget=forms.ClearableFileInput(attrs={
             'class': 'form-control',
             'accept': '.xlsx,.xls,.csv'
@@ -207,18 +215,17 @@ class IngredientImportForm(forms.Form):
 
 # [FR23: Manual inventory correction]
 class ManualInventoryCorrectionForm(forms.Form):
-    new_quantity = forms.DecimalField(
+    new_quantity = DecimalInputField(
         min_value=Decimal('0'),
         max_digits=10,
         decimal_places=2,
-        label='Corrected quantity',
-        help_text='The real quantity counted in the bakery. It replaces the current quantity.',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+        label=_('Corrected quantity'),
+        help_text=_('The real quantity counted in the bakery. It replaces the current quantity.'),
     )
     reason = forms.CharField(
         max_length=500,
-        label='Reason',
-        help_text='Explain why the quantity is being corrected, for example a physical count.',
+        label=_('Reason'),
+        help_text=_('Explain why the quantity is being corrected, for example a physical count.'),
         widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
     )
 
@@ -229,7 +236,7 @@ class ManualInventoryCorrectionForm(forms.Form):
     def clean_reason(self):
         reason = self.cleaned_data['reason'].strip()
         if not reason:
-            raise forms.ValidationError('A reason is required to correct the inventory.')
+            raise forms.ValidationError(_('A reason is required to correct the inventory.'))
         return reason
 
     def clean_new_quantity(self):
