@@ -230,6 +230,7 @@ def scheduled_order_list(request):
         'bakery': bakery, 'form': form, 'orders': orders,
     })
 
+@bakery_required()
 def product_list(request):
     """Display the bakery product catalog."""
 
