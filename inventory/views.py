@@ -16,12 +16,13 @@ from .forms import (
     IngredientForm,
     IngredientImportForm,
     LowStockThresholdConfigurationForm,
+    NotificationPreferenceForm,
     ManualInventoryCorrectionForm,
     StockConsumptionRegistrationForm,
     StockInForm,
 )
 
-from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMovement
+from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMovement, NotificationPreference
 
 from .services import (
     InsufficientStockError,
@@ -174,6 +175,12 @@ def ingredient_list(request):
     start_date = request.GET.get('start_date', '').strip()
     end_date = request.GET.get('end_date', '').strip()
 
+    try:
+        preferences = bakery.notification_preferences if bakery is not None else None
+    except NotificationPreference.DoesNotExist:
+        preferences = None
+    low_stock_enabled = preferences.low_stock_enabled if preferences else True
+    expiration_enabled = preferences.expiration_enabled if preferences else True
     ingredients = (
         Ingredient.objects.filter(bakery=bakery, is_active=True)
         .select_related('unit', 'alert_configuration')
@@ -198,13 +205,13 @@ def ingredient_list(request):
 
     ingredients = list(ingredients)
     for ingredient in ingredients:
-        ingredient.is_low_stock = low_stock_alerts(
+        ingredient.is_low_stock = low_stock_enabled and low_stock_alerts(
             ingredient=ingredient,
         )
-        ingredient.is_expiring_soon = expiration_alerts(
+        ingredient.is_expiring_soon = expiration_enabled and expiration_alerts(
             ingredient=ingredient,
         )
-        ingredient.is_expired = is_ingredient_expired(
+        ingredient.is_expired = expiration_enabled and is_ingredient_expired(
             ingredient=ingredient,
         )
 
@@ -217,11 +224,33 @@ def ingredient_list(request):
             'query': query,
             'start_date': start_date,
             'end_date': end_date,
+            'notification_preferences': preferences,
         },
     )
 
 
 @bakery_required('Set up the bakery profile before registering stock.')
+def notification_preferences(request):
+    """FR29 - configure which inventory alerts are shown for this bakery."""
+    bakery = request.bakery
+
+    preferences, _ = NotificationPreference.objects.get_or_create(bakery=bakery)
+    if request.method == 'POST':
+        form = NotificationPreferenceForm(request.POST, instance=preferences)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Notification preferences saved.')
+            return redirect('inventory:notification_preferences')
+    else:
+        form = NotificationPreferenceForm(instance=preferences)
+
+    return render(request, 'inventory/notification_preferences.html', {
+        'form': form, 'bakery': bakery,
+    })
+
+
+@bakery_required('Set up the bakery profile before registering stock.')
+@transaction.atomic
 def stock_in_create(request):
     bakery = request.bakery
 

@@ -5,6 +5,7 @@ from . import views
 app_name = 'inventory'
 
 urlpatterns = [
+    path('notifications/preferences/', views.notification_preferences, name='notification_preferences'),
     path('ingredients/new/', views.ingredient_create, name='create'),
     path('stock-in/', views.stock_in_create, name='stock_in'),
     path('stock-consumption/', views.stock_consumption_registration, name='stock_consumption'),
