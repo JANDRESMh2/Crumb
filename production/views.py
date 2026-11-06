@@ -19,8 +19,9 @@ from .forms import (
     DailySalesRegistrationForm,
     ProductEditForm,
     ProductForm,
+    ScheduledOrderForm,
 )
-from .models import Product, ProductionRecord, SalesRecord
+from .models import Product, ProductionRecord, SalesRecord, ScheduledOrder
 from .services import (
     HISTORY_RECORD_TYPES,
     build_daily_unsold_products,
@@ -30,6 +31,7 @@ from .services import (
     register_daily_production,
     register_daily_sale,
     register_product,
+    register_scheduled_order,
 )
 
 
@@ -196,7 +198,6 @@ def sales_list(request):
         .filter(bakery=bakery)
         .select_related('product')
     )
-
     return render(
         request,
         'production/sales_list.html',
@@ -207,6 +208,28 @@ def sales_list(request):
         },
     )
 @bakery_required()
+def scheduled_order_list(request):
+    """FR34 - list and register upcoming customer orders."""
+    bakery = request.bakery
+
+    if request.method == 'POST':
+        form = ScheduledOrderForm(request.POST, bakery=bakery)
+        if form.is_valid():
+            try:
+                register_scheduled_order(bakery=bakery, **form.cleaned_data)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                messages.success(request, 'Scheduled order saved.')
+                return redirect('production:scheduled_orders')
+    else:
+        form = ScheduledOrderForm(bakery=bakery)
+
+    orders = ScheduledOrder.objects.filter(bakery=bakery).select_related('product')
+    return render(request, 'production/scheduled_orders.html', {
+        'bakery': bakery, 'form': form, 'orders': orders,
+    })
+
 def product_list(request):
     """Display the bakery product catalog."""
 
