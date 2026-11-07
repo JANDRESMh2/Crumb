@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,9 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ms823773ogo+grpd)y1c602@6&*t9p2gvkqah6!3hmz6w+@pjp'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('CRUMB_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = []
+if not DEBUG:
+    SECRET_KEY = os.environ['CRUMB_SECRET_KEY']
+
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('CRUMB_ALLOWED_HOSTS', '').split(',') if host.strip()]
 
 
 # Application definition
@@ -105,6 +111,45 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+EMAIL_MODE = os.environ.get('CRUMB_EMAIL_MODE', 'console' if DEBUG else 'smtp').lower()
+if EMAIL_MODE not in ('console', 'smtp'):
+    raise ImproperlyConfigured('CRUMB_EMAIL_MODE must be console or smtp.')
+EMAIL_BACKEND = f'django.core.mail.backends.{EMAIL_MODE}.EmailBackend'
+DEFAULT_FROM_EMAIL = os.environ.get('CRUMB_DEFAULT_FROM_EMAIL', 'Crumb <noreply@localhost>')
+if EMAIL_MODE == 'smtp':
+    EMAIL_HOST = 'smtp-relay.brevo.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 5
+    EMAIL_HOST_USER = os.environ.get('CRUMB_EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('CRUMB_EMAIL_HOST_PASSWORD', '')
+    if not all((EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, os.environ.get('CRUMB_DEFAULT_FROM_EMAIL'))):
+        raise ImproperlyConfigured('SMTP mode requires CRUMB_EMAIL_HOST_USER, CRUMB_EMAIL_HOST_PASSWORD, and CRUMB_DEFAULT_FROM_EMAIL.')
+
+RECOVERY_HMAC_KEY = os.environ.get('CRUMB_RECOVERY_HMAC_KEY', '')
+if len(RECOVERY_HMAC_KEY) < 32:
+    raise ImproperlyConfigured('CRUMB_RECOVERY_HMAC_KEY must contain at least 32 private characters.')
+
+RECOVERY_CODE_LIFETIME_SECONDS = 600
+RECOVERY_GRANT_LIFETIME_SECONDS = 300
+RECOVERY_RESEND_COOLDOWN_SECONDS = 60
+RECOVERY_MAX_CODE_ATTEMPTS = 5
+
+
+def positive_limit(name, default, maximum):
+    try:
+        value = int(os.environ.get(name, default))
+    except ValueError as error:
+        raise ImproperlyConfigured(f'{name} must be a positive integer.') from error
+    if not 1 <= value <= maximum:
+        raise ImproperlyConfigured(f'{name} must be between 1 and {maximum}.')
+    return value
+
+
+RECOVERY_IDENTITY_HOURLY_LIMIT = positive_limit('CRUMB_RECOVERY_IDENTITY_HOURLY_LIMIT', 5, 10)
+RECOVERY_IP_HOURLY_LIMIT = positive_limit('CRUMB_RECOVERY_IP_HOURLY_LIMIT', 30, 100)
 
 
 # Internationalization

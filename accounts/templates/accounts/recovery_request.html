@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Recover your password" %} - Crumb{% endblock %}
+
+{% block content %}
+<p class="eyebrow">{% translate "Account security" %}</p>
+<h1>{% translate "Recover your password" %}</h1>
+<p class="lede">{% translate "Enter your username and registered email address. If the account is eligible, we will email a verification code." %}</p>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button type="submit">{% translate "Send verification code" %}</button>
+      <a class="btn btn-secondary" href="{% url 'accounts:login' %}">{% translate "Back to login" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

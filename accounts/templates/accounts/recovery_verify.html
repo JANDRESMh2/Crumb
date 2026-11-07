@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Verify your code" %} - Crumb{% endblock %}
+
+{% block content %}
+<p class="eyebrow">{% translate "Account security" %}</p>
+<h1>{% translate "Verify your code" %}</h1>
+<p class="lede">{% translate "If we can process the request, a six-digit code will arrive at the registered email address. It expires in 10 minutes." %}</p>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button type="submit">{% translate "Verify code" %}</button>
+    </div>
+  </form>
+  <p>{% translate "You can request another code after 60 seconds. A new code replaces the previous one." %}</p>
+  <p>{% translate "If no code arrives, try again later or contact the administrator." %}</p>
+  <form method="post" action="{% url 'accounts:recovery_resend' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-secondary">{% translate "Resend code" %}</button>
+  </form>
+  <p><a href="{% url 'accounts:recovery_request' %}">{% translate "Start again" %}</a></p>
+</div>
+{% endblock %}
