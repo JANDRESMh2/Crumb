@@ -1,8 +1,11 @@
 from decimal import Decimal
 from datetime import date, timedelta
+from io import BytesIO
 from time import perf_counter
 from unittest.mock import patch
 
+from openpyxl import load_workbook
+from pypdf import PdfReader
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -38,6 +41,7 @@ from .services import (
     register_inventory_correction,
     register_stock_consumption,
     configure_low_stock_threshold,
+    build_inventory_report,
 )
 
 
@@ -49,6 +53,258 @@ def make_unit(abbreviation='kg'):
     names = {'kg': ('Kilogram', 'mass'), 'g': ('Gram', 'mass'), 'u': ('Unit', 'count'), 'L': ('Liter', 'volume')}
     name, unit_type = names[abbreviation]
     return UnitOfMeasure.objects.create(name=name, abbreviation=abbreviation, unit_type=unit_type)
+
+
+class InventoryExportTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.url = reverse('inventory:export')
+
+    def add_ingredient(self, name, *, quantity='5.25', expiration_date=None,
+                       bakery=None, is_active=True, barcode=''):
+        ingredient = Ingredient.objects.create(
+            bakery=bakery or self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=Decimal(quantity),
+            expiration_date=expiration_date or date(2027, 12, 31),
+            is_active=is_active,
+        )
+        if barcode:
+            BarcodeIdentifier.objects.create(
+                ingredient=ingredient, barcode_value=barcode,
+            )
+        return ingredient
+
+    def excel_rows(self, **params):
+        response = self.client.get(self.url, {'format': 'xlsx', **params})
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.content), read_only=True)
+        rows = list(workbook.active.values)
+        workbook.close()
+        return response, rows
+
+    def pdf_text(self, **params):
+        response = self.client.get(self.url, {'format': 'pdf', **params})
+        self.assertEqual(response.status_code, 200)
+        reader = PdfReader(BytesIO(response.content))
+        return response, '\n'.join(page.extract_text() for page in reader.pages)
+
+    def test_offers_both_downloads_from_the_inventory_page(self):
+        response = self.client.get(reverse('inventory:list'))
+        self.assertContains(response, self.url)
+        self.assertContains(response, 'Export to Excel')
+        self.assertContains(response, 'Export to PDF')
+        self.assertContains(response, 'name="q" value=""')
+
+    def test_excel_is_readable_and_has_current_inventory_fields(self):
+        self.add_ingredient('Flour', barcode='FLOUR-001')
+        response, rows = self.excel_rows()
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('attachment; filename="inventory_report.xlsx"',
+                      response['Content-Disposition'])
+        self.assertEqual(rows[2],
+                         ('Name', 'Quantity', 'Unit', 'Expires', 'Barcode', 'Status'))
+        self.assertEqual(rows[3][0:3], ('Flour', 5.25, 'kg'))
+        self.assertEqual(rows[3][3].date(), date(2027, 12, 31))
+        self.assertEqual(rows[3][4:], ('FLOUR-001', 'No inventory alert'))
+
+    def test_pdf_is_readable_and_has_current_inventory_fields(self):
+        self.add_ingredient('Flour', barcode='FLOUR-001')
+        response, text = self.pdf_text()
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment; filename="inventory_report.pdf"',
+                      response['Content-Disposition'])
+        for value in ('Inventory report', 'El Buen Pan', 'Name', 'Quantity',
+                      'Unit', 'Expires', 'Barcode', 'Status', 'Flour',
+                      '5.25', '2027-12-31', 'FLOUR-001', 'No inventory alert'):
+            self.assertIn(value, text)
+
+    def test_both_formats_use_name_and_inclusive_expiration_filters(self):
+        self.add_ingredient('Flour before', expiration_date=date(2026, 8, 31))
+        self.add_ingredient('Flour start', expiration_date=date(2026, 9, 1))
+        self.add_ingredient('Flour end', expiration_date=date(2026, 12, 31))
+        self.add_ingredient('Sugar', expiration_date=date(2026, 10, 1))
+        params = {'q': 'FLOUR', 'start_date': '2026-09-01',
+                  'end_date': '2026-12-31'}
+        _, rows = self.excel_rows(**params)
+        _, text = self.pdf_text(**params)
+        self.assertEqual([row[0] for row in rows[3:]], ['Flour end', 'Flour start'])
+        for value in ('Flour start', 'Flour end'):
+            self.assertIn(value, text)
+        self.assertLess(text.index('Flour end'), text.index('Flour start'))
+        for value in ('Flour before', 'Sugar'):
+            self.assertNotIn(value, text)
+
+    def test_both_formats_exclude_inactive_and_other_bakery_ingredients(self):
+        other_bakery = Bakery.objects.create(name='Other Bakery', address='Other')
+        self.add_ingredient('Local Flour')
+        self.add_ingredient('Inactive Flour', is_active=False)
+        self.add_ingredient('Private Flour', bakery=other_bakery)
+        _, rows = self.excel_rows()
+        _, text = self.pdf_text()
+        self.assertEqual([row[0] for row in rows[3:]], ['Local Flour'])
+        self.assertIn('Local Flour', text)
+        self.assertNotIn('Inactive Flour', text)
+        self.assertNotIn('Private Flour', text)
+
+    def test_empty_inventory_creates_valid_documents(self):
+        _, rows = self.excel_rows()
+        _, text = self.pdf_text()
+        self.assertEqual(rows[2][0], 'Name')
+        self.assertEqual(rows[3][0], 'No ingredients match the selected filters.')
+        self.assertIn('No ingredients match the selected filters.', text)
+
+    def test_no_filter_matches_creates_empty_documents(self):
+        self.add_ingredient('Flour')
+        _, rows = self.excel_rows(q='sugar')
+        _, text = self.pdf_text(q='sugar')
+        self.assertEqual(rows[3][0], 'No ingredients match the selected filters.')
+        self.assertIn('No ingredients match the selected filters.', text)
+        self.assertNotIn('Flour', text)
+
+    def test_pdf_repeats_the_table_header_on_later_pages(self):
+        for index in range(100):
+            self.add_ingredient(f'Ingredient {index:03}')
+        response = self.client.get(self.url, {'format': 'pdf'})
+        reader = PdfReader(BytesIO(response.content))
+        self.assertGreater(len(reader.pages), 1)
+        for page in reader.pages:
+            self.assertIn('Name', page.extract_text())
+
+    def test_alert_status_is_consistent_in_both_formats(self):
+        ingredient = self.add_ingredient(
+            'Expired Flour', quantity='1.00',
+            expiration_date=timezone.localdate() - timedelta(days=1),
+        )
+        AlertConfiguration.objects.create(
+            ingredient=ingredient, minimum_stock_threshold=Decimal('2.00'),
+        )
+        _, rows = self.excel_rows()
+        _, text = self.pdf_text()
+        self.assertEqual(rows[3][5], 'Low stock, Expired')
+        self.assertIn('Low stock, Expired', text)
+
+    def test_optional_expiration_date_can_be_rendered(self):
+        self.add_ingredient('Flour')
+        rows = build_inventory_report(bakery=self.bakery)
+        rows[0]['expiration_date'] = None
+        from .services import build_inventory_excel, build_inventory_pdf
+        workbook = load_workbook(
+            BytesIO(build_inventory_excel(rows=rows, bakery=self.bakery)),
+            read_only=True,
+        )
+        self.assertIsNone(list(workbook.active.values)[3][3])
+        workbook.close()
+        text = '\n'.join(
+            page.extract_text() for page in PdfReader(
+                BytesIO(build_inventory_pdf(rows=rows, bakery=self.bakery))
+            ).pages
+        )
+        self.assertIn('Flour', text)
+
+    def test_invalid_export_parameters_return_bad_request(self):
+        for params in (
+            {}, {'format': 'csv'}, {'format': 'xlsx', 'start_date': 'invalid'},
+            {'format': 'pdf', 'start_date': '2027-01-01',
+             'end_date': '2026-01-01'},
+            {'format': 'pdf', 'q': 'x' * 121},
+        ):
+            with self.subTest(params=params):
+                response = self.client.get(self.url, params)
+                self.assertEqual(response.status_code, 400)
+                self.assertNotIn('attachment', response.headers.get('Content-Disposition', ''))
+
+    def test_post_is_not_allowed(self):
+        response = self.client.post(self.url, {'format': 'pdf'})
+        self.assertEqual(response.status_code, 405)
+
+    def test_export_redirects_to_setup_without_a_bakery(self):
+        self.bakery.delete()
+        response = self.client.get(self.url, {'format': 'xlsx'})
+        self.assertRedirects(response, reverse('bakery:setup'))
+
+    def test_missing_bakery_message_uses_the_selected_language(self):
+        self.bakery.delete()
+        for language, expected in (
+            ('en', 'Set up the bakery profile before exporting inventory.'),
+            ('es', 'Configura el perfil de la panadería antes de exportar el inventario.'),
+        ):
+            with self.subTest(language=language):
+                self.client.post(reverse('set_language'), {
+                    'language': language, 'next': self.url,
+                })
+                response = self.client.get(
+                    self.url, {'format': 'xlsx'}, follow=True,
+                )
+                self.assertRedirects(response, reverse('bakery:setup'))
+                self.assertContains(response, expected)
+
+    def test_excel_escapes_formula_prefixes_in_user_controlled_text(self):
+        self.add_ingredient('=SUM(1,1)', barcode='@ATTACK')
+        response = self.client.get(self.url, {'format': 'xlsx'})
+        workbook = load_workbook(BytesIO(response.content))
+        self.assertEqual(workbook.active['A4'].data_type, 's')
+        self.assertEqual(workbook.active['E4'].data_type, 's')
+        self.assertEqual(workbook.active['A4'].value, "'=SUM(1,1)")
+        self.assertEqual(workbook.active['E4'].value, "'@ATTACK")
+        workbook.close()
+
+    def test_excel_removes_only_invalid_controls_without_changing_records(self):
+        ingredient = self.add_ingredient('Flour\x01X', barcode='CODE\x02X')
+        self.add_ingredient('\x03=SUM(1,1)')
+        self.add_ingredient('Crème\nMilk')
+        self.bakery.name = '\x04=BAKERY()'
+        self.bakery.save(update_fields=['name'])
+
+        response = self.client.get(self.url, {'format': 'xlsx'})
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        self.assertEqual(sheet['B1'].value, "'=BAKERY()")
+        exported = {sheet.cell(row, 1).value: row for row in range(4, 7)}
+        self.assertIn('FlourX', exported)
+        self.assertEqual(sheet.cell(exported['FlourX'], 5).value, 'CODEX')
+        self.assertIn("'=SUM(1,1)", exported)
+        self.assertIn('Crème\nMilk', exported)
+        self.assertEqual(sheet.cell(exported["'=SUM(1,1)"], 1).data_type, 's')
+        workbook.close()
+
+        ingredient.refresh_from_db()
+        self.bakery.refresh_from_db()
+        self.assertEqual(ingredient.name, 'Flour\x01X')
+        self.assertEqual(ingredient.active_barcode, 'CODE\x02X')
+        self.assertEqual(self.bakery.name, '\x04=BAKERY()')
+
+    def test_pdf_escapes_user_controlled_markup(self):
+        self.add_ingredient('<b>Flour & Milk</b>', barcode='<script>alert(1)</script>')
+        _, text = self.pdf_text()
+        self.assertIn('<b>Flour & Milk</b>', text)
+        self.assertIn('<script>alert(1)</script>', text)
+
+    def test_spanish_interface_and_documents_are_translated(self):
+        self.add_ingredient('Harina')
+        self.client.post(reverse('set_language'), {
+            'language': 'es', 'next': reverse('inventory:list'),
+        })
+        page = self.client.get(reverse('inventory:list'))
+        _, excel = self.excel_rows()
+        _, pdf = self.pdf_text()
+        self.assertContains(page, 'Exportar a Excel')
+        self.assertEqual(excel[2][0], 'Nombre')
+        self.assertIn('Informe de inventario', pdf)
+
+    def test_export_query_count_does_not_grow_per_ingredient(self):
+        for index in range(30):
+            self.add_ingredient(f'Ingredient {index:03}')
+        with self.assertNumQueries(3):
+            self.excel_rows()
 
 
 class UnitSeedMigrationTests(TestCase):

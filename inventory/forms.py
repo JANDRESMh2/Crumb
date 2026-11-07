@@ -213,6 +213,23 @@ class IngredientImportForm(forms.Form):
     )
 
 
+class InventoryExportForm(forms.Form):
+    format = forms.ChoiceField(choices=[('xlsx', 'Excel'), ('pdf', 'PDF')])
+    q = forms.CharField(required=False, max_length=120, strip=True)
+    start_date = forms.DateField(required=False, input_formats=['%Y-%m-%d'])
+    end_date = forms.DateField(required=False, input_formats=['%Y-%m-%d'])
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError(
+                _('The start date cannot be later than the end date.')
+            )
+        return cleaned_data
+
+
 # [FR23: Manual inventory correction]
 class ManualInventoryCorrectionForm(forms.Form):
     new_quantity = DecimalInputField(
