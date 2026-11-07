@@ -834,6 +834,94 @@ msgstr "que todavía tienen existencias"
 msgid "will no longer appear in the active inventory."
 msgstr "ya no aparecerá en el inventario activo."
 
+# Password recovery (FR32)
+msgid "Forgot your password?"
+msgstr "¿Olvidaste tu contraseña?"
+
+msgid "Account security"
+msgstr "Seguridad de la cuenta"
+
+msgid "Back to login"
+msgstr "Volver al inicio de sesión"
+
+msgid "Set a new password"
+msgstr "Establecer una contraseña nueva"
+
+msgid "Save new password"
+msgstr "Guardar contraseña nueva"
+
+msgid "Password updated"
+msgstr "Contraseña actualizada"
+
+msgid "Go to login"
+msgstr "Ir al inicio de sesión"
+
+msgid "If you did not request this change, you can ignore this email."
+msgstr "Si no solicitaste este cambio, puedes ignorar este correo."
+
+msgid "Recover your password"
+msgstr "Recupera tu contraseña"
+
+msgid "Enter your username and registered email address. If the account is eligible, we will email a verification code."
+msgstr "Ingresa tu nombre de usuario y correo registrado. Si la cuenta cumple los requisitos, enviaremos un código de verificación."
+
+msgid "Send verification code"
+msgstr "Enviar código de verificación"
+
+msgid "Verify your code"
+msgstr "Verifica tu código"
+
+msgid "If we can process the request, a six-digit code will arrive at the registered email address. It expires in 10 minutes."
+msgstr "Si podemos procesar la solicitud, llegará un código de seis dígitos al correo registrado. Vence en 10 minutos."
+
+msgid "Verify code"
+msgstr "Verificar código"
+
+msgid "You can request another code after 60 seconds. A new code replaces the previous one."
+msgstr "Puedes solicitar otro código después de 60 segundos. El código nuevo reemplaza al anterior."
+
+msgid "If no code arrives, try again later or contact the administrator."
+msgstr "Si no llega el código, inténtalo más tarde o contacta al administrador."
+
+msgid "Resend code"
+msgstr "Reenviar código"
+
+msgid "Start again"
+msgstr "Empezar de nuevo"
+
+msgid "Choose a strong password that differs from your current password."
+msgstr "Elige una contraseña segura y diferente de la actual."
+
+msgid "Your password has been changed. Sign in with the new password."
+msgstr "Tu contraseña fue cambiada. Inicia sesión con la nueva contraseña."
+
+msgid "A password recovery code was requested for the Crumb account %(username)s."
+msgstr "Se solicitó un código de recuperación para la cuenta de Crumb %(username)s."
+
+msgid "Your verification code is %(code)s."
+msgstr "Tu código de verificación es %(code)s."
+
+msgid "This code expires in 10 minutes and can be used only once."
+msgstr "Este código vence en 10 minutos y solo se puede usar una vez."
+
+msgid "Your Crumb recovery code"
+msgstr "Tu código de recuperación de Crumb"
+
+msgid "Verification code"
+msgstr "Código de verificación"
+
+msgid "Enter a six-digit code."
+msgstr "Ingresa un código de seis dígitos."
+
+msgid "The new password must differ from the current password."
+msgstr "La contraseña nueva debe ser diferente de la actual."
+
+msgid "The code is invalid, expired, or has no attempts remaining."
+msgstr "El código no es válido, venció o agotó los intentos."
+
+msgid "This recovery authorization has expired. Request a new code."
+msgstr "Esta autorización de recuperación venció. Solicita un código nuevo."
+
 msgid "%(counter)s entry recorded."
 msgid_plural "%(counter)s entries recorded."
 msgstr[0] "%(counter)s entrada registrada."
