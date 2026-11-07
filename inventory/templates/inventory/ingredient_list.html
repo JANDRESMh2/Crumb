@@ -53,6 +53,14 @@
     {% endif %}
   </form>
 
+  <form method="get" action="{% url 'inventory:export' %}" class="actions">
+    <input type="hidden" name="q" value="{{ query }}">
+    <input type="hidden" name="start_date" value="{{ start_date }}">
+    <input type="hidden" name="end_date" value="{{ end_date }}">
+    <button type="submit" name="format" value="xlsx">{% translate "Export to Excel" %}</button>
+    <button type="submit" name="format" value="pdf">{% translate "Export to PDF" %}</button>
+  </form>
+
   {% if ingredients %}
   <table>
     <thead>

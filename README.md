@@ -152,6 +152,13 @@ python manage.py createsuperuser
 
 ---
 
+## Exporting inventory
+
+The ingredient inventory page offers Excel and PDF downloads. Exports use the
+current name search and expiration-date filters, and include each active
+ingredient's quantity, unit, expiration date, barcode, and alert status.
+The download links work even when the filtered inventory is empty.
+
 ## Running the tests
 
 ```bash

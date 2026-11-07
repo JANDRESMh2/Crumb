@@ -205,6 +205,12 @@ msgstr ""
 msgid "Excel or CSV File"
 msgstr "Archivo de Excel o CSV"
 
+msgid "Export to Excel"
+msgstr "Exportar a Excel"
+
+msgid "Export to PDF"
+msgstr "Exportar a PDF"
+
 msgid "Expiration date"
 msgstr "Fecha de vencimiento"
 
@@ -282,6 +288,9 @@ msgstr "Ingredientes"
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
+msgid "Invalid export parameters."
+msgstr "Los parámetros de exportación no son válidos."
+
 msgid "Invalid username or password."
 msgstr "El usuario o la contraseña no son correctos."
 
@@ -296,6 +305,9 @@ msgstr "Inventario para panaderías pequeñas"
 
 msgid "Inventory management for small bakeries"
 msgstr "Gestión de inventario para panaderías pequeñas"
+
+msgid "Inventory report"
+msgstr "Informe de inventario"
 
 msgid "Kilogram"
 msgstr "Kilogramo"
@@ -403,6 +415,9 @@ msgstr ""
 
 msgid "Overproduction"
 msgstr "Sobreproducción"
+
+msgid "Page"
+msgstr "Página"
 
 msgid "Phone"
 msgstr "Teléfono"
@@ -612,6 +627,9 @@ msgstr "Selecciona una unidad"
 
 msgid "Select an ingredient"
 msgstr "Selecciona un ingrediente"
+
+msgid "Set up the bakery profile before exporting inventory."
+msgstr "Configura el perfil de la panadería antes de exportar el inventario."
 
 msgid "Set up your bakery"
 msgstr "Configura tu panadería"
