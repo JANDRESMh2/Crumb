@@ -940,6 +940,40 @@ msgstr "El código no es válido, venció o agotó los intentos."
 msgid "This recovery authorization has expired. Request a new code."
 msgstr "Esta autorización de recuperación venció. Solicita un código nuevo."
 
+# Ingredient categorization (FR35)
+msgid "Category"
+msgstr "Categoría"
+
+msgid "Select a category"
+msgstr "Selecciona una categoría"
+
+msgid "Uncategorized"
+msgstr "Sin categoría"
+
+msgid "Flours and grains"
+msgstr "Harinas y cereales"
+
+msgid "Sweeteners"
+msgstr "Endulzantes"
+
+msgid "Dairy and eggs"
+msgstr "Lácteos y huevos"
+
+msgid "Fats and oils"
+msgstr "Grasas y aceites"
+
+msgid "Leavening agents"
+msgstr "Agentes leudantes"
+
+msgid "Fruits, nuts, and seeds"
+msgstr "Frutas, frutos secos y semillas"
+
+msgid "Flavorings and decorations"
+msgstr "Saborizantes y decoraciones"
+
+msgid "Other"
+msgstr "Otros"
+
 msgid "%(counter)s entry recorded."
 msgid_plural "%(counter)s entries recorded."
 msgstr[0] "%(counter)s entrada registrada."

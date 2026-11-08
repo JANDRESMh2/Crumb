@@ -1,11 +1,101 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% block title %}{% translate "Ingredients" %} - Crumb{% endblock %}
+{% block main_class %}wide inventory-page{% endblock %}
 {% block content %}
+<style>
+  main.inventory-page.wide { max-width: 1280px; }
+  .inventory-page .inventory-card { min-width: 0; padding: 1.5rem; }
+  .inventory-filters {
+    display: grid;
+    grid-template-columns: minmax(13rem, 2fr) repeat(2, minmax(10rem, 1fr)) auto;
+    align-items: end;
+    gap: 0.75rem;
+  }
+  .inventory-filters .field { margin: 0; min-width: 0; }
+  .inventory-filter-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .inventory-filter-actions button,
+  .inventory-filter-actions .btn { padding: 0.65rem 0.9rem; }
+  .inventory-export-actions { margin-top: 1.1rem; }
+  .inventory-table-wrap { max-width: 100%; overflow-x: auto; margin-top: 1.4rem; }
+  .inventory-table { min-width: 1080px; table-layout: fixed; }
+  .inventory-table th,
+  .inventory-table td { vertical-align: middle; padding: 0.7rem 0.55rem; }
+  .inventory-table td { overflow-wrap: anywhere; }
+  .inventory-table .inventory-category { overflow-wrap: normal; hyphens: auto; line-height: 1.35; }
+  .inventory-table .inventory-status .status-badge { white-space: normal; line-height: 1.2; }
+  .inventory-row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+  .inventory-row-actions .btn {
+    width: 100%;
+    min-height: 2.2rem;
+    padding: 0.35rem 0.45rem;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.76rem;
+    line-height: 1.2;
+  }
+  .inventory-mobile-label { display: none; }
+
+  @media (max-width: 1050px) {
+    .inventory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 700px) {
+    main.inventory-page { padding: 1.5rem 1rem 3rem; }
+    .inventory-page .inventory-card { padding: 1rem; }
+    .inventory-filters { grid-template-columns: 1fr; }
+    .inventory-table-wrap { overflow: visible; }
+    .inventory-table,
+    .inventory-table tbody { display: block; width: 100%; min-width: 0; }
+    .inventory-table colgroup { display: none; }
+    .inventory-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .inventory-table tbody { display: grid; gap: 0.85rem; }
+    .inventory-table tbody tr {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem 0.75rem;
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    .inventory-table tbody tr:hover { background: var(--surface); }
+    .inventory-table tbody td { display: block; min-width: 0; padding: 0; border: 0; }
+    .inventory-table tbody td:first-child,
+    .inventory-table tbody td:nth-child(2),
+    .inventory-table tbody td:nth-child(7),
+    .inventory-table tbody td:last-child { grid-column: 1 / -1; }
+    .inventory-table tbody td:first-child { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; }
+    .inventory-mobile-label {
+      display: block;
+      margin-bottom: 0.2rem;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  }
+</style>
 <p class="eyebrow">{% translate "Inventory" %}</p>
 <h1>{% translate "Ingredients" %}</h1>
-<div class="card">
-  <form method="get" role="search">
+<div class="card inventory-card">
+  <form method="get" role="search" class="inventory-filters">
     <div class="field">
       <label for="ingredient-search">{% translate "Search ingredients by name" %}</label>
       <input
@@ -45,15 +135,17 @@
         value="{{ end_date }}"
       >
     </div>
-    <button type="submit">{% translate "Search" %}</button>
-    {% if query or start_date or end_date %}
-    <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
-      {% translate "Clear filters" %}
-    </a>
-    {% endif %}
+    <div class="inventory-filter-actions">
+      <button type="submit">{% translate "Search" %}</button>
+      {% if query or start_date or end_date %}
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">
+        {% translate "Clear filters" %}
+      </a>
+      {% endif %}
+    </div>
   </form>
 
-  <form method="get" action="{% url 'inventory:export' %}" class="actions">
+  <form method="get" action="{% url 'inventory:export' %}" class="actions inventory-export-actions">
     <input type="hidden" name="q" value="{{ query }}">
     <input type="hidden" name="start_date" value="{{ start_date }}">
     <input type="hidden" name="end_date" value="{{ end_date }}">
@@ -62,10 +154,16 @@
   </form>
 
   {% if ingredients %}
-  <table>
+  <div class="inventory-table-wrap" role="region" aria-label="{% translate 'Ingredients' %}" tabindex="0">
+  <table class="inventory-table">
+    <colgroup>
+      <col style="width: 16%"><col style="width: 16%"><col style="width: 8%"><col style="width: 5%">
+      <col style="width: 10%"><col style="width: 10%"><col style="width: 11%"><col style="width: 24%">
+    </colgroup>
     <thead>
       <tr>
         <th>{% translate "Name" %}</th>
+        <th>{% translate "Category" %}</th>
         <th>{% translate "Quantity" %}</th>
         <th>{% translate "Unit" %}</th>
         <th>{% translate "Expires" %}</th>
@@ -77,12 +175,21 @@
     <tbody>
       {% for ingredient in ingredients %}
       <tr>
-        <td>{{ ingredient.name }}</td>
-        <td>{{ ingredient.current_quantity }}</td>
-        <td>{{ ingredient.unit.abbreviation }}</td>
-        <td>{{ ingredient.expiration_date }}</td>
-        <td>{{ ingredient.active_barcode|default:"—" }}</td>
-        <td>
+        <td><span class="inventory-mobile-label">{% translate "Name" %}</span>{{ ingredient.name }}</td>
+        <td class="inventory-category">
+          <span class="inventory-mobile-label">{% translate "Category" %}</span>
+          {% if ingredient.category %}
+            {{ ingredient.get_category_display }}
+          {% else %}
+            {% translate "Uncategorized" %}
+          {% endif %}
+        </td>
+        <td><span class="inventory-mobile-label">{% translate "Quantity" %}</span>{{ ingredient.current_quantity }}</td>
+        <td><span class="inventory-mobile-label">{% translate "Unit" %}</span>{{ ingredient.unit.abbreviation }}</td>
+        <td><span class="inventory-mobile-label">{% translate "Expires" %}</span>{{ ingredient.expiration_date }}</td>
+        <td><span class="inventory-mobile-label">{% translate "Barcode" %}</span>{{ ingredient.active_barcode|default:"—" }}</td>
+        <td class="inventory-status">
+          <span class="inventory-mobile-label">{% translate "Status" %}</span>
           <div class="status-badges">
           {% if ingredient.is_low_stock %}
           <span class="status-badge status-badge-warning">
@@ -117,37 +224,24 @@
           {% endif %}
           </div>
         </td>
-        <td>
-          <a
-            class="btn btn-secondary"
-            href="{% url 'inventory:edit' ingredient.id %}"
-          >
-            {% translate "Edit" %}
-          </a>
-
-          <a
-            class="btn btn-secondary"
-            href="{% url 'inventory:delete' ingredient.id %}"
-          >
-            {% translate "Delete" %}
-          </a>
-          <a
-            class="btn btn-secondary"
-            href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
-          >
-            {% translate "Low-stock threshold" %}
-          </a>
-          <a
-            class="btn btn-secondary"
-            href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
-          >
-            {% translate "Correct quantity" %}
-          </a>
+        <td class="inventory-action-cell">
+          <span class="inventory-mobile-label">{% translate "Actions" %}</span>
+          <div class="inventory-row-actions" role="group" aria-label="{% translate 'Actions' %}">
+            <a class="btn btn-secondary" href="{% url 'inventory:edit' ingredient.id %}"
+               aria-label="{% translate 'Edit' %}: {{ ingredient.name }}">{% translate "Edit" %}</a>
+            <a class="btn btn-secondary" href="{% url 'inventory:delete' ingredient.id %}"
+               aria-label="{% translate 'Delete' %}: {{ ingredient.name }}">{% translate "Delete" %}</a>
+            <a class="btn btn-secondary" href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
+               aria-label="{% translate 'Low-stock threshold' %}: {{ ingredient.name }}">{% translate "Low-stock threshold" %}</a>
+            <a class="btn btn-secondary" href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
+               aria-label="{% translate 'Correct quantity' %}: {{ ingredient.name }}">{% translate "Correct quantity" %}</a>
+          </div>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <div class="empty-state">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>

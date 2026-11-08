@@ -9,6 +9,7 @@ from .models import (
     AlertConfiguration,
     BarcodeIdentifier,
     Ingredient,
+    IngredientCategory,
     StockMovement,
     SUPPORTED_UNIT_ABBREVIATIONS,
     UnitOfMeasure,
@@ -30,6 +31,7 @@ class IngredientForm(forms.ModelForm):
         model = Ingredient
         fields = [
             'name',
+            'category',
             'unit',
             'current_quantity',
             'expiration_date',
@@ -37,6 +39,7 @@ class IngredientForm(forms.ModelForm):
         ]
         labels = {
             'name': _('Name'),
+            'category': _('Category'),
             'current_quantity': _('Quantity'),
             'unit': _('Unit of measure'),
             'expiration_date': _('Expiration date'),
@@ -44,15 +47,22 @@ class IngredientForm(forms.ModelForm):
         field_classes = decimal_field_classes('current_quantity')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': True}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
             'expiration_date': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
+                format='%Y-%m-%d',
+                attrs={'class': 'form-control', 'type': 'date'},
             ),
         }
 
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
+        self.fields['category'].required = True
+        self.fields['category'].choices = [
+            ('', _('Select a category')),
+            *IngredientCategory.choices,
+        ]
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )

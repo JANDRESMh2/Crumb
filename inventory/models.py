@@ -22,6 +22,17 @@ SEEDED_UNIT_NAMES = (
 )
 
 
+class IngredientCategory(models.TextChoices):
+    FLOURS_GRAINS = 'flours_grains', _('Flours and grains')
+    SWEETENERS = 'sweeteners', _('Sweeteners')
+    DAIRY_EGGS = 'dairy_eggs', _('Dairy and eggs')
+    FATS_OILS = 'fats_oils', _('Fats and oils')
+    LEAVENING = 'leavening', _('Leavening agents')
+    FRUITS_NUTS_SEEDS = 'fruits_nuts_seeds', _('Fruits, nuts, and seeds')
+    FLAVORINGS_DECORATIONS = 'flavorings_decorations', _('Flavorings and decorations')
+    OTHER = 'other', _('Other')
+
+
 class UnitOfMeasure(models.Model):
     """Reference catalog of measurement units supported by Crumb (FR02, DR01).
 
@@ -59,19 +70,22 @@ class UnitOfMeasure(models.Model):
 
 
 class Ingredient(models.Model):
-    """Raw-material catalog item tracked in inventory (FR01, DR01, DR03).
+    """Raw-material catalog item tracked in inventory (FR01, FR35, DR01, DR03).
 
-    Deliberately excludes cost_per_unit and category at this stage: cost
-    belongs to the purchase/stock-in flow (FR07) and categorization is a
-    separate, unbuilt Could-have (FR35). Adding either later is a single
-    nullable-field migration - it is not worth speculatively building a
-    field FR01 never asks for.
+    Cost belongs to the purchase/stock-in flow (FR07). Category can be null
+    for existing ingredients and ingredients created by bulk import (FR15).
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bakery = models.ForeignKey(Bakery, on_delete=models.PROTECT, related_name='ingredients')
     unit = models.ForeignKey(UnitOfMeasure, on_delete=models.PROTECT, related_name='ingredients')
     name = models.CharField(max_length=120)
+    category = models.CharField(
+        max_length=24,
+        choices=IngredientCategory.choices,
+        null=True,
+        verbose_name=_('Category'),
+    )
     current_quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -92,6 +106,13 @@ class Ingredient(models.Model):
             models.CheckConstraint(
                 condition=models.Q(current_quantity__gte=0),
                 name='ingredient_quantity_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(category__isnull=True)
+                    | models.Q(category__in=IngredientCategory.values)
+                ),
+                name='ingredient_category_valid',
             ),
         ]
 
