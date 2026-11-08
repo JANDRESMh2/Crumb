@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Password updated" %} - Crumb{% endblock %}
+
+{% block content %}
+<p class="eyebrow">{% translate "Account security" %}</p>
+<h1>{% translate "Password updated" %}</h1>
+<div class="card">
+  <p>{% translate "Your password has been changed. Sign in with the new password." %}</p>
+  <div class="actions">
+    <a class="btn" href="{% url 'accounts:login' %}">{% translate "Go to login" %}</a>
+  </div>
+</div>
+{% endblock %}

@@ -26,6 +26,8 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 - [Features](#features)
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
+- [Password recovery](#password-recovery)
+- [Exporting inventory](#exporting-inventory)
 - [Running the tests](#running-the-tests)
 - [Languages](#languages)
 - [Project structure](#project-structure)
@@ -121,6 +123,9 @@ pip install -r requirements.txt
 
 ### 4. Create the database
 
+First configure and load the private recovery secret as described in
+[Password recovery](#password-recovery); Django validates it at startup.
+
 ```bash
 python manage.py migrate
 ```
@@ -152,12 +157,126 @@ python manage.py createsuperuser
 
 ---
 
+## Password recovery
+
+On the login page, select **Forgot your password?** and enter the account's
+username and registered email address. If the account is eligible, Crumb sends
+a six-digit code. Enter it within 10 minutes, then choose a new password that
+differs from the old one. The code allows five incorrect attempts. A resend
+requires 60 seconds; the previous code is revoked when SMTP accepts the
+replacement. After changing the password, return to the normal login page.
+All request confirmations are
+generic, including requests for unknown or ineligible accounts.
+Requests are limited to five per username/email pair and 30 per client IP per
+hour by default. `CRUMB_RECOVERY_IDENTITY_HOURLY_LIMIT` and
+`CRUMB_RECOVERY_IP_HOURLY_LIMIT` can lower or modestly raise those limits;
+five incorrect entries always disable a code.
+
+Create a private local configuration in Ubuntu WSL:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+python -c 'import secrets; print(secrets.token_urlsafe(48))'
+```
+
+Paste the generated value into `CRUMB_RECOVERY_HMAC_KEY` in `.env`. Keep this
+secret stable across restarts and application instances. The `.env` file is
+ignored by Git; never commit it or paste its values into issues or logs. Load
+the variables before running Django. You may instead keep this file outside
+the repository with mode `600` and source its private path:
+
+```bash
+set -a
+. ./.env
+set +a
+python manage.py migrate
+python manage.py runserver
+```
+
+With `CRUMB_EMAIL_MODE=console`, the recovery email and code appear in the
+server terminal. To test delivery through Brevo, set `CRUMB_EMAIL_MODE=smtp`,
+`CRUMB_EMAIL_HOST_USER` to the SMTP login shown in Brevo, `CRUMB_EMAIL_HOST_PASSWORD`
+to its private SMTP key, and `CRUMB_DEFAULT_FROM_EMAIL` to the verified sender.
+Restart the server after loading the updated environment. Crumb connects to
+`smtp-relay.brevo.com` on port 587 with STARTTLS. Request recovery for a demo
+account whose registered email is a Gmail address you control; read the code
+from that inbox, complete verification, and sign in with the new password.
+SMTP acceptance does not guarantee inbox delivery, so check Brevo's
+transactional email logs if the message is delayed. A replacement code is
+unusable until SMTP accepts it. If SMTP fails, Crumb records a sanitized
+operational error and keeps the previous valid code usable. The browser keeps
+a generic message so it cannot reveal whether the account exists. Request
+limits and the resend cooldown still apply after a delivery failure.
+
+### FR32 performance and security limits
+
+In local measurements after the resend correction, Python 3.12.13 used a
+temporary SQLite database with 1,001 users, an in-memory email backend, and
+30 HTTP requests per operation. Recovery request median and 95th percentile
+were 0.0183 and 0.0345 seconds; code verification measured 0.0141 and 0.0159
+seconds; password update measured 0.8264 and 0.8510 seconds. These figures
+measure application processing under local test conditions, not external mail
+delivery or the time a person takes to read and enter a code. One real Brevo
+SMTP handoff took 3.2616 seconds; the recipient confirmed Gmail delivery.
+Because SMTP delivery is synchronous, the three-second requirement is not
+guaranteed. SMTP acceptance is also not a guarantee of inbox arrival.
+
+Eligible requests perform SMTP work while unknown or ineligible identities do
+not. Response-time differences can therefore reveal account eligibility to a
+patient observer despite identical browser messages. If strict three-second
+HTTP responses and stronger timing privacy are required, use a durable external
+job queue and worker, with a carefully protected short-lived mail payload and
+uniform request handling. An in-process background thread is not reliable.
+Even a durable queue cannot guarantee that an external provider delivers an
+email within three seconds; that requires a separate delivery service target
+and monitoring.
+
+### AWS deployment checklist for FR32
+
+1. Back up the database and apply all Django migrations, including
+   `accounts.0001_initial` and `accounts.0002_recoverychallenge_activated_at`,
+   before enabling the application. Use a shared persistent database for all
+   application instances; do not use an ephemeral SQLite file.
+2. Supply `CRUMB_RECOVERY_HMAC_KEY` (at least 32 private characters) through a
+   secret manager or protected environment. Keep the same key across restarts
+   and instances; changing it invalidates outstanding codes and rate buckets.
+3. Set `CRUMB_DEBUG=false`, provide a separate private `CRUMB_SECRET_KEY`, and
+   set `CRUMB_ALLOWED_HOSTS` to the actual deployment host. Keep both secrets
+   out of the repository, logs, and instance images.
+4. Set `CRUMB_EMAIL_MODE=smtp`, `CRUMB_EMAIL_HOST_USER` to the Brevo SMTP login,
+   `CRUMB_EMAIL_HOST_PASSWORD` to the private SMTP key, and
+   `CRUMB_DEFAULT_FROM_EMAIL` to the verified sender. Store these with the
+   other deployment secrets and verify they are available to every instance.
+5. Confirm outbound connectivity to `smtp-relay.brevo.com:587` and STARTTLS.
+   Test SMTP authentication, message acceptance, and inbox delivery. Do not
+   log SMTP credentials, codes, or email bodies. No public URL is needed in
+   the recovery email.
+6. Create disposable demonstration accounts with known usernames and email
+   addresses. Run a real request, verification, password change, and new login
+   after deployment. Check rejection of the old password and used code.
+7. Schedule `python manage.py purge_recovery_state` to remove old recovery
+   records. Monitor sanitized delivery failures and request volume. Recovery
+   limits currently use the direct connection IP; configure trusted proxy
+   handling before relying on per-client IP limits behind a shared proxy. Do
+   not trust arbitrary `X-Forwarded-For` headers.
+8. The academic HTTP demonstration is for disposable accounts only. HTTP does
+   not protect credentials, codes, or session cookies in transit. Use HTTPS,
+   secure cookies, and a production deployment review before real accounts.
+
+Load the private environment before running `python manage.py test` or
+`python manage.py check`. CI should supply a separate test-only HMAC secret.
+
+---
+
 ## Exporting inventory
 
 The ingredient inventory page offers Excel and PDF downloads. Exports use the
 current name search and expiration-date filters, and include each active
-ingredient's quantity, unit, expiration date, barcode, and alert status.
+ingredient's name, quantity, unit, expiration date, barcode, and alert status.
 The download links work even when the filtered inventory is empty.
+
+---
 
 ## Running the tests
 
