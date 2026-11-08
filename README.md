@@ -27,6 +27,7 @@ Developed for **Proyecto Integrador 1 (ST0251)**, Universidad EAFIT.
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
 - [Password recovery](#password-recovery)
+- [Exporting inventory](#exporting-inventory)
 - [Running the tests](#running-the-tests)
 - [Languages](#languages)
 - [Project structure](#project-structure)
@@ -163,8 +164,8 @@ username and registered email address. If the account is eligible, Crumb sends
 a six-digit code. Enter it within 10 minutes, then choose a new password that
 differs from the old one. The code allows five incorrect attempts. A resend
 requires 60 seconds; the previous code is revoked when SMTP accepts the
-replacement. After changing the
-password, return to the normal login page. All request confirmations are
+replacement. After changing the password, return to the normal login page.
+All request confirmations are
 generic, including requests for unknown or ineligible accounts.
 Requests are limited to five per username/email pair and 30 per client IP per
 hour by default. `CRUMB_RECOVERY_IDENTITY_HOURLY_LIMIT` and
@@ -265,6 +266,15 @@ and monitoring.
 
 Load the private environment before running `python manage.py test` or
 `python manage.py check`. CI should supply a separate test-only HMAC secret.
+
+---
+
+## Exporting inventory
+
+The ingredient inventory page offers Excel and PDF downloads. Exports use the
+current name search and expiration-date filters, and include each active
+ingredient's name, quantity, unit, expiration date, barcode, and alert status.
+The download links work even when the filtered inventory is empty.
 
 ---
 
