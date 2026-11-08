@@ -23,13 +23,23 @@
   .inventory-table td { vertical-align: middle; padding: 0.7rem 0.55rem; }
   .inventory-table td { overflow-wrap: anywhere; }
   .inventory-table .inventory-category { overflow-wrap: normal; hyphens: auto; line-height: 1.35; }
-  .inventory-table .inventory-status .status-badge { white-space: normal; line-height: 1.2; }
-  .inventory-row-actions {
+  .inventory-name-category { display: none; }
+  .inventory-quantity,
+  .inventory-expiration { white-space: nowrap; }
+  .inventory-table .inventory-status .status-badge {
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+    line-height: 1.2;
+  }
+  .inventory-direct-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.35rem;
   }
-  .inventory-row-actions .btn {
+  .inventory-row-actions .btn,
+  .inventory-more-actions summary {
     width: 100%;
     min-height: 2.2rem;
     padding: 0.35rem 0.45rem;
@@ -38,10 +48,61 @@
     font-size: 0.76rem;
     line-height: 1.2;
   }
+  .inventory-compact-actions { display: none; }
+  .inventory-more-actions { position: relative; }
+  .inventory-more-actions summary { list-style: none; }
+  .inventory-more-actions summary::after { content: '▾'; margin-left: 0.25rem; }
+  .inventory-more-actions summary::-webkit-details-marker { display: none; }
+  .inventory-more-actions[open] { z-index: 2; }
+  .inventory-more-links {
+    position: absolute;
+    z-index: 3;
+    top: calc(100% + 0.3rem);
+    right: 0;
+    display: grid;
+    gap: 0.3rem;
+    width: max-content;
+    min-width: 12rem;
+    max-width: min(18rem, 70vw);
+    padding: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+  .inventory-more-links .btn { justify-content: flex-start; text-align: left; }
   .inventory-mobile-label { display: none; }
 
   @media (max-width: 1050px) {
     .inventory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (min-width: 701px) and (max-width: 1175px) {
+    .inventory-table-wrap { overflow: visible; }
+    .inventory-table { min-width: 0; }
+    .inventory-table colgroup,
+    .inventory-table th:nth-child(2),
+    .inventory-table td:nth-child(2) { display: none; }
+    .inventory-table th,
+    .inventory-table td { padding: 0.6rem 0.4rem; }
+    .inventory-quantity { white-space: normal; }
+    .inventory-table th:nth-child(1) { width: 25%; }
+    .inventory-table th:nth-child(3) { width: 12%; }
+    .inventory-table th:nth-child(4) { width: 14%; }
+    .inventory-table th:nth-child(5) { width: 15%; }
+    .inventory-table th:nth-child(6) { width: 17%; }
+    .inventory-table th:nth-child(7) { width: 17%; }
+    .inventory-name-category {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+    .inventory-direct-actions { display: none; }
+    .inventory-compact-actions { display: grid; gap: 0.3rem; }
   }
 
   @media (max-width: 700px) {
@@ -77,8 +138,11 @@
     .inventory-table tbody td { display: block; min-width: 0; padding: 0; border: 0; }
     .inventory-table tbody td:first-child,
     .inventory-table tbody td:nth-child(2),
-    .inventory-table tbody td:nth-child(7),
+    .inventory-table tbody td:nth-child(5),
+    .inventory-table tbody td:nth-child(6),
     .inventory-table tbody td:last-child { grid-column: 1 / -1; }
+    .inventory-quantity,
+    .inventory-expiration { white-space: normal; }
     .inventory-table tbody td:first-child { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; }
     .inventory-mobile-label {
       display: block;
@@ -157,15 +221,14 @@
   <div class="inventory-table-wrap" role="region" aria-label="{% translate 'Ingredients' %}" tabindex="0">
   <table class="inventory-table">
     <colgroup>
-      <col style="width: 16%"><col style="width: 16%"><col style="width: 8%"><col style="width: 5%">
-      <col style="width: 10%"><col style="width: 10%"><col style="width: 11%"><col style="width: 24%">
+      <col style="width: 16%"><col style="width: 16%"><col style="width: 10%">
+      <col style="width: 10%"><col style="width: 10%"><col style="width: 14%"><col style="width: 24%">
     </colgroup>
     <thead>
       <tr>
         <th>{% translate "Name" %}</th>
         <th>{% translate "Category" %}</th>
         <th>{% translate "Quantity" %}</th>
-        <th>{% translate "Unit" %}</th>
         <th>{% translate "Expires" %}</th>
         <th>{% translate "Barcode" %}</th>
         <th>{% translate "Status" %}</th>
@@ -175,7 +238,12 @@
     <tbody>
       {% for ingredient in ingredients %}
       <tr>
-        <td><span class="inventory-mobile-label">{% translate "Name" %}</span>{{ ingredient.name }}</td>
+        <td>
+          <span class="inventory-mobile-label">{% translate "Name" %}</span>{{ ingredient.name }}
+          <span class="inventory-name-category">
+            {% if ingredient.category %}{{ ingredient.get_category_display }}{% else %}{% translate "Uncategorized" %}{% endif %}
+          </span>
+        </td>
         <td class="inventory-category">
           <span class="inventory-mobile-label">{% translate "Category" %}</span>
           {% if ingredient.category %}
@@ -184,9 +252,8 @@
             {% translate "Uncategorized" %}
           {% endif %}
         </td>
-        <td><span class="inventory-mobile-label">{% translate "Quantity" %}</span>{{ ingredient.current_quantity }}</td>
-        <td><span class="inventory-mobile-label">{% translate "Unit" %}</span>{{ ingredient.unit.abbreviation }}</td>
-        <td><span class="inventory-mobile-label">{% translate "Expires" %}</span>{{ ingredient.expiration_date }}</td>
+        <td class="inventory-quantity"><span class="inventory-mobile-label">{% translate "Quantity" %}</span>{{ ingredient.current_quantity }} {{ ingredient.unit.abbreviation }}</td>
+        <td class="inventory-expiration"><span class="inventory-mobile-label">{% translate "Expires" %}</span>{{ ingredient.expiration_date|date:"SHORT_DATE_FORMAT"|default:"—" }}</td>
         <td><span class="inventory-mobile-label">{% translate "Barcode" %}</span>{{ ingredient.active_barcode|default:"—" }}</td>
         <td class="inventory-status">
           <span class="inventory-mobile-label">{% translate "Status" %}</span>
@@ -227,14 +294,31 @@
         <td class="inventory-action-cell">
           <span class="inventory-mobile-label">{% translate "Actions" %}</span>
           <div class="inventory-row-actions" role="group" aria-label="{% translate 'Actions' %}">
-            <a class="btn btn-secondary" href="{% url 'inventory:edit' ingredient.id %}"
-               aria-label="{% translate 'Edit' %}: {{ ingredient.name }}">{% translate "Edit" %}</a>
-            <a class="btn btn-secondary" href="{% url 'inventory:delete' ingredient.id %}"
-               aria-label="{% translate 'Delete' %}: {{ ingredient.name }}">{% translate "Delete" %}</a>
-            <a class="btn btn-secondary" href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
-               aria-label="{% translate 'Low-stock threshold' %}: {{ ingredient.name }}">{% translate "Low-stock threshold" %}</a>
-            <a class="btn btn-secondary" href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
-               aria-label="{% translate 'Correct quantity' %}: {{ ingredient.name }}">{% translate "Correct quantity" %}</a>
+            <div class="inventory-direct-actions">
+              <a class="btn btn-secondary" href="{% url 'inventory:edit' ingredient.id %}"
+                 aria-label="{% translate 'Edit' %}: {{ ingredient.name }}">{% translate "Edit" %}</a>
+              <a class="btn btn-secondary" href="{% url 'inventory:delete' ingredient.id %}"
+                 aria-label="{% translate 'Delete' %}: {{ ingredient.name }}">{% translate "Delete" %}</a>
+              <a class="btn btn-secondary" href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
+                 aria-label="{% translate 'Low-stock threshold' %}: {{ ingredient.name }}">{% translate "Low-stock threshold" %}</a>
+              <a class="btn btn-secondary" href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
+                 aria-label="{% translate 'Correct quantity' %}: {{ ingredient.name }}">{% translate "Correct quantity" %}</a>
+            </div>
+            <div class="inventory-compact-actions">
+              <a class="btn btn-secondary" href="{% url 'inventory:edit' ingredient.id %}"
+                 aria-label="{% translate 'Edit' %}: {{ ingredient.name }}">{% translate "Edit" %}</a>
+              <details class="inventory-more-actions">
+                <summary class="btn btn-secondary" aria-label="{% translate 'Actions' %}: {{ ingredient.name }}">{% translate "Actions" %}</summary>
+                <div class="inventory-more-links">
+                  <a class="btn btn-secondary" href="{% url 'inventory:delete' ingredient.id %}"
+                     aria-label="{% translate 'Delete' %}: {{ ingredient.name }}">{% translate "Delete" %}</a>
+                  <a class="btn btn-secondary" href="{% url 'inventory:low_stock_threshold_configuration' ingredient.id %}"
+                     aria-label="{% translate 'Low-stock threshold' %}: {{ ingredient.name }}">{% translate "Low-stock threshold" %}</a>
+                  <a class="btn btn-secondary" href="{% url 'inventory:manual_inventory_correction' ingredient.id %}"
+                     aria-label="{% translate 'Correct quantity' %}: {{ ingredient.name }}">{% translate "Correct quantity" %}</a>
+                </div>
+              </details>
+            </div>
           </div>
         </td>
       </tr>

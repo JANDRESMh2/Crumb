@@ -2518,10 +2518,41 @@ class IngredientCategoryTests(TestCase):
         response = self.client.get(self.list_url)
         self.assertContains(response, '<main class="wide inventory-page">')
         self.assertContains(response, 'class="inventory-row-actions"')
+        self.assertContains(response, 'class="inventory-direct-actions"')
+        self.assertContains(response, 'class="inventory-compact-actions"')
+        self.assertContains(response, '<details class="inventory-more-actions">')
+        self.assertContains(response, 'aria-label="Actions: Flour"')
         self.assertContains(response, 'aria-label="Edit: Flour"')
         for route in ('edit', 'delete', 'low_stock_threshold_configuration', 'manual_inventory_correction'):
             with self.subTest(route=route):
-                self.assertContains(response, reverse(f'inventory:{route}', args=[ingredient.pk]))
+                self.assertContains(response, reverse(f'inventory:{route}', args=[ingredient.pk]), count=2)
+
+        self.select_language('es')
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'aria-label="Acciones: Flour"')
+
+    def test_inventory_uses_compact_localized_dates_and_combined_quantity(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        ingredient.current_quantity = Decimal('400.00')
+        ingredient.expiration_date = date(2027, 2, 26)
+        ingredient.save(update_fields=['current_quantity', 'expiration_date'])
+
+        for language, quantity, display_date, heading in (
+            ('en', '400.00 kg', '02/26/2027', 'Quantity'),
+            ('es', '400,00 kg', '26/02/2027', 'Cantidad'),
+        ):
+            with self.subTest(language=language):
+                self.select_language(language)
+                response = self.client.get(self.list_url, {
+                    'start_date': '2027-02-26',
+                })
+                self.assertContains(response, quantity)
+                self.assertContains(response, display_date)
+                self.assertContains(response, 'value="2027-02-26"')
+                self.assertContains(response, 'class="inventory-name-category"')
+                self.assertContains(response, f'<th>{heading}</th>', html=True)
+                self.assertNotContains(response, '<th>Unit</th>', html=True)
+                self.assertEqual(response.content.count(b'<th>'), 7)
 
     def test_category_labels_are_translated_in_english_and_spanish(self):
         translations = (
