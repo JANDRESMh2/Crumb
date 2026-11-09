@@ -18,7 +18,7 @@ class BakeryAlreadyConfigured(Exception):
 
 
 def get_current_bakery():
-    return Bakery.objects.order_by('created_at').first()
+    return Bakery.objects.select_related('notification_preferences').order_by('created_at').first()
 
 
 @transaction.atomic

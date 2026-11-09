@@ -12,6 +12,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from Crumb.testutils import AuthenticatedTestCase
 from bakery.models import Bakery
 
 from .forms import (
@@ -600,8 +601,9 @@ class RegisterIngredientServiceTests(TestCase):
         self.assertTrue(ingredient.is_active)
 
 
-class IngredientCreateViewTests(TestCase):
+class IngredientCreateViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.url = reverse('inventory:create')
 
     def test_redirects_to_bakery_setup_when_no_bakery_is_configured(self):
@@ -750,7 +752,7 @@ class IngredientCreateViewTests(TestCase):
         )
 
 
-class IngredientListViewTests(TestCase):
+class IngredientListViewTests(AuthenticatedTestCase):
     def test_shows_ingredients_registered_for_the_configured_bakery(self):
         bakery = make_bakery()
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
@@ -1001,8 +1003,9 @@ class IngredientListViewTests(TestCase):
         self.assertLess(elapsed, 2)
 
 
-class LowStockAlertsViewTests(TestCase):
+class LowStockAlertsViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
         self.url = reverse('inventory:list')
@@ -1089,9 +1092,9 @@ class LowStockAlertsViewTests(TestCase):
             )
 
         started_at = perf_counter()
-        # 3 constant queries: bakery, ingredients + alert configuration, and the
+        # 5 constant queries: session, user, bakery, ingredients + alert configuration, and the
         # FR17 barcode prefetch. The count must not grow with the 50 ingredients.
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(5):
             response = self.client.get(self.url)
         elapsed_seconds = perf_counter() - started_at
 
@@ -1100,8 +1103,9 @@ class LowStockAlertsViewTests(TestCase):
         self.assertLess(elapsed_seconds, 2)
 
 
-class ExpirationAlertsViewTests(TestCase):
+class ExpirationAlertsViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
         self.url = reverse('inventory:list')
@@ -1203,9 +1207,9 @@ class ExpirationAlertsViewTests(TestCase):
             )
 
         started_at = perf_counter()
-        # 3 constant queries: bakery, ingredients + alert configuration, and the
+        # 5 constant queries: session, user, bakery, ingredients + alert configuration, and the
         # FR17 barcode prefetch. The count must not grow with the 50 ingredients.
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(5):
             response = self.client.get(self.url)
         elapsed_seconds = perf_counter() - started_at
 
@@ -1214,8 +1218,9 @@ class ExpirationAlertsViewTests(TestCase):
         self.assertLess(elapsed_seconds, 2)
 
 
-class IngredientEditViewTests(TestCase):
+class IngredientEditViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
 
@@ -1341,8 +1346,9 @@ class IngredientEditViewTests(TestCase):
             'Flour',
         )
 
-class IngredientDeleteViewTests(TestCase):
+class IngredientDeleteViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
 
@@ -1490,7 +1496,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
         self.assertTrue(form.is_valid())
 
 
-class IngredientCreateViewBarcodeTests(TestCase):
+class IngredientCreateViewBarcodeTests(AuthenticatedTestCase):
     def test_post_with_barcode_links_it_to_the_new_ingredient(self):
         bakery = make_bakery()
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
@@ -1573,8 +1579,9 @@ class StockConsumptionFormTests(TestCase):
         self.assertIn('quantity', form.errors)
 
 
-class StockConsumptionCreateViewTests(TestCase):
+class StockConsumptionCreateViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.url = reverse('inventory:stock_consumption')
 
     def test_redirects_to_bakery_setup_when_no_bakery_is_configured(self):
@@ -1694,10 +1701,11 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
         self.assertIn('barcode_value', form.errors)
 
 
-class IngredientListViewBarcodeTests(TestCase):
+class IngredientListViewBarcodeTests(AuthenticatedTestCase):
     """FR17 - the linked barcode has to be visible in the catalog, not only in the admin."""
 
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
 
@@ -1735,7 +1743,7 @@ class IngredientListViewBarcodeTests(TestCase):
         self.assertNotContains(response, '7501234567890')
 
 
-class StockConsumptionViewErrorHandlingTests(TestCase):
+class StockConsumptionViewErrorHandlingTests(AuthenticatedTestCase):
     """FR08 - a stock change between validating and saving must not raise a 500."""
 
     def test_reshows_the_form_when_the_service_reports_insufficient_stock(self):
@@ -1989,10 +1997,11 @@ class ManualInventoryCorrectionFormTests(TestCase):
         self.assertIn('new_quantity', form.errors)
 
 
-class ManualInventoryCorrectionViewTests(TestCase):
+class ManualInventoryCorrectionViewTests(AuthenticatedTestCase):
     """FR23 - the correction page, end to end."""
 
     def setUp(self):
+        super().setUp()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
 
     def create_ingredient(self, bakery, name='Flour', quantity='10.00', is_active=True):
@@ -2024,7 +2033,7 @@ class ManualInventoryCorrectionViewTests(TestCase):
         self.assertEqual(ingredient.current_quantity, Decimal('7.00'))
         movement = StockMovement.objects.get(movement_type='Correction')
         self.assertEqual(movement.note, 'Physical count')
-        self.assertIsNone(movement.user)
+        self.assertEqual(movement.user, self.auth_user)
 
     def test_post_with_the_same_quantity_reshows_the_form_with_an_error(self):
         ingredient = self.create_ingredient(make_bakery())
@@ -2067,13 +2076,14 @@ class ManualInventoryCorrectionViewTests(TestCase):
         self.assertContains(response, self.url(ingredient))
 
 
-class DecimalSeparatorInFormsTests(TestCase):
+class DecimalSeparatorInFormsTests(AuthenticatedTestCase):
     """A quantity written with a comma must be stored as the same amount.
 
     Before this, the browser dropped the comma and 12,5 was saved as 125.
     """
 
     def setUp(self):
+        super().setUp()
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
         self.ingredient = Ingredient.objects.create(

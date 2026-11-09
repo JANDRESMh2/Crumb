@@ -3,8 +3,37 @@ from django.utils.translation import gettext_lazy as _
 
 from bakery.fields import DecimalInputField, decimal_field_classes
 from decimal import Decimal
+from django.utils import timezone
 
-from .models import Product, ProductionRecord, SalesRecord
+from .models import Product, ProductionRecord, SalesRecord, ScheduledOrder
+
+
+class ScheduledOrderForm(forms.ModelForm):
+    class Meta:
+        model = ScheduledOrder
+        fields = ['customer_name', 'product', 'quantity', 'scheduled_for', 'notes']
+        widgets = {
+            'customer_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'product': forms.Select(attrs={'class': 'form-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'scheduled_for': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, bakery, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['product'].queryset = Product.objects.filter(
+            bakery=bakery, status=Product.Status.ACTIVE,
+        )
+
+    def clean_scheduled_for(self):
+        scheduled_for = self.cleaned_data['scheduled_for']
+        if scheduled_for <= timezone.now():
+            raise forms.ValidationError('Choose a date and time in the future.')
+        return scheduled_for
 
 
 class ProductForm(forms.Form):

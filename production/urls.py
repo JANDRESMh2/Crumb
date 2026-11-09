@@ -5,6 +5,7 @@ from . import views
 app_name = 'production'
 
 urlpatterns = [
+    path('scheduled-orders/', views.scheduled_order_list, name='scheduled_orders'),
     path(
         'products/new/',
         views.product_create,

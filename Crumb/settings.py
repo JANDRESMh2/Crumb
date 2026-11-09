@@ -31,7 +31,17 @@ DEBUG = os.environ.get('CRUMB_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 if not DEBUG:
     SECRET_KEY = os.environ['CRUMB_SECRET_KEY']
 
-ALLOWED_HOSTS = [host.strip() for host in os.environ.get('CRUMB_ALLOWED_HOSTS', '').split(',') if host.strip()]
+# Los hosts permitidos se configuran por variable de entorno. Si no esta
+# definida se usan los del despliegue actual y los de desarrollo local, para
+# que el servidor siga respondiendo sin tener que configurar nada.
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        'CRUMB_ALLOWED_HOSTS',
+        '54.227.200.130,127.0.0.1,localhost',
+    ).split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -59,6 +69,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # default deny; toda vista exige sesión salvo las marcadas explícitamente con @login_not_required.
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -178,3 +190,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'accounts:login'
+

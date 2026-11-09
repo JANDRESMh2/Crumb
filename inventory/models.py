@@ -167,6 +167,19 @@ class AlertConfiguration(models.Model):
         return f'Alerts for {self.ingredient.name}'
 
 
+class NotificationPreference(models.Model):
+    """Bakery-wide choices for which inventory alerts are shown (FR29)."""
+
+    bakery = models.OneToOneField(
+        Bakery, on_delete=models.CASCADE, related_name='notification_preferences'
+    )
+    low_stock_enabled = models.BooleanField(default=True)
+    expiration_enabled = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'Notification preferences for {self.bakery.name}'
+
+
 class StockMovement(models.Model):
     # Declaración de la lista de opciones
     MOVEMENT_TYPES = [

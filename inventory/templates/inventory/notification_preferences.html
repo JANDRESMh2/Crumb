@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Notification preferences - Crumb{% endblock %}
+{% block content %}
+<p class="eyebrow">Settings</p>
+<h1>Notification preferences</h1>
+<p class="lede">Choose which inventory alerts Crumb displays.</p>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}
+    <div class="field">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+    <div class="actions">
+      <button type="submit">Save preferences</button>
+      <a class="btn btn-secondary" href="{% url 'inventory:list' %}">Back to inventory</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
