@@ -23,7 +23,10 @@ from reportlab.platypus import LongTable, Paragraph, SimpleDocTemplate, Spacer, 
 from bakery.models import ActivityLog
 from bakery.services import record_activity
 
-from .models import AlertConfiguration, BarcodeIdentifier, Ingredient, StockMovement, UnitOfMeasure, SUPPORTED_UNIT_ABBREVIATIONS
+from .models import (
+    AlertConfiguration, BarcodeIdentifier, Ingredient, IngredientCategory,
+    StockMovement, SUPPORTED_UNIT_ABBREVIATIONS, UnitOfMeasure,
+)
 
 
 class InsufficientStockError(Exception):
@@ -134,11 +137,17 @@ def configure_low_stock_threshold(*, ingredient, minimum_stock_threshold):
     return configuration
 
 
+def _validate_ingredient_category(category):
+    if category not in IngredientCategory.values:
+        raise ValueError('Select a valid ingredient category.')
+
+
 @transaction.atomic
 def register_ingredient(
     *,
     bakery,
     name,
+    category,
     unit,
     current_quantity,
     expiration_date,
@@ -150,6 +159,7 @@ def register_ingredient(
     barcode_value is optional (FR17) - when provided, links a scanned barcode
     to the ingredient being registered.
     """
+    _validate_ingredient_category(category)
 
     existing = Ingredient.objects.filter(
         bakery=bakery,
@@ -159,6 +169,7 @@ def register_ingredient(
 
     if existing is not None:
         existing.name = name
+        existing.category = category
         existing.unit = unit
         existing.current_quantity = current_quantity
         existing.expiration_date = expiration_date
@@ -167,6 +178,7 @@ def register_ingredient(
         existing.save(
             update_fields=[
                 'name',
+                'category',
                 'unit',
                 'current_quantity',
                 'expiration_date',
@@ -186,6 +198,7 @@ def register_ingredient(
     ingredient = Ingredient.objects.create(
         bakery=bakery,
         name=name,
+        category=category,
         unit=unit,
         current_quantity=current_quantity,
         expiration_date=expiration_date,
@@ -244,19 +257,23 @@ def update_ingredient(
     *,
     ingredient,
     name,
+    category,
     unit,
     current_quantity,
     expiration_date,
     expiration_warning_days=None,
 ):
     """FR03 - edit an existing ingredient."""
+    _validate_ingredient_category(category)
     ingredient.name = name
+    ingredient.category = category
     ingredient.unit = unit
     ingredient.current_quantity = current_quantity
     ingredient.expiration_date = expiration_date
     ingredient.save(
         update_fields=[
             'name',
+            'category',
             'unit',
             'current_quantity',
             'expiration_date',
@@ -524,6 +541,7 @@ def build_inventory_report(*, bakery, query='', start_date=None, end_date=None):
             statuses.append(gettext('Expiring soon'))
         rows.append({
             'name': ingredient.name,
+            'category': ingredient.get_category_display() if ingredient.category else gettext('Uncategorized'),
             'quantity': ingredient.current_quantity,
             'unit': ingredient.unit.abbreviation,
             'expiration_date': ingredient.expiration_date,
@@ -535,7 +553,7 @@ def build_inventory_report(*, bakery, query='', start_date=None, end_date=None):
 
 def _report_headers():
     return [
-        gettext('Name'), gettext('Quantity'), gettext('Unit'),
+        gettext('Name'), gettext('Category'), gettext('Quantity'), gettext('Unit'),
         gettext('Expires'), gettext('Barcode'), gettext('Status'),
     ]
 
@@ -556,7 +574,9 @@ def build_inventory_excel(*, rows, bakery):
     workbook = Workbook(write_only=True)
     sheet = workbook.create_sheet(gettext('Inventory')[:31])
     sheet.freeze_panes = 'A4'
-    for column, width in {'A': 35, 'B': 16, 'C': 12, 'D': 18, 'E': 24, 'F': 28}.items():
+    for column, width in {
+        'A': 35, 'B': 30, 'C': 16, 'D': 12, 'E': 18, 'F': 24, 'G': 28,
+    }.items():
         sheet.column_dimensions[column].width = width
 
     sheet.append([gettext('Inventory report'), _spreadsheet_text(bakery.name)])
@@ -576,8 +596,9 @@ def build_inventory_excel(*, rows, bakery):
         quantity_cell = WriteOnlyCell(sheet, value=float(row['quantity']))
         quantity_cell.number_format = '0.00'
         sheet.append([
-            _spreadsheet_text(row['name']), quantity_cell, row['unit'],
-            date_cell, _spreadsheet_text(row['barcode']), row['status'],
+            _spreadsheet_text(row['name']), _spreadsheet_text(row['category']),
+            quantity_cell, row['unit'], date_cell,
+            _spreadsheet_text(row['barcode']), _spreadsheet_text(row['status']),
         ])
     if not rows:
         sheet.append([gettext('No ingredients match the selected filters.')])
@@ -610,6 +631,7 @@ def build_inventory_pdf(*, rows, bakery):
     )
     body_style = ParagraphStyle(
         'ReportBody', fontName='CrumbVera', fontSize=8, leading=11,
+        splitLongWords=1,
     )
     heading_style = ParagraphStyle(
         'ReportHeading', parent=body_style, fontName='CrumbVeraBold',
@@ -620,7 +642,7 @@ def build_inventory_pdf(*, rows, bakery):
     table_rows = [[Paragraph(escape(label), heading_style) for label in _report_headers()]]
     for row in rows:
         values = [
-            row['name'], f"{row['quantity']:.2f}", row['unit'],
+            row['name'], row['category'], f"{row['quantity']:.2f}", row['unit'],
             row['expiration_date'].isoformat() if row['expiration_date'] else '—',
             row['barcode'] or '—', row['status'],
         ]
@@ -630,14 +652,14 @@ def build_inventory_pdf(*, rows, bakery):
     if not rows:
         table_rows.append([
             Paragraph(escape(gettext('No ingredients match the selected filters.')), body_style),
-            '', '', '', '', '',
+            '', '', '', '', '', '',
         ])
 
     table = LongTable(
-        table_rows, colWidths=[188, 75, 55, 93, 120, 220],
+        table_rows, colWidths=[138, 128, 64, 50, 85, 105, 195],
         repeatRows=1, hAlign='LEFT',
     )
-    table.setStyle(TableStyle([
+    table_styles = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#344760')),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F2F5F8')]),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -645,7 +667,10 @@ def build_inventory_pdf(*, rows, bakery):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ('LEFTPADDING', (0, 0), (-1, -1), 7),
         ('RIGHTPADDING', (0, 0), (-1, -1), 7),
-    ]))
+    ]
+    if not rows:
+        table_styles.append(('SPAN', (0, 1), (-1, 1)))
+    table.setStyle(TableStyle(table_styles))
 
     def draw_page_number(canvas, pdf_document):
         canvas.setFont('CrumbVera', 8)
