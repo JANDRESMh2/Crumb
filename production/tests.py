@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from Crumb.testutils import AuthenticatedTestCase
 from bakery.models import Bakery
 from inventory.models import Ingredient, UnitOfMeasure
 
@@ -322,9 +323,10 @@ class DailyProductionRegistrationTests(TestCase):
         )
 
 
-class ProductionViewTests(TestCase):
+class ProductionViewTests(AuthenticatedTestCase):
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='Test Bakery',
             address='Test Address',
@@ -801,9 +803,10 @@ class DailySalesRegistrationTests(TestCase):
         )
 
 
-class SalesViewTests(TestCase):
+class SalesViewTests(AuthenticatedTestCase):
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='Test Bakery',
             address='Test Address',
@@ -880,10 +883,11 @@ class SalesViewTests(TestCase):
             Decimal('10000.00'),
         )
 
-class ProductionSalesHistoryTests(TestCase):
+class ProductionSalesHistoryTests(AuthenticatedTestCase):
     """FR25 - view the history of production and sales records."""
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='Test Bakery',
             address='Test Address',
@@ -1220,10 +1224,11 @@ class SalesAnalyticsTests(TestCase):
         )
 
 
-class SalesAnalyticsViewTests(TestCase):
+class SalesAnalyticsViewTests(AuthenticatedTestCase):
     """FR36 - the screen that shows the ranking."""
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='Test Bakery',
             address='Test Address',
@@ -1408,10 +1413,11 @@ class LossReportTests(TestCase):
         self.assertEqual(report['totals']['expired_quantity'], Decimal('0'))
 
 
-class LossReportViewTests(TestCase):
+class LossReportViewTests(AuthenticatedTestCase):
     """FR26 - the screen that shows the losses."""
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='Test Bakery',
             address='Test Address',

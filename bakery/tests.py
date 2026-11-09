@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from Crumb.testutils import AuthenticatedTestCase
 from .models import ActivityLog, Bakery
 from .services import (
     BakeryAlreadyConfigured,
@@ -40,8 +41,9 @@ class SetupBakeryProfileServiceTests(TestCase):
         self.assertEqual(Bakery.objects.count(), 1)
 
 
-class BakerySetupViewTests(TestCase):
+class BakerySetupViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.url = reverse('bakery:setup')
 
     def test_get_renders_the_setup_form(self):
@@ -84,7 +86,7 @@ class BakerySetupViewTests(TestCase):
         self.assertRedirects(response, reverse('bakery:detail'))
 
 
-class BakeryDetailViewTests(TestCase):
+class BakeryDetailViewTests(AuthenticatedTestCase):
     def test_redirects_to_setup_when_not_configured(self):
         response = self.client.get(reverse('bakery:detail'))
         self.assertRedirects(response, reverse('bakery:setup'))
@@ -288,10 +290,11 @@ class BuildActivityLogTests(TestCase):
             )
 
 
-class ActivityLogViewTests(TestCase):
+class ActivityLogViewTests(AuthenticatedTestCase):
     """FR28 - the screen that shows the log."""
 
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='El Buen Pan',
             address='Calle 10 #20-30',

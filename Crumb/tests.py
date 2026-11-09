@@ -10,12 +10,14 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from Crumb.testutils import AuthenticatedTestCase
 from bakery.models import Bakery
 from production.services import register_daily_sale, register_product
 
 
-class LanguageSwitcherTests(TestCase):
+class LanguageSwitcherTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.bakery = Bakery.objects.create(
             name='El Buen Pan',
             address='Calle 10 #20-30',

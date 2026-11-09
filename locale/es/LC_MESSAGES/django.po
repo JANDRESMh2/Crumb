@@ -1,860 +1,1294 @@
 # Spanish translation of the Crumb interface.
 # This file is distributed under the same license as the Crumb package.
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: Crumb\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-08 23:59-0500\n"
+"Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "%% of revenue"
-msgstr "%% de los ingresos"
-
-msgid "%(units)s units sold"
-msgstr "%(units)s unidades vendidas"
-
-msgid "A reason is required to correct the inventory."
-msgstr "Se necesita un motivo para corregir el inventario."
-
-msgid "A stock-in quantity must be greater than zero."
-msgstr "La cantidad de una entrada debe ser mayor que cero."
-
-msgid "Action"
-msgstr "Acción"
-
-msgid "Actions"
-msgstr "Acciones"
-
-msgid "Active"
-msgstr "Activo"
-
-msgid "Add a baked product to the catalog of %(name)s."
-msgstr "Agrega un producto al catálogo de %(name)s."
-
-msgid "Add a new ingredient with quantity, unit, and expiration date."
-msgstr ""
-"Agrega un ingrediente nuevo con su cantidad, unidad y fecha de "
-"vencimiento."
-
-msgid "Add a raw material to the inventory of %(name)s."
-msgstr "Agrega una materia prima al inventario de %(name)s."
-
-msgid "Add product"
-msgstr "Agregar producto"
-
-msgid "Address"
-msgstr "Dirección"
-
-msgid "After"
-msgstr "Después de"
-
-msgid "All actions"
-msgstr "Todas las acciones"
-
-msgid "All products"
-msgstr "Todos los productos"
-
-msgid "All users"
-msgstr "Todos los usuarios"
-
-msgid "Are you sure you want to remove %(name)s from the inventory?"
-msgstr "¿Seguro que quieres quitar %(name)s del inventario?"
-
-msgid "Authenticate to access the Crumb system."
-msgstr "Identifícate para entrar a Crumb."
-
-msgid "Bakery"
-msgstr "Panadería"
-
-msgid "Bakery profile"
-msgstr "Perfil de la panadería"
-
-msgid "Barcode"
-msgstr "Código de barras"
-
-msgid "Before"
-msgstr "Antes de"
-
-msgid "Best seller"
-msgstr "Lo más vendido"
-
-msgid "Business profile created successfully."
-msgstr "El perfil del negocio se creó correctamente."
-
-msgid "Business profile updated successfully."
-msgstr "El perfil del negocio se actualizó correctamente."
-
-msgid "Cancel"
-msgstr "Cancelar"
-
-msgid "Cancelled"
-msgstr "Cancelada"
-
-msgid "Clear filters"
-msgstr "Quitar filtros"
-
-msgid "Completed"
-msgstr "Completada"
-
-msgid "Configure low-stock threshold"
-msgstr "Configurar el mínimo de existencias"
-
-msgid ""
-"Configure the minimum stock level for %(name)s. The threshold uses the "
-"same unit as the ingredient (%(unit)s)."
-msgstr ""
-"Configura el nivel mínimo de existencias de %(name)s. El mínimo usa la "
-"misma unidad del ingrediente (%(unit)s)."
-
-msgid "Consumption"
-msgstr "Consumo"
-
-msgid "Correct inventory"
-msgstr "Corregir el inventario"
-
-msgid "Correct quantity"
-msgstr "Corregir la cantidad"
-
-msgid "Corrected quantity"
-msgstr "Cantidad corregida"
-
-msgid "Corrected the stock of %(name)s from %(before)s to %(after)s."
-msgstr "Se corrigieron las existencias de %(name)s de %(before)s a %(after)s."
-
-msgid "Correction"
-msgstr "Corrección"
-
-msgid "Correction history"
-msgstr "Historial de correcciones"
-
-msgid "Count"
-msgstr "Conteo"
-
-msgid "Create a new user account for the bakery administrators or staff."
-msgstr "Crea una cuenta para el personal o la administración de la panadería."
-
-msgid "Current quantity:"
-msgstr "Cantidad actual:"
-
-msgid "Daily production registered successfully."
-msgstr "La producción del día se registró correctamente."
-
-msgid "Daily sale registered successfully."
-msgstr "La venta del día se registró correctamente."
-
-msgid "Dashboard"
-msgstr "Panel"
-
-msgid "Date"
-msgstr "Fecha"
-
-msgid "Days expired"
-msgstr "Días vencido"
-
-msgid "Delete"
-msgstr "Eliminar"
-
-msgid "Delete ingredient"
-msgstr "Eliminar el ingrediente"
-
-msgid "Description"
-msgstr "Descripción"
-
-msgid "Don't have an account?"
-msgstr "¿No tienes cuenta?"
-
-msgid "Download Template"
-msgstr "Descargar la plantilla"
-
-msgid "Edit"
-msgstr "Editar"
-
-msgid "Edit business profile"
-msgstr "Editar el perfil del negocio"
-
-msgid "Edit ingredient"
-msgstr "Editar el ingrediente"
-
-msgid "Edit product"
-msgstr "Editar el producto"
-
-msgid "Edit profile"
-msgstr "Editar el perfil"
-
+#: .\accounts\forms.py:10 .\accounts\forms.py:22 .\bakery\forms.py:15
+#: .\bakery\templates\bakery\detail.html:21
 msgid "Email"
 msgstr "Correo electrónico"
 
-msgid "Enable Scan Mode"
-msgstr "Activar el modo escáner"
-
-msgid "Enter a valid phone number (digits, spaces, +, -, ( and ) only)."
-msgstr "Escribe un teléfono válido (solo dígitos, espacios, +, -, ( y ))."
-
-msgid "Every product produced so far has been sold."
-msgstr "Todo lo que se ha producido hasta ahora se vendió."
-
-msgid "Every production and sale registered for %(name)s, newest first."
-msgstr ""
-"Toda la producción y las ventas registradas en %(name)s, de lo más "
-"reciente a lo más antiguo."
-
-msgid "Excel or CSV File"
-msgstr "Archivo de Excel o CSV"
-
-msgid "Expiration date"
-msgstr "Fecha de vencimiento"
-
-msgid "Expiration date from"
-msgstr "Vence desde"
-
-msgid "Expiration date to"
-msgstr "Vence hasta"
-
-msgid "Expiration warning days"
-msgstr "Días de aviso antes del vencimiento"
-
-msgid "Expired"
-msgstr "Vencido"
-
-msgid "Expired ingredients"
-msgstr "Ingredientes vencidos"
-
-msgid "Expired on"
-msgstr "Venció el"
-
-msgid "Expires"
-msgstr "Vence"
-
-msgid "Expiring soon"
-msgstr "Por vencer"
-
-msgid ""
-"Explain why the quantity is being corrected, for example a physical "
-"count."
-msgstr "Explica por qué se corrige la cantidad, por ejemplo un conteo físico."
-
-msgid "Filter"
-msgstr "Filtrar"
-
-msgid "For example, flour or sugar"
-msgstr "Por ejemplo, harina o azúcar"
-
-msgid "From"
-msgstr "Desde"
-
-msgid "Getting started"
-msgstr "Para empezar"
-
-msgid "Gram"
-msgstr "Gramo"
-
-msgid "Import"
-msgstr "Importar"
-
-msgid "Import Ingredients"
-msgstr "Importar ingredientes"
-
-msgid "Import from Excel"
-msgstr "Importar desde Excel"
-
-msgid "Inactive"
-msgstr "Inactivo"
-
-msgid "Ingredient"
-msgstr "Ingrediente"
-
-msgid "Ingredient deleted successfully."
-msgstr "El ingrediente se eliminó correctamente."
-
-msgid "Ingredient registered successfully."
-msgstr "El ingrediente se registró correctamente."
-
-msgid "Ingredient updated successfully."
-msgstr "El ingrediente se actualizó correctamente."
-
-msgid "Ingredients"
-msgstr "Ingredientes"
-
-msgid "Invalid date."
-msgstr "Fecha inválida."
-
-msgid "Invalid username or password."
-msgstr "El usuario o la contraseña no son correctos."
-
-msgid "Inventory"
-msgstr "Inventario"
-
-msgid "Inventory corrected"
-msgstr "Inventario corregido"
-
-msgid "Inventory for small bakeries"
-msgstr "Inventario para panaderías pequeñas"
-
-msgid "Inventory management for small bakeries"
-msgstr "Gestión de inventario para panaderías pequeñas"
-
-msgid "Kilogram"
-msgstr "Kilogramo"
-
-msgid "Language"
-msgstr "Idioma"
-
-msgid "Liter"
-msgstr "Litro"
-
-msgid "Login"
-msgstr "Entrar"
-
-msgid "Loss"
-msgstr "Pérdida"
-
-msgid "Loss reporting"
-msgstr "Reporte de pérdidas"
-
-msgid "Low stock"
-msgstr "Existencias bajas"
-
-msgid "Low-stock threshold"
-msgstr "Mínimo de existencias"
-
-msgid "Low-stock threshold updated successfully."
-msgstr "El mínimo de existencias se actualizó correctamente."
-
-msgid "Manage products"
-msgstr "Gestionar los productos"
-
-msgid "Manage the baked products registered for %(name)s."
-msgstr "Gestiona los productos registrados en %(name)s."
-
-msgid "Mass"
-msgstr "Masa"
-
-msgid "Name"
-msgstr "Nombre"
-
-msgid "No activity has been recorded yet."
-msgstr "Todavía no se ha registrado ninguna actividad."
-
-msgid "No activity matches the selected filters."
-msgstr "Ninguna actividad coincide con los filtros seleccionados."
-
-msgid "No corrections have been recorded for this ingredient yet."
-msgstr "Todavía no se ha registrado ninguna corrección para este ingrediente."
-
-msgid "No daily production or sales have been recorded yet."
-msgstr "Todavía no se ha registrado producción ni ventas del día."
-
-msgid "No ingredient expired with stock left."
-msgstr "Ningún ingrediente se venció con existencias."
-
-msgid "No ingredients match the selected filters."
-msgstr "Ningún ingrediente coincide con los filtros seleccionados."
-
-msgid "No ingredients match “%(query)s”."
-msgstr "Ningún ingrediente coincide con “%(query)s”."
-
-msgid "No ingredients registered yet."
-msgstr "Todavía no hay ingredientes registrados."
-
-msgid "No inventory alert"
-msgstr "Sin alertas de inventario"
-
-msgid "No product was left unsold in the selected date range."
-msgstr "En el rango de fechas seleccionado no quedó ningún producto sin vender."
-
-msgid "No production or sales have been registered yet."
-msgstr "Todavía no se ha registrado producción ni ventas."
-
-msgid "No production records have been registered yet."
-msgstr "Todavía no hay registros de producción."
-
-msgid "No products have been registered yet."
-msgstr "Todavía no hay productos registrados."
-
-msgid "No products registered"
-msgstr "Sin productos registrados"
-
-msgid "No records match the selected filters."
-msgstr "Ningún registro coincide con los filtros seleccionados."
-
-msgid "No sales have been registered yet."
-msgstr "Todavía no se ha registrado ninguna venta."
-
-msgid "No sales were registered in the selected date range."
-msgstr "En el rango de fechas seleccionado no se registró ninguna venta."
-
-msgid "Not signed in"
-msgstr "Sin iniciar sesión"
-
-msgid "Note"
-msgstr "Nota"
-
-msgid "Optional."
-msgstr "Opcional."
-
-msgid "Optional. Scan or type a barcode to link it to this ingredient."
-msgstr ""
-"Opcional. Escanea o escribe un código de barras para vincularlo a este "
-"ingrediente."
-
-msgid "Overproduction"
-msgstr "Sobreproducción"
-
-msgid "Phone"
-msgstr "Teléfono"
-
-msgid "Produced"
-msgstr "Producido"
-
-msgid ""
-"Produced: %(produced)s &middot; Sold: %(sold)s &middot; Sales amount: "
-"%(amount)s"
-msgstr ""
-"Producido: %(produced)s &middot; Vendido: %(sold)s &middot; Total "
-"vendido: %(amount)s"
-
-msgid "Product"
-msgstr "Producto"
-
-msgid "Product registered successfully."
-msgstr "El producto se registró correctamente."
-
-msgid "Product updated successfully."
-msgstr "El producto se actualizó correctamente."
-
-msgid "Production"
-msgstr "Producción"
-
-msgid "Production and sales"
-msgstr "Producción y ventas"
-
-msgid "Production and sales history"
-msgstr "Historial de producción y ventas"
-
-msgid "Production date"
-msgstr "Fecha de producción"
-
-msgid "Production date and time"
-msgstr "Fecha y hora de producción"
-
-msgid "Production only"
-msgstr "Solo producción"
-
-msgid "Production records"
-msgstr "Registros de producción"
-
-msgid "Products"
-msgstr "Productos"
-
-msgid ""
-"Quantities are not valued in money because the inventory does not record "
-"what each ingredient costs."
-msgstr ""
-"Las cantidades no se valoran en dinero porque el inventario no guarda "
-"cuánto cuesta cada ingrediente."
-
-msgid "Quantity"
-msgstr "Cantidad"
-
-msgid "Quantity left"
-msgstr "Cantidad restante"
-
-msgid "Quantity produced"
-msgstr "Cantidad producida"
-
-msgid "Quantity sold"
-msgstr "Cantidad vendida"
-
-msgid "Reason"
-msgstr "Motivo"
-
-msgid "Record a purchase and update the ingredient's current stock."
-msgstr "Registra una compra y actualiza las existencias del ingrediente."
-
-msgid "Record baked products sold by %(name)s."
-msgstr "Registra los productos vendidos por %(name)s."
-
-msgid "Record ingredients used from the inventory of %(name)s."
-msgstr "Registra los ingredientes usados del inventario de %(name)s."
-
-msgid "Record the baked products manufactured by %(name)s."
-msgstr "Registra los productos elaborados por %(name)s."
-
-msgid "Record type"
-msgstr "Tipo de registro"
-
-msgid "Register Stock-In"
-msgstr "Registrar una entrada"
-
-msgid "Register Stock-In (Ingredient Purchase)"
-msgstr "Registrar una entrada (compra de ingredientes)"
-
-msgid "Register User"
-msgstr "Registrar un usuario"
-
-msgid "Register a baked product before recording sales."
-msgstr "Registra un producto antes de registrar ventas."
-
-msgid "Register consumption"
-msgstr "Registrar consumo"
-
-msgid "Register daily production"
-msgstr "Registrar la producción del día"
-
-msgid "Register daily sales"
-msgstr "Registrar las ventas del día"
-
-msgid "Register here"
-msgstr "Regístrate aquí"
-
-msgid "Register ingredient"
-msgstr "Registrar un ingrediente"
-
-msgid "Register product"
-msgstr "Registrar un producto"
-
-msgid "Register production"
-msgstr "Registrar producción"
-
-msgid "Register sale"
-msgstr "Registrar una venta"
-
-msgid "Register your first baked product before recording daily production."
-msgstr "Registra tu primer producto antes de registrar la producción del día."
-
-msgid "Registered %(quantity)s of %(name)s into the stock."
-msgstr "Se registró una entrada de %(quantity)s de %(name)s."
-
-msgid "Registered by"
-msgstr "Registrado por"
-
-msgid "Registered the sale of %(quantity)s %(name)s for %(amount)s."
-msgstr "Se registró la venta de %(quantity)s %(name)s por %(amount)s."
-
-msgid ""
-"Replace the recorded quantity of %(name)s with the real quantity counted "
-"in the bakery. Every correction is logged with its date, user and "
-"reason."
-msgstr ""
-"Reemplaza la cantidad registrada de %(name)s por la cantidad real "
-"contada en la panadería. Cada corrección queda guardada con su fecha, "
-"usuario y motivo."
-
-msgid "Revenue"
-msgstr "Ingresos"
-
-msgid "Review the daily production registered for %(name)s."
-msgstr "Revisa la producción diaria registrada en %(name)s."
-
-msgid "Review the sales registered for %(name)s."
-msgstr "Revisa las ventas registradas en %(name)s."
-
-msgid "SKU"
-msgstr "SKU"
-
-msgid "Sale"
-msgstr "Venta"
-
-msgid "Sale date and time"
-msgstr "Fecha y hora de la venta"
-
-msgid "Sale registered"
-msgstr "Venta registrada"
-
-msgid "Sales"
-msgstr "Ventas"
-
-msgid "Sales analytics"
-msgstr "Análisis de ventas"
-
-msgid "Sales only"
-msgstr "Solo ventas"
-
-msgid "Sales records"
-msgstr "Registros de ventas"
-
-msgid "Save Stock-In"
-msgstr "Guardar la entrada"
-
-msgid "Save changes"
-msgstr "Guardar los cambios"
-
-msgid "Save correction"
-msgstr "Guardar la corrección"
-
-msgid "Save profile"
-msgstr "Guardar el perfil"
-
-msgid "Save threshold"
-msgstr "Guardar el mínimo"
-
-msgid "Scan Mode Enabled:"
-msgstr "Modo escáner activado:"
-
-msgid "Search"
-msgstr "Buscar"
-
-msgid "Search ingredients by name"
-msgstr "Buscar ingredientes por nombre"
-
-msgid "See all your registered ingredients and their current stock levels."
-msgstr "Consulta todos tus ingredientes registrados y sus existencias actuales."
-
-msgid "Select a product"
-msgstr "Selecciona un producto"
-
-msgid "Select a unit"
-msgstr "Selecciona una unidad"
-
-msgid "Select an ingredient"
-msgstr "Selecciona un ingrediente"
-
-msgid "Set up your bakery"
-msgstr "Configura tu panadería"
-
-msgid "Set up your bakery profile"
-msgstr "Configura el perfil de tu panadería"
-
-msgid "Set up your name, address, and contact details."
-msgstr "Registra tu nombre, dirección y datos de contacto."
-
-msgid "Share of the best seller"
-msgstr "Proporción frente a lo más vendido"
-
-msgid "Show an alert this many days before the expiration date."
-msgstr "Muestra una alerta estos días antes de la fecha de vencimiento."
-
-msgid ""
-"Showing the %(shown)s most recent entries out of %(total)s. Narrow the "
-"filters to see the other %(hidden)s."
-msgstr ""
-"Se muestran las %(shown)s entradas más recientes de %(total)s. Ajusta "
-"los filtros para ver las otras %(hidden)s."
-
-msgid "Signed in"
-msgstr "Inició sesión"
-
-msgid "Signed out"
-msgstr "Cerró sesión"
-
-msgid "Sold"
-msgstr "Vendido"
-
-msgid "Status"
-msgstr "Estado"
-
-msgid "Stock-In (Purchase)"
-msgstr "Entrada (compra)"
-
-msgid "Stock-in registered"
-msgstr "Entrada registrada"
-
-msgid "Tax ID"
-msgstr "NIT"
-
-msgid "The bakery address is required."
-msgstr "La dirección de la panadería es obligatoria."
-
-msgid "The bakery name is required."
-msgstr "El nombre de la panadería es obligatorio."
-
-msgid "The bakery profile has already been set up."
-msgstr "El perfil de la panadería ya fue configurado."
-
-msgid "The bakery profile was already set up."
-msgstr "El perfil de la panadería ya estaba configurado."
-
-msgid "The corrected quantity cannot be negative."
-msgstr "La cantidad corregida no puede ser negativa."
-
-msgid "The corrected quantity must be different from the current quantity."
-msgstr "La cantidad corregida debe ser distinta de la cantidad actual."
-
-msgid "The ingredient name is required."
-msgstr "El nombre del ingrediente es obligatorio."
-
-msgid "The product name is required."
-msgstr "El nombre del producto es obligatorio."
-
-msgid ""
-"The real quantity counted in the bakery. It replaces the current "
-"quantity."
-msgstr "La cantidad real contada en la panadería. Reemplaza la cantidad actual."
-
-msgid "The start date cannot be later than the end date."
-msgstr "La fecha inicial no puede ser posterior a la fecha final."
-
-msgid "This barcode is already linked to another ingredient."
-msgstr "Este código de barras ya está vinculado a otro ingrediente."
-
-msgid ""
-"This information identifies your bakery across Crumb. You can always add "
-"contact details later."
-msgstr ""
-"Esta información identifica a tu panadería dentro de Crumb. Los datos de "
-"contacto los puedes agregar después."
-
-msgid "This product is already registered."
-msgstr "Este producto ya está registrado."
-
-msgid "To"
-msgstr "Hasta"
-
-msgid "Total"
-msgstr "Total"
-
-msgid "Totals"
-msgstr "Totales"
-
-msgid ""
-"Track ingredients, stock, and expiration dates in one place. Start by "
-"setting up your bakery's profile."
-msgstr ""
-"Lleva en un solo lugar tus ingredientes, existencias y fechas de "
-"vencimiento. Empieza configurando el perfil de tu panadería."
-
-msgid "Type"
-msgstr "Tipo"
-
-msgid "Unit"
-msgstr "Unidad"
-
-msgid "Unit of measure"
-msgstr "Unidad de medida"
-
-msgid "Unit price"
-msgstr "Precio unitario"
-
-msgid "Units sold"
-msgstr "Unidades vendidas"
-
-msgid "Unknown record type."
-msgstr "Tipo de registro desconocido."
-
-msgid "Unsold"
-msgstr "Sin vender"
-
-msgid "Unsold products"
-msgstr "Productos sin vender"
-
-msgid "Unsold products by day"
-msgstr "Productos sin vender por día"
-
-msgid "Update %(name)s."
-msgstr "Actualiza %(name)s."
-
-msgid "Update the inventory information of %(name)s."
-msgstr "Actualiza la información de inventario de %(name)s."
-
-msgid "Update your bakery's contact and business information."
-msgstr "Actualiza los datos de contacto y del negocio de tu panadería."
-
-msgid "Upload an .xlsx, .xls, or .csv file."
-msgstr "Sube un archivo .xlsx, .xls o .csv."
-
-msgid ""
-"Upload an Excel or CSV file to bulk import ingredients. If an ingredient "
-"already exists, its quantity will be added and the expiration date "
-"updated."
-msgstr ""
-"Sube un archivo de Excel o CSV para importar ingredientes en lote. Si un "
-"ingrediente ya existe, se suma su cantidad y se actualiza la fecha de "
-"vencimiento."
-
-msgid "User"
-msgstr "Usuario"
-
-msgid "User account registered successfully."
-msgstr "La cuenta de usuario se registró correctamente."
-
-msgid "User activity log"
-msgstr "Registro de actividad de los usuarios"
-
+#: .\accounts\forms.py:21
 msgid "Username"
 msgstr "Usuario"
 
-msgid "Value not earned"
-msgstr "Valor no percibido"
+#: .\accounts\templates\accounts\login.html:4
+#: .\accounts\templates\accounts\login.html:8
+#: .\accounts\templates\accounts\login.html:26 .\templates\base.html:583
+msgid "Sign in"
+msgstr "Iniciar sesión"
 
-msgid "View Inventory"
-msgstr "Ver el inventario"
+#: .\accounts\templates\accounts\login.html:9
+msgid "Sign in to manage your bakery's inventory."
+msgstr "Inicia sesión para gestionar el inventario de la panadería."
 
-msgid "View history"
-msgstr "Ver el historial"
+#: .\accounts\templates\accounts\login.html:28
+#: .\accounts\templates\accounts\register.html:4
+#: .\accounts\templates\accounts\register.html:8
+#: .\accounts\templates\accounts\register.html:27 .\templates\base.html:584
+msgid "Create account"
+msgstr "Crear cuenta"
 
-msgid "View production records"
-msgstr "Ver los registros de producción"
+#: .\accounts\templates\accounts\register.html:9
+msgid "Create a user account to manage the bakery."
+msgstr "Crea una cuenta de usuario para administrar la panadería."
 
-msgid "View sales"
-msgstr "Ver las ventas"
+#: .\accounts\templates\accounts\register.html:29
+msgid "Back to sign in"
+msgstr "Volver al inicio de sesión"
 
-msgid "View your business information."
-msgstr "Consulta la información de tu negocio."
+#: .\accounts\views.py:54
+#, python-format
+msgid "Welcome back, %(username)s!"
+msgstr "¡Te damos la bienvenida de nuevo, %(username)s!"
 
-msgid "Volume"
-msgstr "Volumen"
+#: .\accounts\views.py:81
+msgid "Your account was created successfully."
+msgstr "Tu cuenta se creó correctamente."
 
-msgid "Waiting for scan..."
-msgstr "Esperando el escaneo..."
+#: .\accounts\views.py:94
+msgid "You signed out."
+msgstr "Cerraste sesión."
 
-msgid "Welcome back, %(name)s"
-msgstr "Hola de nuevo, %(name)s"
+#: .\bakery\forms.py:12 .\inventory\forms.py:50
+#: .\inventory\templates\inventory\ingredient_list.html:60
+#: .\production\forms.py:44 .\production\forms.py:108
+msgid "Name"
+msgstr "Nombre"
 
-msgid ""
-"What %(name)s lost: ingredients that expired with stock left, and "
-"products that were baked and never sold."
-msgstr ""
-"Lo que perdió %(name)s: ingredientes que se vencieron con existencias y "
-"productos que se hornearon y nunca se vendieron."
+#: .\bakery\forms.py:13 .\bakery\templates\bakery\detail.html:10
+msgid "Address"
+msgstr "Dirección"
 
+#: .\bakery\forms.py:14 .\bakery\templates\bakery\detail.html:15
+msgid "Phone"
+msgstr "Teléfono"
+
+#: .\bakery\forms.py:16 .\bakery\templates\bakery\detail.html:27
+msgid "Tax ID"
+msgstr "NIT"
+
+#: .\bakery\forms.py:26 .\bakery\forms.py:27 .\bakery\forms.py:28
+msgid "Optional."
+msgstr "Opcional."
+
+#: .\bakery\forms.py:34
+msgid "The bakery name is required."
+msgstr "El nombre de la panadería es obligatorio."
+
+#: .\bakery\forms.py:40
+msgid "The bakery address is required."
+msgstr "La dirección de la panadería es obligatoria."
+
+#: .\bakery\models.py:10
+msgid "Enter a valid phone number (digits, spaces, +, -, ( and ) only)."
+msgstr "Escribe un teléfono válido (solo dígitos, espacios, +, -, ( y ))."
+
+#: .\bakery\models.py:44
+msgid "Signed in"
+msgstr "Inició sesión"
+
+#: .\bakery\models.py:45
+msgid "Signed out"
+msgstr "Cerró sesión"
+
+#: .\bakery\models.py:46
+msgid "Stock-in registered"
+msgstr "Entrada registrada"
+
+#: .\bakery\models.py:47
+msgid "Inventory corrected"
+msgstr "Inventario corregido"
+
+#: .\bakery\models.py:48
+msgid "Sale registered"
+msgstr "Venta registrada"
+
+#: .\bakery\services.py:27
+msgid "The bakery profile has already been set up."
+msgstr "El perfil de la panadería ya fue configurado."
+
+#: .\bakery\services.py:77 .\inventory\views.py:203
+#: .\production\services.py:280 .\production\services.py:390
+#: .\production\services.py:488
+msgid "The start date cannot be later than the end date."
+msgstr "La fecha inicial no puede ser posterior a la fecha final."
+
+#: .\bakery\templates\bakery\activity_log.html:4
+#: .\bakery\templates\bakery\activity_log.html:12
+#: .\bakery\templates\bakery\detail.html:33
+msgid "User activity log"
+msgstr "Registro de actividad de los usuarios"
+
+#: .\bakery\templates\bakery\activity_log.html:10
+msgid "Bakery"
+msgstr "Panadería"
+
+#: .\bakery\templates\bakery\activity_log.html:15
+#, python-format
 msgid "What each user did in %(name)s, newest first."
-msgstr ""
-"Lo que hizo cada usuario en %(name)s, de lo más reciente a lo más "
-"antiguo."
+msgstr "Lo que hizo cada usuario en %(name)s, de lo más reciente a lo más antiguo."
 
+#: .\bakery\templates\bakery\activity_log.html:25
+#: .\bakery\templates\bakery\detail.html:5
+#: .\bakery\templates\bakery\edit.html:5 .\templates\base.html:565
+#: .\templates\home.html:21
+msgid "Bakery profile"
+msgstr "Perfil de la panadería"
+
+#: .\bakery\templates\bakery\activity_log.html:35
+#: .\bakery\templates\bakery\activity_log.html:104
+msgid "Action"
+msgstr "Acción"
+
+#: .\bakery\templates\bakery\activity_log.html:37
+msgid "All actions"
+msgstr "Todas las acciones"
+
+#: .\bakery\templates\bakery\activity_log.html:50
+#: .\bakery\templates\bakery\activity_log.html:103
+#: .\inventory\templates\inventory\manual_inventory_correction.html:54
+msgid "User"
+msgstr "Usuario"
+
+#: .\bakery\templates\bakery\activity_log.html:52
+msgid "All users"
+msgstr "Todos los usuarios"
+
+#: .\bakery\templates\bakery\activity_log.html:65
+#: .\production\templates\production\history_tracking.html:72
+#: .\production\templates\production\loss_report.html:42
+#: .\production\templates\production\sales_analytics.html:43
+msgid "From"
+msgstr "Desde"
+
+#: .\bakery\templates\bakery\activity_log.html:76
+#: .\production\templates\production\history_tracking.html:83
+#: .\production\templates\production\loss_report.html:53
+#: .\production\templates\production\sales_analytics.html:54
+msgid "To"
+msgstr "Hasta"
+
+#: .\bakery\templates\bakery\activity_log.html:86
+#: .\production\templates\production\history_tracking.html:93
+#: .\production\templates\production\loss_report.html:63
+#: .\production\templates\production\sales_analytics.html:64
+msgid "Filter"
+msgstr "Filtrar"
+
+#: .\bakery\templates\bakery\activity_log.html:90
+#: .\inventory\templates\inventory\ingredient_list.html:51
+#: .\production\templates\production\history_tracking.html:97
+#: .\production\templates\production\loss_report.html:67
+#: .\production\templates\production\sales_analytics.html:68
+msgid "Clear filters"
+msgstr "Quitar filtros"
+
+#: .\bakery\templates\bakery\activity_log.html:102
 msgid "When"
 msgstr "Cuándo"
 
-msgid "Which products of %(name)s sell best, ordered from the best seller down."
-msgstr "Cuáles productos de %(name)s se venden más, del más vendido hacia abajo."
+#: .\bakery\templates\bakery\activity_log.html:105
+msgid "Description"
+msgstr "Descripción"
 
-msgid "You can scan products continuously."
-msgstr "Puedes escanear productos de forma continua."
+#: .\bakery\templates\bakery\activity_log.html:119
+msgid "Not signed in"
+msgstr "Sin iniciar sesión"
 
-msgid "from the unsold products"
-msgstr "de los productos sin vender"
+#: .\bakery\templates\bakery\activity_log.html:134
+#, python-format
+msgid "Showing the %(shown)s most recent entries out of %(total)s. Narrow the filters to see the other %(hidden)s."
+msgstr "Se muestran las %(shown)s entradas más recientes de %(total)s. Ajusta los filtros para ver las otras %(hidden)s."
 
-msgid "still holding stock"
-msgstr "que todavía tienen existencias"
-
-msgid "will no longer appear in the active inventory."
-msgstr "ya no aparecerá en el inventario activo."
-
+#: .\bakery\templates\bakery\activity_log.html:140
+#, python-format
 msgid "%(counter)s entry recorded."
 msgid_plural "%(counter)s entries recorded."
 msgstr[0] "%(counter)s entrada registrada."
 msgstr[1] "%(counter)s entradas registradas."
 
+#: .\bakery\templates\bakery\activity_log.html:148
+msgid "No activity matches the selected filters."
+msgstr "Ninguna actividad coincide con los filtros seleccionados."
+
+#: .\bakery\templates\bakery\activity_log.html:154
+msgid "No activity has been recorded yet."
+msgstr "Todavía no se ha registrado ninguna actividad."
+
+#: .\bakery\templates\bakery\detail.html:32
+msgid "Edit profile"
+msgstr "Editar el perfil"
+
+#: .\bakery\templates\bakery\edit.html:6
+msgid "Edit business profile"
+msgstr "Editar el perfil del negocio"
+
+#: .\bakery\templates\bakery\edit.html:7
+msgid "Update your bakery's contact and business information."
+msgstr "Actualiza los datos de contacto y del negocio de tu panadería."
+
+#: .\bakery\templates\bakery\edit.html:21
+#: .\inventory\templates\inventory\ingredient_edit.html:40
+#: .\production\templates\production\product_edit.html:39
+msgid "Save changes"
+msgstr "Guardar los cambios"
+
+#: .\bakery\templates\bakery\edit.html:22
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:34
+#: .\inventory\templates\inventory\ingredient_edit.html:43
+#: .\inventory\templates\inventory\ingredient_import.html:23
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:46
+#: .\inventory\templates\inventory\manual_inventory_correction.html:37
+#: .\inventory\templates\inventory\stock_in_form.html:28
+#: .\production\templates\production\product_edit.html:46
+#: .\production\templates\production\product_form.html:42
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: .\bakery\templates\bakery\setup.html:3
+msgid "Set up your bakery"
+msgstr "Configura tu panadería"
+
+#: .\bakery\templates\bakery\setup.html:5
+msgid "Getting started"
+msgstr "Para empezar"
+
+#: .\bakery\templates\bakery\setup.html:6
+msgid "Set up your bakery profile"
+msgstr "Configura el perfil de tu panadería"
+
+#: .\bakery\templates\bakery\setup.html:7
+msgid "This information identifies your bakery across Crumb. You can always add contact details later."
+msgstr "Esta información identifica a tu panadería dentro de Crumb. Los datos de contacto los puedes agregar después."
+
+#: .\bakery\templates\bakery\setup.html:21
+msgid "Save profile"
+msgstr "Guardar el perfil"
+
+#: .\bakery\views.py:33
+msgid "The bakery profile was already set up."
+msgstr "El perfil de la panadería ya estaba configurado."
+
+#: .\bakery\views.py:35
+msgid "Business profile created successfully."
+msgstr "El perfil del negocio se creó correctamente."
+
+#: .\bakery\views.py:55
+msgid "Business profile updated successfully."
+msgstr "El perfil del negocio se actualizó correctamente."
+
+#: .\bakery\views.py:102 .\production\views.py:331 .\production\views.py:383
+#: .\production\views.py:420
+msgid "Invalid date."
+msgstr "Fecha inválida."
+
+#: .\inventory\forms.py:33
+msgid "Expiration warning days"
+msgstr "Días de aviso antes del vencimiento"
+
+#: .\inventory\forms.py:34
+msgid "Show an alert this many days before the expiration date."
+msgstr "Muestra una alerta estos días antes de la fecha de vencimiento."
+
+#: .\inventory\forms.py:51 .\inventory\forms.py:144 .\inventory\forms.py:183
+#: .\inventory\templates\inventory\ingredient_list.html:61
+#: .\production\templates\production\history_tracking.html:112
+#: .\production\templates\production\production_list.html:73
+#: .\production\templates\production\sales_list.html:53
+msgid "Quantity"
+msgstr "Cantidad"
+
+#: .\inventory\forms.py:52
+msgid "Unit of measure"
+msgstr "Unidad de medida"
+
+#: .\inventory\forms.py:53
+msgid "Expiration date"
+msgstr "Fecha de vencimiento"
+
+#: .\inventory\forms.py:70
+msgid "Select a unit"
+msgstr "Selecciona una unidad"
+
+#: .\inventory\forms.py:85
+msgid "The ingredient name is required."
+msgstr "El nombre del ingrediente es obligatorio."
+
+#: .\inventory\forms.py:120
+#: .\inventory\templates\inventory\ingredient_list.html:64
+msgid "Barcode"
+msgstr "Código de barras"
+
+#: .\inventory\forms.py:121
+msgid "Optional. Scan or type a barcode to link it to this ingredient."
+msgstr "Opcional. Escanea o escribe un código de barras para vincularlo a este ingrediente."
+
+#: .\inventory\forms.py:133
+msgid "This barcode is already linked to another ingredient."
+msgstr "Este código de barras ya está vinculado a otro ingrediente."
+
+#: .\inventory\forms.py:143 .\inventory\forms.py:182
+#: .\production\templates\production\loss_report.html:201
+msgid "Ingredient"
+msgstr "Ingrediente"
+
+#: .\inventory\forms.py:145 .\inventory\forms.py:184
+msgid "Note"
+msgstr "Nota"
+
+#: .\inventory\forms.py:160 .\inventory\forms.py:199
+msgid "Select an ingredient"
+msgstr "Selecciona un ingrediente"
+
+#: .\inventory\forms.py:208
+#: .\inventory\templates\inventory\ingredient_list.html:130
+msgid "Low-stock threshold"
+msgstr "Mínimo de existencias"
+
+#: .\inventory\forms.py:218
+msgid "Excel or CSV File"
+msgstr "Archivo de Excel o CSV"
+
+#: .\inventory\forms.py:219
+msgid "Upload an .xlsx, .xls, or .csv file."
+msgstr "Sube un archivo .xlsx, .xls o .csv."
+
+#: .\inventory\forms.py:233
+msgid "Corrected quantity"
+msgstr "Cantidad corregida"
+
+#: .\inventory\forms.py:234
+msgid "The real quantity counted in the bakery. It replaces the current quantity."
+msgstr "La cantidad real contada en la panadería. Reemplaza la cantidad actual."
+
+#: .\inventory\forms.py:238
+#: .\inventory\templates\inventory\manual_inventory_correction.html:53
+msgid "Reason"
+msgstr "Motivo"
+
+#: .\inventory\forms.py:239
+msgid "Explain why the quantity is being corrected, for example a physical count."
+msgstr "Explica por qué se corrige la cantidad, por ejemplo un conteo físico."
+
+#: .\inventory\forms.py:250 .\inventory\services.py:374
+msgid "A reason is required to correct the inventory."
+msgstr "Se necesita un motivo para corregir el inventario."
+
+#: .\inventory\models.py:18
+msgid "Kilogram"
+msgstr "Kilogramo"
+
+#: .\inventory\models.py:19
+msgid "Gram"
+msgstr "Gramo"
+
+#: .\inventory\models.py:20
+#: .\inventory\templates\inventory\ingredient_list.html:62
+#: .\production\templates\production\loss_report.html:203
+msgid "Unit"
+msgstr "Unidad"
+
+#: .\inventory\models.py:21
+msgid "Liter"
+msgstr "Litro"
+
+#: .\inventory\models.py:35
+msgid "Mass"
+msgstr "Masa"
+
+#: .\inventory\models.py:36
+msgid "Volume"
+msgstr "Volumen"
+
+#: .\inventory\models.py:37
+msgid "Count"
+msgstr "Conteo"
+
+#: .\inventory\models.py:186
+msgid "Stock-In (Purchase)"
+msgstr "Entrada (compra)"
+
+#: .\inventory\models.py:187
+msgid "Consumption"
+msgstr "Consumo"
+
+#: .\inventory\models.py:188
+msgid "Correction"
+msgstr "Corrección"
+
+#: .\inventory\models.py:189
+msgid "Loss"
+msgstr "Pérdida"
+
+#: .\inventory\services.py:368
+msgid "The corrected quantity cannot be negative."
+msgstr "La cantidad corregida no puede ser negativa."
+
+#: .\inventory\services.py:371
+msgid "The corrected quantity must be different from the current quantity."
+msgstr "La cantidad corregida debe ser distinta de la cantidad actual."
+
+#: .\inventory\services.py:394
+#, python-format
+msgid "Corrected the stock of %(name)s from %(before)s to %(after)s."
+msgstr "Se corrigieron las existencias de %(name)s de %(before)s a %(after)s."
+
+#: .\inventory\services.py:413
+msgid "A stock-in quantity must be greater than zero."
+msgstr "La cantidad de una entrada debe ser mayor que cero."
+
+#: .\inventory\services.py:431
+#, python-format
+msgid "Registered %(quantity)s of %(name)s into the stock."
+msgstr "Se registró una entrada de %(quantity)s de %(name)s."
+
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:4
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:10
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:30
+msgid "Delete ingredient"
+msgstr "Eliminar el ingrediente"
+
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:8
+#: .\inventory\templates\inventory\ingredient_edit.html:8
+#: .\inventory\templates\inventory\ingredient_form.html:5
+#: .\inventory\templates\inventory\ingredient_import.html:7
+#: .\inventory\templates\inventory\ingredient_list.html:5
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:8
+#: .\inventory\templates\inventory\manual_inventory_correction.html:8
+#: .\inventory\templates\inventory\stock_consumption_form.html:5
+msgid "Inventory"
+msgstr "Inventario"
+
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:13
+#, python-format
+msgid "Are you sure you want to remove %(name)s from the inventory?"
+msgstr "¿Seguro que quieres quitar %(name)s del inventario?"
+
+#: .\inventory\templates\inventory\ingredient_confirm_delete.html:21
+msgid "will no longer appear in the active inventory."
+msgstr "ya no aparecerá en el inventario activo."
+
+#: .\inventory\templates\inventory\ingredient_edit.html:4
+#: .\inventory\templates\inventory\ingredient_edit.html:10
+msgid "Edit ingredient"
+msgstr "Editar el ingrediente"
+
+#: .\inventory\templates\inventory\ingredient_edit.html:13
+#, python-format
+msgid "Update the inventory information of %(name)s."
+msgstr "Actualiza la información de inventario de %(name)s."
+
+#: .\inventory\templates\inventory\ingredient_form.html:3
+#: .\inventory\templates\inventory\ingredient_form.html:6
+#: .\inventory\templates\inventory\ingredient_form.html:23
+#: .\inventory\templates\inventory\ingredient_list.html:156
+#: .\templates\home.html:28
+msgid "Register ingredient"
+msgstr "Registrar un ingrediente"
+
+#: .\inventory\templates\inventory\ingredient_form.html:7
+#, python-format
+msgid "Add a raw material to the inventory of %(name)s."
+msgstr "Agrega una materia prima al inventario de %(name)s."
+
+#: .\inventory\templates\inventory\ingredient_import.html:4
+#: .\inventory\templates\inventory\ingredient_import.html:8
+msgid "Import Ingredients"
+msgstr "Importar ingredientes"
+
+#: .\inventory\templates\inventory\ingredient_import.html:12
+msgid "Upload an Excel or CSV file to bulk import ingredients. If an ingredient already exists, its quantity will be added and the expiration date updated."
+msgstr "Sube un archivo de Excel o CSV para importar ingredientes en lote. Si un ingrediente ya existe, se suma su cantidad y se actualiza la fecha de vencimiento."
+
+#: .\inventory\templates\inventory\ingredient_import.html:16
+msgid "Download Template"
+msgstr "Descargar la plantilla"
+
+#: .\inventory\templates\inventory\ingredient_import.html:22
+msgid "Import"
+msgstr "Importar"
+
+#: .\inventory\templates\inventory\ingredient_list.html:3
+#: .\inventory\templates\inventory\ingredient_list.html:6
+#: .\production\templates\production\loss_report.html:25
+#: .\templates\base.html:566
+msgid "Ingredients"
+msgstr "Ingredientes"
+
+#: .\inventory\templates\inventory\ingredient_list.html:10
+msgid "Search ingredients by name"
+msgstr "Buscar ingredientes por nombre"
+
+#: .\inventory\templates\inventory\ingredient_list.html:18
+msgid "For example, flour or sugar"
+msgstr "Por ejemplo, harina o azúcar"
+
+#: .\inventory\templates\inventory\ingredient_list.html:23
+msgid "Expiration date from"
+msgstr "Vence desde"
+
+#: .\inventory\templates\inventory\ingredient_list.html:37
+msgid "Expiration date to"
+msgstr "Vence hasta"
+
+#: .\inventory\templates\inventory\ingredient_list.html:48
+msgid "Search"
+msgstr "Buscar"
+
+#: .\inventory\templates\inventory\ingredient_list.html:63
+msgid "Expires"
+msgstr "Vence"
+
+#: .\inventory\templates\inventory\ingredient_list.html:65
+#: .\production\forms.py:111
+#: .\production\templates\production\product_list.html:41
+msgid "Status"
+msgstr "Estado"
+
+#: .\inventory\templates\inventory\ingredient_list.html:66
+msgid "Actions"
+msgstr "Acciones"
+
+#: .\inventory\templates\inventory\ingredient_list.html:86
+msgid "Low stock"
+msgstr "Existencias bajas"
+
+#: .\inventory\templates\inventory\ingredient_list.html:96
+msgid "Expired"
+msgstr "Vencido"
+
+#: .\inventory\templates\inventory\ingredient_list.html:104
+msgid "Expiring soon"
+msgstr "Por vencer"
+
+#: .\inventory\templates\inventory\ingredient_list.html:108
+msgid "No inventory alert"
+msgstr "Sin alertas de inventario"
+
+#: .\inventory\templates\inventory\ingredient_list.html:117
+#: .\production\templates\production\product_list.html:70
+msgid "Edit"
+msgstr "Editar"
+
+#: .\inventory\templates\inventory\ingredient_list.html:124
+msgid "Delete"
+msgstr "Eliminar"
+
+#: .\inventory\templates\inventory\ingredient_list.html:136
+msgid "Correct quantity"
+msgstr "Corregir la cantidad"
+
+#: .\inventory\templates\inventory\ingredient_list.html:147
+#, python-format
+msgid "No ingredients match “%(query)s”."
+msgstr "Ningún ingrediente coincide con “%(query)s”."
+
+#: .\inventory\templates\inventory\ingredient_list.html:149
+msgid "No ingredients match the selected filters."
+msgstr "Ningún ingrediente coincide con los filtros seleccionados."
+
+#: .\inventory\templates\inventory\ingredient_list.html:151
+msgid "No ingredients registered yet."
+msgstr "Todavía no hay ingredientes registrados."
+
+#: .\inventory\templates\inventory\ingredient_list.html:157
+#: .\templates\home.html:35
+msgid "Register Stock-In"
+msgstr "Registrar una entrada"
+
+#: .\inventory\templates\inventory\ingredient_list.html:158
+msgid "Import from Excel"
+msgstr "Importar desde Excel"
+
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:4
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:10
+msgid "Configure low-stock threshold"
+msgstr "Configurar el mínimo de existencias"
+
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:13
+#, python-format
+msgid "Configure the minimum stock level for %(name)s. The threshold uses the same unit as the ingredient (%(unit)s)."
+msgstr "Configura el nivel mínimo de existencias de %(name)s. El mínimo usa la misma unidad del ingrediente (%(unit)s)."
+
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:21
+#: .\inventory\templates\inventory\manual_inventory_correction.html:21
+msgid "Current quantity:"
+msgstr "Cantidad actual:"
+
+#: .\inventory\templates\inventory\low_stock_threshold_configuration.html:42
+msgid "Save threshold"
+msgstr "Guardar el mínimo"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:4
+#: .\inventory\templates\inventory\manual_inventory_correction.html:10
+msgid "Correct inventory"
+msgstr "Corregir el inventario"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:13
+#, python-format
+msgid "Replace the recorded quantity of %(name)s with the real quantity counted in the bakery. Every correction is logged with its date, user and reason."
+msgstr "Reemplaza la cantidad registrada de %(name)s por la cantidad real contada en la panadería. Cada corrección queda guardada con su fecha, usuario y motivo."
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:36
+msgid "Save correction"
+msgstr "Guardar la corrección"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:44
+msgid "Correction history"
+msgstr "Historial de correcciones"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:50
+#: .\production\templates\production\history_tracking.html:109
+#: .\production\templates\production\loss_report.html:258
+#: .\production\templates\production\sales_list.html:56
+#: .\production\templates\production\sales_list.html:98
+msgid "Date"
+msgstr "Fecha"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:51
+msgid "Before"
+msgstr "Antes de"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:52
+msgid "After"
+msgstr "Después de"
+
+#: .\inventory\templates\inventory\manual_inventory_correction.html:70
+msgid "No corrections have been recorded for this ingredient yet."
+msgstr "Todavía no se ha registrado ninguna corrección para este ingrediente."
+
+#: .\inventory\templates\inventory\stock_consumption_form.html:3
+#: .\inventory\templates\inventory\stock_consumption_form.html:6
+#: .\inventory\templates\inventory\stock_consumption_form.html:18
+msgid "Register consumption"
+msgstr "Registrar consumo"
+
+#: .\inventory\templates\inventory\stock_consumption_form.html:7
+#, python-format
+msgid "Record ingredients used from the inventory of %(name)s."
+msgstr "Registra los ingredientes usados del inventario de %(name)s."
+
+#: .\inventory\templates\inventory\stock_in_form.html:7
+msgid "Register Stock-In (Ingredient Purchase)"
+msgstr "Registrar una entrada (compra de ingredientes)"
+
+#: .\inventory\templates\inventory\stock_in_form.html:9
+msgid "Enable Scan Mode"
+msgstr "Activar el modo escáner"
+
+#: .\inventory\templates\inventory\stock_in_form.html:16
+msgid "Scan Mode Enabled:"
+msgstr "Modo escáner activado:"
+
+#: .\inventory\templates\inventory\stock_in_form.html:16
+msgid "You can scan products continuously."
+msgstr "Puedes escanear productos de forma continua."
+
+#: .\inventory\templates\inventory\stock_in_form.html:17
+msgid "Waiting for scan..."
+msgstr "Esperando el escaneo..."
+
+#: .\inventory\templates\inventory\stock_in_form.html:27
+msgid "Save Stock-In"
+msgstr "Guardar la entrada"
+
+#: .\inventory\views.py:59
+msgid "Ingredient registered successfully."
+msgstr "El ingrediente se registró correctamente."
+
+#: .\inventory\views.py:92
+msgid "Ingredient updated successfully."
+msgstr "El ingrediente se actualizó correctamente."
+
+#: .\inventory\views.py:128
+msgid "Ingredient deleted successfully."
+msgstr "El ingrediente se eliminó correctamente."
+
+#: .\inventory\views.py:367
+msgid "Low-stock threshold updated successfully."
+msgstr "El mínimo de existencias se actualizó correctamente."
+
+#: .\production\forms.py:56 .\production\forms.py:109
+msgid "SKU"
+msgstr "SKU"
+
+#: .\production\forms.py:68 .\production\forms.py:110
+#: .\production\templates\production\loss_report.html:263
+#: .\production\templates\production\product_list.html:40
+#: .\production\templates\production\sales_list.html:54
+msgid "Unit price"
+msgstr "Precio unitario"
+
+#: .\production\forms.py:87 .\production\forms.py:152
+#: .\production\services.py:111
+msgid "This product is already registered."
+msgstr "Este producto ya está registrado."
+
+#: .\production\forms.py:172 .\production\forms.py:220
+#: .\production\templates\production\history_tracking.html:57
+#: .\production\templates\production\history_tracking.html:111
+#: .\production\templates\production\loss_report.html:259
+#: .\production\templates\production\product_list.html:38
+#: .\production\templates\production\production_list.html:72
+#: .\production\templates\production\sales_analytics.html:197
+#: .\production\templates\production\sales_list.html:52
+#: .\production\templates\production\sales_list.html:99
+msgid "Product"
+msgstr "Producto"
+
+#: .\production\forms.py:173
+msgid "Quantity produced"
+msgstr "Cantidad producida"
+
+#: .\production\forms.py:174
+msgid "Production date and time"
+msgstr "Fecha y hora de producción"
+
+#: .\production\forms.py:203 .\production\forms.py:251
+msgid "Select a product"
+msgstr "Selecciona un producto"
+
+#: .\production\forms.py:221
+msgid "Quantity sold"
+msgstr "Cantidad vendida"
+
+#: .\production\forms.py:222
+msgid "Sale date and time"
+msgstr "Fecha y hora de la venta"
+
+#: .\production\models.py:17
+msgid "Active"
+msgstr "Activo"
+
+#: .\production\models.py:18
+msgid "Inactive"
+msgstr "Inactivo"
+
+#: .\production\models.py:94
+msgid "Completed"
+msgstr "Completada"
+
+#: .\production\models.py:95
+msgid "Cancelled"
+msgstr "Cancelada"
+
+#: .\production\services.py:99
+msgid "The product name is required."
+msgstr "El nombre del producto es obligatorio."
+
+#: .\production\services.py:160 .\production\services.py:202
+msgid "The selected product does not belong to this bakery."
+msgstr "El producto seleccionado no pertenece a esta panadería."
+
+#: .\production\services.py:166
+msgid "Inactive products cannot be used for production registration."
+msgstr "Los productos inactivos no se pueden usar para registrar producción."
+
+#: .\production\services.py:208
+msgid "Inactive products cannot be used for sales registration."
+msgstr "Los productos inactivos no se pueden usar para registrar ventas."
+
+#: .\production\services.py:214
+msgid "The selected product does not have a unit price configured."
+msgstr "El producto seleccionado no tiene configurado un precio unitario."
+
+#: .\production\services.py:247
+#, python-format
+msgid "Registered the sale of %(quantity)s %(name)s for %(amount)s."
+msgstr "Se registró la venta de %(quantity)s %(name)s por %(amount)s."
+
+#: .\production\services.py:276
+msgid "Unknown record type."
+msgstr "Tipo de registro desconocido."
+
+#: .\production\templates\production\history_tracking.html:4
+#: .\production\templates\production\history_tracking.html:12
+#: .\production\templates\production\sales_analytics.html:33
+msgid "Production and sales history"
+msgstr "Historial de producción y ventas"
+
+#: .\production\templates\production\history_tracking.html:10
+#: .\production\templates\production\history_tracking.html:126
+#: .\production\templates\production\loss_report.html:10
+#: .\production\templates\production\product_edit.html:8
+#: .\production\templates\production\product_form.html:8
+#: .\production\templates\production\product_list.html:10
+#: .\production\templates\production\production_form.html:8
+#: .\production\templates\production\production_list.html:10
+#: .\production\templates\production\sales_analytics.html:11
+#: .\templates\base.html:567
+msgid "Production"
+msgstr "Producción"
+
+#: .\production\templates\production\history_tracking.html:15
+#, python-format
+msgid "Every production and sale registered for %(name)s, newest first."
+msgstr "Toda la producción y las ventas registradas en %(name)s, de lo más reciente a lo más antiguo."
+
+#: .\production\templates\production\history_tracking.html:25
+#: .\production\templates\production\production_list.html:4
+#: .\production\templates\production\production_list.html:12
+msgid "Production records"
+msgstr "Registros de producción"
+
+#: .\production\templates\production\history_tracking.html:32
+#: .\production\templates\production\sales_analytics.html:26
+#: .\production\templates\production\sales_list.html:4
+#: .\production\templates\production\sales_list.html:12
+msgid "Sales records"
+msgstr "Registros de ventas"
+
+#: .\production\templates\production\history_tracking.html:42
+msgid "Record type"
+msgstr "Tipo de registro"
+
+#: .\production\templates\production\history_tracking.html:45
+msgid "Production and sales"
+msgstr "Producción y ventas"
+
+#: .\production\templates\production\history_tracking.html:48
+msgid "Production only"
+msgstr "Solo producción"
+
+#: .\production\templates\production\history_tracking.html:51
+msgid "Sales only"
+msgstr "Solo ventas"
+
+#: .\production\templates\production\history_tracking.html:59
+msgid "All products"
+msgstr "Todos los productos"
+
+#: .\production\templates\production\history_tracking.html:110
+msgid "Type"
+msgstr "Tipo"
+
+#: .\production\templates\production\history_tracking.html:113
+#: .\production\templates\production\loss_report.html:227
+#: .\production\templates\production\sales_list.html:55
+msgid "Total"
+msgstr "Total"
+
+#: .\production\templates\production\history_tracking.html:114
+msgid "Registered by"
+msgstr "Registrado por"
+
+#: .\production\templates\production\history_tracking.html:129
+msgid "Sale"
+msgstr "Venta"
+
+#: .\production\templates\production\history_tracking.html:144
+#: .\production\templates\production\loss_report.html:288
+#: .\production\templates\production\sales_analytics.html:246
+msgid "Totals"
+msgstr "Totales"
+
+#: .\production\templates\production\history_tracking.html:146
+#, python-format
+msgid "Produced: %(produced)s &middot; Sold: %(sold)s &middot; Sales amount: %(amount)s"
+msgstr "Producido: %(produced)s &middot; Vendido: %(sold)s &middot; Total vendido: %(amount)s"
+
+#: .\production\templates\production\history_tracking.html:158
+msgid "No records match the selected filters."
+msgstr "Ningún registro coincide con los filtros seleccionados."
+
+#: .\production\templates\production\history_tracking.html:164
+msgid "No production or sales have been registered yet."
+msgstr "Todavía no se ha registrado producción ni ventas."
+
+#: .\production\templates\production\loss_report.html:4
+#: .\production\templates\production\loss_report.html:12
+#: .\production\templates\production\production_list.html:59
+msgid "Loss reporting"
+msgstr "Reporte de pérdidas"
+
+#: .\production\templates\production\loss_report.html:15
+#, python-format
+msgid "What %(name)s lost: ingredients that expired with stock left, and products that were baked and never sold."
+msgstr "Lo que perdió %(name)s: ingredientes que se vencieron con existencias y productos que se hornearon y nunca se vendieron."
+
+#: .\production\templates\production\loss_report.html:32
+#: .\production\templates\production\production_list.html:52
+#: .\production\templates\production\sales_analytics.html:5
+#: .\production\templates\production\sales_analytics.html:13
+#: .\production\templates\production\sales_list.html:39
+msgid "Sales analytics"
+msgstr "Análisis de ventas"
+
+#: .\production\templates\production\loss_report.html:102
+#: .\production\templates\production\loss_report.html:193
+msgid "Expired ingredients"
+msgstr "Ingredientes vencidos"
+
+#: .\production\templates\production\loss_report.html:115
+msgid "still holding stock"
+msgstr "que todavía tienen existencias"
+
+#: .\production\templates\production\loss_report.html:137
+msgid "Unsold products"
+msgstr "Productos sin vender"
+
+#: .\production\templates\production\loss_report.html:150
+#, python-format
+msgid "over %(counter)s product-day"
+msgid_plural "over %(counter)s product-days"
+msgstr[0] "en %(counter)s producto-día"
+msgstr[1] "en %(counter)s productos-día"
+
+#: .\production\templates\production\loss_report.html:172
+#: .\production\templates\production\loss_report.html:264
+msgid "Value not earned"
+msgstr "Valor no percibido"
+
+#: .\production\templates\production\loss_report.html:185
+msgid "from the unsold products"
+msgstr "de los productos sin vender"
+
+#: .\production\templates\production\loss_report.html:202
+msgid "Quantity left"
+msgstr "Cantidad restante"
+
+#: .\production\templates\production\loss_report.html:204
+msgid "Expired on"
+msgstr "Venció el"
+
+#: .\production\templates\production\loss_report.html:205
+msgid "Days expired"
+msgstr "Días vencido"
+
+#: .\production\templates\production\loss_report.html:230
+#, python-format
 msgid "across %(counter)s ingredient"
 msgid_plural "across %(counter)s ingredients"
 msgstr[0] "en %(counter)s ingrediente"
 msgstr[1] "en %(counter)s ingredientes"
 
+#: .\production\templates\production\loss_report.html:238
+msgid "Quantities are not valued in money because the inventory does not record what each ingredient costs."
+msgstr "Las cantidades no se valoran en dinero porque el inventario no guarda cuánto cuesta cada ingrediente."
+
+#: .\production\templates\production\loss_report.html:245
+msgid "No ingredient expired with stock left."
+msgstr "Ningún ingrediente se venció con existencias."
+
+#: .\production\templates\production\loss_report.html:250
+msgid "Overproduction"
+msgstr "Sobreproducción"
+
+#: .\production\templates\production\loss_report.html:260
+#: .\production\templates\production\sales_list.html:100
+msgid "Produced"
+msgstr "Producido"
+
+#: .\production\templates\production\loss_report.html:261
+#: .\production\templates\production\sales_list.html:101
+msgid "Sold"
+msgstr "Vendido"
+
+#: .\production\templates\production\loss_report.html:262
+#: .\production\templates\production\sales_list.html:102
+msgid "Unsold"
+msgstr "Sin vender"
+
+#: .\production\templates\production\loss_report.html:300
+msgid "No product was left unsold in the selected date range."
+msgstr "En el rango de fechas seleccionado no quedó ningún producto sin vender."
+
+#: .\production\templates\production\loss_report.html:306
+msgid "Every product produced so far has been sold."
+msgstr "Todo lo que se ha producido hasta ahora se vendió."
+
+#: .\production\templates\production\product_edit.html:4
+#: .\production\templates\production\product_edit.html:10
+msgid "Edit product"
+msgstr "Editar el producto"
+
+#: .\production\templates\production\product_edit.html:13
+#, python-format
+msgid "Update %(name)s."
+msgstr "Actualiza %(name)s."
+
+#: .\production\templates\production\product_form.html:4
+#: .\production\templates\production\product_form.html:10
+#: .\production\templates\production\product_form.html:35
+#: .\production\templates\production\production_form.html:32
+#: .\production\templates\production\sales_form.html:32
+msgid "Register product"
+msgstr "Registrar un producto"
+
+#: .\production\templates\production\product_form.html:13
+#, python-format
+msgid "Add a baked product to the catalog of %(name)s."
+msgstr "Agrega un producto al catálogo de %(name)s."
+
+#: .\production\templates\production\product_list.html:4
+#: .\production\templates\production\product_list.html:12
+msgid "Products"
+msgstr "Productos"
+
+#: .\production\templates\production\product_list.html:15
+#, python-format
+msgid "Manage the baked products registered for %(name)s."
+msgstr "Gestiona los productos registrados en %(name)s."
+
+#: .\production\templates\production\product_list.html:25
+#: .\production\templates\production\production_form.html:67
+msgid "Add product"
+msgstr "Agregar producto"
+
+#: .\production\templates\production\product_list.html:84
+msgid "No products have been registered yet."
+msgstr "Todavía no hay productos registrados."
+
+#: .\production\templates\production\production_form.html:4
+#: .\production\templates\production\production_form.html:10
+msgid "Register daily production"
+msgstr "Registrar la producción del día"
+
+#: .\production\templates\production\production_form.html:13
+#, python-format
+msgid "Record the baked products manufactured by %(name)s."
+msgstr "Registra los productos elaborados por %(name)s."
+
+#: .\production\templates\production\production_form.html:21
+#: .\production\templates\production\sales_form.html:21
+msgid "No products registered"
+msgstr "Sin productos registrados"
+
+#: .\production\templates\production\production_form.html:24
+msgid "Register your first baked product before recording daily production."
+msgstr "Registra tu primer producto antes de registrar la producción del día."
+
+#: .\production\templates\production\production_form.html:60
+#: .\production\templates\production\production_list.html:25
+msgid "Register production"
+msgstr "Registrar producción"
+
+#: .\production\templates\production\production_form.html:84
+msgid "View production records"
+msgstr "Ver los registros de producción"
+
+#: .\production\templates\production\production_list.html:15
+#, python-format
+msgid "Review the daily production registered for %(name)s."
+msgstr "Revisa la producción diaria registrada en %(name)s."
+
+#: .\production\templates\production\production_list.html:32
+msgid "Manage products"
+msgstr "Gestionar los productos"
+
+#: .\production\templates\production\production_list.html:38
+#: .\production\templates\production\sales_form.html:60
+#: .\production\templates\production\sales_list.html:25
+msgid "Register sale"
+msgstr "Registrar una venta"
+
+#: .\production\templates\production\production_list.html:45
+#: .\production\templates\production\sales_list.html:32
+msgid "View history"
+msgstr "Ver el historial"
+
+#: .\production\templates\production\production_list.html:74
+msgid "Production date"
+msgstr "Fecha de producción"
+
+#: .\production\templates\production\production_list.html:99
+msgid "No production records have been registered yet."
+msgstr "Todavía no hay registros de producción."
+
+#: .\production\templates\production\sales_analytics.html:16
+#, python-format
+msgid "Which products of %(name)s sell best, ordered from the best seller down."
+msgstr "Cuáles productos de %(name)s se venden más, del más vendido hacia abajo."
+
+#: .\production\templates\production\sales_analytics.html:103
+msgid "Best seller"
+msgstr "Lo más vendido"
+
+#: .\production\templates\production\sales_analytics.html:116
+#, python-format
+msgid "%(units)s units sold"
+msgstr "%(units)s unidades vendidas"
+
+#: .\production\templates\production\sales_analytics.html:138
+#: .\production\templates\production\sales_analytics.html:198
+msgid "Units sold"
+msgstr "Unidades vendidas"
+
+#: .\production\templates\production\sales_analytics.html:151
+#, python-format
 msgid "across %(counter)s sale"
 msgid_plural "across %(counter)s sales"
 msgstr[0] "en %(counter)s venta"
 msgstr[1] "en %(counter)s ventas"
 
+#: .\production\templates\production\sales_analytics.html:173
+#: .\production\templates\production\sales_analytics.html:201
+msgid "Revenue"
+msgstr "Ingresos"
+
+#: .\production\templates\production\sales_analytics.html:186
+#, python-format
 msgid "from %(counter)s product"
 msgid_plural "from %(counter)s products"
 msgstr[0] "de %(counter)s producto"
 msgstr[1] "de %(counter)s productos"
 
-msgid "over %(counter)s product-day"
-msgid_plural "over %(counter)s product-days"
-msgstr[0] "en %(counter)s producto-día"
-msgstr[1] "en %(counter)s productos-día"
+#: .\production\templates\production\sales_analytics.html:199
+msgid "Share of the best seller"
+msgstr "Proporción frente a lo más vendido"
+
+#: .\production\templates\production\sales_analytics.html:200
+#: .\production\templates\production\sales_form.html:8
+#: .\production\templates\production\sales_list.html:10
+msgid "Sales"
+msgstr "Ventas"
+
+#: .\production\templates\production\sales_analytics.html:202
+#, python-format
+msgid "%% of revenue"
+msgstr "%% de los ingresos"
+
+#: .\production\templates\production\sales_analytics.html:260
+msgid "No sales were registered in the selected date range."
+msgstr "En el rango de fechas seleccionado no se registró ninguna venta."
+
+#: .\production\templates\production\sales_analytics.html:266
+#: .\production\templates\production\sales_list.html:83
+msgid "No sales have been registered yet."
+msgstr "Todavía no se ha registrado ninguna venta."
+
+#: .\production\templates\production\sales_form.html:4
+#: .\production\templates\production\sales_form.html:10
+msgid "Register daily sales"
+msgstr "Registrar las ventas del día"
+
+#: .\production\templates\production\sales_form.html:13
+#, python-format
+msgid "Record baked products sold by %(name)s."
+msgstr "Registra los productos vendidos por %(name)s."
+
+#: .\production\templates\production\sales_form.html:24
+msgid "Register a baked product before recording sales."
+msgstr "Registra un producto antes de registrar ventas."
+
+#: .\production\templates\production\sales_form.html:67
+msgid "View sales"
+msgstr "Ver las ventas"
+
+#: .\production\templates\production\sales_list.html:15
+#, python-format
+msgid "Review the sales registered for %(name)s."
+msgstr "Revisa las ventas registradas en %(name)s."
+
+#: .\production\templates\production\sales_list.html:92
+msgid "Unsold products by day"
+msgstr "Productos sin vender por día"
+
+#: .\production\templates\production\sales_list.html:118
+msgid "No daily production or sales have been recorded yet."
+msgstr "Todavía no se ha registrado producción ni ventas del día."
+
+#: .\production\views.py:58
+msgid "Product registered successfully."
+msgstr "El producto se registró correctamente."
+
+#: .\production\views.py:96
+msgid "Daily production registered successfully."
+msgstr "La producción del día se registró correctamente."
+
+#: .\production\views.py:163
+msgid "Daily sale registered successfully."
+msgstr "La venta del día se registró correctamente."
+
+#: .\production\views.py:275
+msgid "Product updated successfully."
+msgstr "El producto se actualizó correctamente."
+
+#: .\templates\base.html:568
+msgid "Scheduled orders"
+msgstr "Pedidos programados"
+
+#: .\templates\base.html:569
+msgid "Notifications"
+msgstr "Notificaciones"
+
+#: .\templates\base.html:577
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
+#: .\templates\base.html:593
+msgid "Language"
+msgstr "Idioma"
+
+#: .\templates\home.html:3
+msgid "Inventory for small bakeries"
+msgstr "Inventario para panaderías pequeñas"
+
+#: .\templates\home.html:7
+msgid "Dashboard"
+msgstr "Panel"
+
+#: .\templates\home.html:8
+#, python-format
+msgid "Welcome back, %(name)s"
+msgstr "Hola de nuevo, %(name)s"
+
+#: .\templates\home.html:12
+msgid "Inventory management for small bakeries"
+msgstr "Gestión de inventario para panaderías pequeñas"
+
+#: .\templates\home.html:13
+msgid "Track ingredients, stock, and expiration dates in one place. Start by setting up your bakery's profile."
+msgstr "Lleva en un solo lugar tus ingredientes, existencias y fechas de vencimiento. Empieza configurando el perfil de tu panadería."
+
+#: .\templates\home.html:22
+msgid "View your business information."
+msgstr "Consulta la información de tu negocio."
+
+#: .\templates\home.html:22
+msgid "Set up your name, address, and contact details."
+msgstr "Registra tu nombre, dirección y datos de contacto."
+
+#: .\templates\home.html:29
+msgid "Add a new ingredient with quantity, unit, and expiration date."
+msgstr "Agrega un ingrediente nuevo con su cantidad, unidad y fecha de vencimiento."
+
+#: .\templates\home.html:36
+msgid "Record a purchase and update the ingredient's current stock."
+msgstr "Registra una compra y actualiza las existencias del ingrediente."
+
+#: .\templates\home.html:42
+msgid "View Inventory"
+msgstr "Ver el inventario"
+
+#: .\templates\home.html:43
+msgid "See all your registered ingredients and their current stock levels."
+msgstr "Consulta todos tus ingredientes registrados y sus existencias actuales."
+
+#~ msgid "Authenticate to access the Crumb system."
+#~ msgstr "Identifícate para entrar a Crumb."
+
+#~ msgid "Don't have an account?"
+#~ msgstr "¿No tienes cuenta?"
+
+#~ msgid "Invalid username or password."
+#~ msgstr "El usuario o la contraseña no son correctos."
+
+#~ msgid "Login"
+#~ msgstr "Entrar"
+
+#~ msgid "Register User"
+#~ msgstr "Registrar un usuario"
+
+#~ msgid "Register here"
+#~ msgstr "Regístrate aquí"
