@@ -61,6 +61,10 @@ class InventoryExportTests(TestCase):
         self.bakery = make_bakery()
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
         self.url = reverse('inventory:export')
+        # El inventario solo se ve con sesion abierta (FR31b), asi que la
+        # exportacion de ese inventario tambien.
+        self.user = get_user_model().objects.create_user(username='panadera')
+        self.client.force_login(self.user)
 
     def add_ingredient(self, name, *, quantity='5.25', expiration_date=None,
                        bakery=None, is_active=True, barcode=''):
@@ -304,7 +308,9 @@ class InventoryExportTests(TestCase):
     def test_export_query_count_does_not_grow_per_ingredient(self):
         for index in range(30):
             self.add_ingredient(f'Ingredient {index:03}')
-        with self.assertNumQueries(3):
+        # 5 y no 3: la sesion y el usuario son dos consultas fijas de la
+        # autenticacion; ninguna de las dos crece con los ingredientes
+        with self.assertNumQueries(5):
             self.excel_rows()
 
 

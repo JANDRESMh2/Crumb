@@ -112,6 +112,7 @@ def user_logout_view(request):
     return redirect('accounts:login')
 
 
+@login_not_required
 @never_cache
 def recovery_request_view(request):
     form = RecoveryRequestForm(request.POST or None)
@@ -135,6 +136,7 @@ def recovery_request_view(request):
     return render(request, 'accounts/recovery_request.html', {'form': form})
 
 
+@login_not_required
 @never_cache
 def recovery_verify_view(request):
     if 'recovery_challenge_id' not in request.session:
@@ -149,6 +151,7 @@ def recovery_verify_view(request):
     return render(request, 'accounts/recovery_verify.html', {'form': form})
 
 
+@login_not_required
 @require_POST
 def recovery_resend_view(request):
     challenge_id = request.session.get('recovery_challenge_id')
@@ -159,6 +162,7 @@ def recovery_resend_view(request):
     return redirect('accounts:recovery_verify')
 
 
+@login_not_required
 @never_cache
 def recovery_password_view(request):
     user = get_recovery_user(request.session.get('recovery_challenge_id'))
@@ -176,5 +180,6 @@ def recovery_password_view(request):
     return render(request, 'accounts/recovery_password.html', {'form': form})
 
 
+@login_not_required
 def recovery_complete_view(request):
     return render(request, 'accounts/recovery_complete.html')
