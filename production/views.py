@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import (
     get_object_or_404,
     redirect,
@@ -10,29 +11,37 @@ from django.shortcuts import (
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_GET
 
 from bakery.decorators import bakery_required
 from bakery.services import get_current_bakery
 
 from .forms import (
+    DailyClosingExportForm,
+    DailyClosingForm,
     DailyProductionRegistrationForm,
     DailySalesRegistrationForm,
     ProductEditForm,
     ProductForm,
     ScheduledOrderForm,
 )
-from .models import Product, ProductionRecord, SalesRecord, ScheduledOrder
+from .models import DailyClosingSummary, Product, ProductionRecord, SalesRecord, ScheduledOrder
 from .services import (
     HISTORY_RECORD_TYPES,
+    build_daily_closing_excel,
+    build_daily_closing_pdf,
     build_daily_unsold_products,
     build_history_tracking,
     build_loss_report,
     build_sales_analytics,
+    close_business_day,
     register_daily_production,
     register_daily_sale,
     register_product,
     register_scheduled_order,
 )
+
+DAILY_CLOSING_HISTORY_SIZE = 60
 
 
 @bakery_required('Set up the bakery profile before registering products.')
@@ -438,3 +447,116 @@ def loss_report(request):
             'has_filters': bool(start_date or end_date),
         },
     )
+
+
+# [FR27: Automatic daily closing summary]
+@bakery_required(_('Set up the bakery profile before closing the day.'))
+def daily_closing(request):
+    """FR27 - close a business day and review the days already closed."""
+
+    bakery = request.bakery
+
+    if request.method == 'POST':
+        form = DailyClosingForm(request.POST)
+
+        if form.is_valid():
+            business_date = form.cleaned_data['business_date']
+            already_closed = DailyClosingSummary.objects.filter(
+                bakery=bakery, business_date=business_date,
+            ).exists()
+
+            if already_closed and not form.cleaned_data['confirm_regenerate']:
+                form.add_error(
+                    'confirm_regenerate',
+                    _('This day is already closed. Confirm to replace its summary '
+                      'with the current data.'),
+                )
+            else:
+                try:
+                    closing, created = close_business_day(
+                        bakery=bakery,
+                        business_date=business_date,
+                        user=request.user,
+                    )
+                except ValidationError as error:
+                    form.add_error('business_date', error)
+                else:
+                    messages.success(
+                        request,
+                        _('Business day closed successfully.')
+                        if created
+                        else _('Closing summary regenerated with the current data.'),
+                    )
+                    return redirect('production:daily_closing_detail', closing_id=closing.pk)
+
+    else:
+        form = DailyClosingForm(initial={'business_date': timezone.localdate()})
+
+    closings = (
+        DailyClosingSummary.objects
+        .filter(bakery=bakery)
+        .select_related('closed_by')[:DAILY_CLOSING_HISTORY_SIZE]
+    )
+
+    return render(
+        request,
+        'production/daily_closing.html',
+        {
+            'bakery': bakery,
+            'form': form,
+            'closings': closings,
+        },
+    )
+
+
+@bakery_required(_('Set up the bakery profile before closing the day.'))
+def daily_closing_detail(request, closing_id):
+    """FR27 - show the stored summary of a closed business day."""
+
+    bakery = request.bakery
+
+    closing = get_object_or_404(
+        DailyClosingSummary.objects.select_related('closed_by'),
+        pk=closing_id,
+        bakery=bakery,
+    )
+
+    return render(
+        request,
+        'production/daily_closing_detail.html',
+        {
+            'bakery': bakery,
+            'closing': closing,
+            'summary': closing.content,
+        },
+    )
+
+
+@require_GET
+@bakery_required(_('Set up the bakery profile before closing the day.'))
+def daily_closing_export(request, closing_id):
+    """FR27 - download a closing summary as an Excel or PDF file."""
+
+    form = DailyClosingExportForm(request.GET)
+    if not form.is_valid():
+        return HttpResponseBadRequest(_('Invalid export parameters.'))
+
+    closing = get_object_or_404(
+        DailyClosingSummary.objects.select_related('bakery', 'closed_by'),
+        pk=closing_id,
+        bakery=request.bakery,
+    )
+
+    export_format = form.cleaned_data['format']
+    if export_format == 'xlsx':
+        content = build_daily_closing_excel(closing=closing)
+        content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    else:
+        content = build_daily_closing_pdf(closing=closing)
+        content_type = 'application/pdf'
+
+    response = HttpResponse(content, content_type=content_type)
+    response['Content-Disposition'] = (
+        f'attachment; filename="daily_closing_{closing.business_date:%Y-%m-%d}.{export_format}"'
+    )
+    return response

@@ -249,3 +249,41 @@ class DailySalesRegistrationForm(forms.ModelForm):
             else Product.objects.none()
         )
         self.fields['product'].empty_label = _('Select a product')
+
+
+# [FR27: Automatic daily closing summary]
+class DailyClosingForm(forms.Form):
+    """FR27 - choose the business day to close, today unless told otherwise."""
+
+    business_date = forms.DateField(
+        label=_('Business day'),
+        input_formats=['%Y-%m-%d'],
+        help_text=_('Days are counted in UTC, the time zone the server keeps.'),
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={'class': 'form-control', 'type': 'date'},
+        ),
+    )
+    confirm_regenerate = forms.BooleanField(
+        required=False,
+        label=_('Replace the summary if this day is already closed'),
+        help_text=_('Only needed when the day was closed before.'),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['business_date'].widget.attrs['max'] = timezone.localdate().isoformat()
+
+    def clean_business_date(self):
+        business_date = self.cleaned_data['business_date']
+        if business_date > timezone.localdate():
+            raise forms.ValidationError(
+                _('A day that has not started yet cannot be closed.')
+            )
+        return business_date
+
+
+class DailyClosingExportForm(forms.Form):
+    """FR27 - the format a closing summary is downloaded in."""
+
+    format = forms.ChoiceField(choices=[('xlsx', 'Excel'), ('pdf', 'PDF')])

@@ -1,26 +1,53 @@
+import json
 from datetime import timedelta
 from decimal import Decimal
+from io import BytesIO
+from time import perf_counter
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
+from pypdf import PdfReader
 
 from Crumb.testutils import AuthenticatedTestCase
-from bakery.models import Bakery
-from inventory.models import Ingredient, UnitOfMeasure
+from bakery.models import ActivityLog, Bakery
+from inventory.models import (
+    AlertConfiguration,
+    Ingredient,
+    NotificationPreference,
+    StockMovement,
+    UnitOfMeasure,
+)
+from inventory.services import (
+    register_inventory_correction,
+    register_stock_consumption,
+    register_stock_in,
+)
 
 from .forms import (
     DailyProductionRegistrationForm,
     DailySalesRegistrationForm,
     ProductEditForm,
 )
-from .models import Product, ProductionRecord, SalesRecord
+from .models import (
+    DailyClosingSummary,
+    Product,
+    ProductionRecord,
+    SalesRecord,
+    ScheduledOrder,
+)
 from .services import (
+    build_daily_closing_summary,
     build_daily_unsold_products,
     build_history_tracking,
     build_loss_report,
     build_sales_analytics,
+    close_business_day,
     register_daily_production,
     register_daily_sale,
     register_product,
@@ -1486,3 +1513,573 @@ class LossReportViewTests(AuthenticatedTestCase):
         response = self.client.get(reverse('production:loss_report'))
 
         self.assertRedirects(response, reverse('bakery:setup'))
+
+
+class DailyClosingTestMixin:
+    """Shared data for the FR27 daily closing tests."""
+
+    def make_closing_data(self):
+        self.bakery = Bakery.objects.create(
+            name='Test Bakery',
+            address='Test Address',
+        )
+        self.product = register_product(
+            bakery=self.bakery,
+            name='Croissant',
+            sku='CRO-001',
+            unit_price=Decimal('5000.00'),
+        )
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.now = timezone.now()
+        self.today = timezone.localdate(self.now)
+
+    def ingredient(self, name, *, quantity='10.00', expires_in=30, bakery=None):
+        return Ingredient.objects.create(
+            bakery=bakery or self.bakery,
+            unit=self.unit,
+            name=name,
+            current_quantity=Decimal(quantity),
+            expiration_date=self.today + timedelta(days=expires_in),
+        )
+
+    def produce_and_sell(self, produced, sold, *, when=None, product=None, bakery=None):
+        when = when or self.now
+        product = product or self.product
+        bakery = bakery or self.bakery
+        register_daily_production(
+            bakery=bakery,
+            product=product,
+            produced_quantity=Decimal(produced),
+            production_date=when,
+        )
+        if Decimal(sold) > 0:
+            register_daily_sale(
+                bakery=bakery,
+                product=product,
+                quantity_sold=Decimal(sold),
+                sale_timestamp=when,
+            )
+
+
+class DailyClosingSummaryTests(DailyClosingTestMixin, TestCase):
+    """FR27 - What the closing summary of a day contains."""
+
+    def setUp(self):
+        self.make_closing_data()
+
+    def summary(self, business_date=None):
+        # A fresh instance, as each request gets: Django caches a missing
+        # notification preference on the object after the first look.
+        return build_daily_closing_summary(
+            bakery=Bakery.objects.get(pk=self.bakery.pk),
+            business_date=business_date or self.today,
+        )
+
+    def test_summarises_the_production_and_sales_of_each_product(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        summary = self.summary()
+
+        self.assertEqual(summary['business_date'], self.today.isoformat())
+        self.assertEqual(summary['products'], [{
+            'product_name': 'Croissant',
+            'produced_quantity': '20.00',
+            'sold_quantity': '7.00',
+            'unsold_quantity': '13.00',
+            'sale_count': 1,
+            'revenue': '35000.00',
+        }])
+        self.assertEqual(summary['totals']['units_produced'], '20.00')
+        self.assertEqual(summary['totals']['units_sold'], '7.00')
+        self.assertEqual(summary['totals']['revenue'], '35000.00')
+        self.assertEqual(summary['totals']['sale_count'], 1)
+
+    def test_leaves_out_other_days_and_other_bakeries(self):
+        other = Bakery.objects.create(name='Other bakery', address='Other address')
+        other_product = register_product(
+            bakery=other, name='Baguette', unit_price=Decimal('3000.00'),
+        )
+        self.produce_and_sell('20.00', '7.00', when=self.now - timedelta(days=1))
+        self.produce_and_sell('5.00', '5.00', product=other_product, bakery=other)
+
+        summary = self.summary()
+
+        self.assertEqual(summary['products'], [])
+        self.assertEqual(summary['totals']['revenue'], '0.00')
+
+    def test_summarises_the_stock_movements_of_each_ingredient(self):
+        flour = self.ingredient('Flour')
+        register_stock_in(bakery=self.bakery, ingredient=flour, quantity=Decimal('5.00'))
+        register_stock_consumption(bakery=self.bakery, ingredient=flour, quantity=Decimal('3.00'))
+        register_inventory_correction(
+            bakery=self.bakery, ingredient=flour, new_quantity=Decimal('11.50'),
+            reason='Physical count', user=None,
+        )
+
+        stock = self.summary()['stock']
+
+        self.assertEqual(stock['ingredients'], [{
+            'ingredient_name': 'Flour',
+            'unit': 'kg',
+            'stock_in': '5.00',
+            'consumption': '3.00',
+            'correction_count': 1,
+            'movement_count': 3,
+        }])
+        self.assertEqual(len(stock['corrections']), 1)
+        correction = stock['corrections'][0]
+        self.assertEqual(correction['previous_quantity'], '12.00')
+        self.assertEqual(correction['new_quantity'], '11.50')
+        self.assertEqual(correction['reason'], 'Physical count')
+
+    def test_leaves_out_the_stock_movements_of_another_day(self):
+        flour = self.ingredient('Flour')
+        movement = register_stock_in(
+            bakery=self.bakery, ingredient=flour, quantity=Decimal('5.00'),
+        )
+        StockMovement.objects.filter(pk=movement.pk).update(
+            movement_date=self.now - timedelta(days=2),
+        )
+
+        self.assertEqual(self.summary()['stock']['ingredients'], [])
+
+    def test_lists_the_inventory_alerts_at_closing(self):
+        low = self.ingredient('Butter', quantity='1.00')
+        AlertConfiguration.objects.create(ingredient=low, minimum_stock_threshold=Decimal('2.00'))
+        soon = self.ingredient('Milk', expires_in=2)
+        AlertConfiguration.objects.create(ingredient=soon, expiration_warning_days=5)
+        self.ingredient('Old yeast', expires_in=-3)
+        self.ingredient('Sugar')
+
+        alerts = self.summary()['alerts']
+
+        self.assertEqual([row['ingredient_name'] for row in alerts['low_stock']], ['Butter'])
+        self.assertEqual(alerts['low_stock'][0]['threshold'], '2.00')
+        self.assertEqual([row['ingredient_name'] for row in alerts['expiring_soon']], ['Milk'])
+        self.assertEqual([row['ingredient_name'] for row in alerts['expired']], ['Old yeast'])
+        self.assertEqual(alerts['evaluated_on'], self.today.isoformat())
+
+    def test_alerts_turned_off_in_the_preferences_are_left_out(self):
+        low = self.ingredient('Butter', quantity='1.00')
+        AlertConfiguration.objects.create(ingredient=low, minimum_stock_threshold=Decimal('2.00'))
+        self.ingredient('Old yeast', expires_in=-3)
+        NotificationPreference.objects.create(
+            bakery=self.bakery, low_stock_enabled=False, expiration_enabled=False,
+        )
+        self.bakery.refresh_from_db()
+
+        alerts = self.summary()['alerts']
+
+        self.assertFalse(alerts['low_stock_enabled'])
+        self.assertFalse(alerts['expiration_enabled'])
+        self.assertEqual(alerts['low_stock'], [])
+        self.assertEqual(alerts['expired'], [])
+
+    def test_values_the_overproduction_of_the_day(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        losses = self.summary()['losses']
+
+        self.assertEqual(losses['overproduction'], [{
+            'product_name': 'Croissant',
+            'unsold_quantity': '13.00',
+            'unit_price': '5000.00',
+            'lost_value': '65000.00',
+        }])
+
+    def test_a_day_sold_out_has_no_overproduction(self):
+        self.produce_and_sell('10.00', '10.00')
+
+        summary = self.summary()
+
+        self.assertEqual(summary['losses']['overproduction'], [])
+        self.assertEqual(summary['totals']['lost_value'], '0.00')
+
+    def test_reports_the_ingredients_whose_life_ends_with_the_day(self):
+        self.ingredient('Cream', quantity='2.00', expires_in=0)
+        self.ingredient('Old yeast', expires_in=-3)
+        self.ingredient('Empty cream', quantity='0.00', expires_in=0)
+
+        expired = self.summary()['losses']['expired_ingredients']
+
+        self.assertEqual(expired, [{
+            'ingredient_name': 'Cream',
+            'quantity': '2.00',
+            'unit': 'kg',
+            'expiration_date': self.today.isoformat(),
+        }])
+
+    def test_lists_the_orders_scheduled_for_the_next_day(self):
+        tomorrow = self.now + timedelta(days=1)
+        ScheduledOrder.objects.create(
+            bakery=self.bakery, product=self.product, customer_name='Ana',
+            quantity=12, scheduled_for=tomorrow, notes='Birthday',
+        )
+        ScheduledOrder.objects.create(
+            bakery=self.bakery, product=self.product, customer_name='Luis',
+            quantity=3, scheduled_for=self.now + timedelta(days=3),
+        )
+
+        orders = self.summary()['next_day_orders']
+
+        self.assertEqual(len(orders), 1)
+        self.assertEqual(orders[0]['customer_name'], 'Ana')
+        self.assertEqual(orders[0]['product_name'], 'Croissant')
+        self.assertEqual(orders[0]['quantity'], 12)
+        self.assertEqual(orders[0]['notes'], 'Birthday')
+
+    def test_a_quiet_day_reports_zeros(self):
+        summary = self.summary()
+
+        self.assertEqual(summary['products'], [])
+        self.assertEqual(summary['stock'], {'ingredients': [], 'corrections': []})
+        self.assertEqual(summary['next_day_orders'], [])
+        self.assertEqual(summary['totals']['units_produced'], '0.00')
+        self.assertEqual(summary['totals']['revenue'], '0.00')
+        self.assertEqual(summary['totals']['alert_count'], 0)
+
+    def test_the_summary_is_plain_json(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        summary = self.summary()
+
+        self.assertEqual(json.loads(json.dumps(summary)), summary)
+
+    def test_the_query_count_does_not_grow_with_the_records(self):
+        self.produce_and_sell('20.00', '7.00')
+        self.ingredient('Flour')
+        with CaptureQueriesContext(connection) as few:
+            self.summary()
+
+        for number in range(10):
+            product = register_product(
+                bakery=self.bakery, name=f'Bread {number}', unit_price=Decimal('100.00'),
+            )
+            self.produce_and_sell('5.00', '2.00', product=product)
+            flour = self.ingredient(f'Flour {number}')
+            register_stock_in(bakery=self.bakery, ingredient=flour, quantity=Decimal('1.00'))
+        with CaptureQueriesContext(connection) as many:
+            self.summary()
+
+        self.assertEqual(len(few), len(many))
+
+
+class CloseBusinessDayTests(DailyClosingTestMixin, TestCase):
+    """FR27 - Closing a business day stores its summary."""
+
+    def setUp(self):
+        self.make_closing_data()
+        self.user = get_user_model().objects.create_user(username='baker')
+
+    def test_closing_stores_the_summary_and_its_totals(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        closing, created = close_business_day(
+            bakery=self.bakery, business_date=self.today, user=self.user,
+        )
+
+        self.assertTrue(created)
+        self.assertEqual(closing.business_date, self.today)
+        self.assertEqual(closing.closed_by, self.user)
+        self.assertEqual(closing.units_produced, Decimal('20.00'))
+        self.assertEqual(closing.units_sold, Decimal('7.00'))
+        self.assertEqual(closing.revenue, Decimal('35000.00'))
+        self.assertEqual(closing.lost_value, Decimal('65000.00'))
+        self.assertEqual(closing.content['products'][0]['product_name'], 'Croissant')
+
+    def test_closing_a_day_again_replaces_its_summary(self):
+        close_business_day(bakery=self.bakery, business_date=self.today, user=self.user)
+        self.produce_and_sell('20.00', '7.00')
+
+        closing, created = close_business_day(
+            bakery=self.bakery, business_date=self.today, user=self.user,
+        )
+
+        self.assertFalse(created)
+        self.assertEqual(DailyClosingSummary.objects.filter(bakery=self.bakery).count(), 1)
+        self.assertEqual(closing.revenue, Decimal('35000.00'))
+
+    def test_the_stored_summary_does_not_change_with_later_records(self):
+        closing, _created = close_business_day(bakery=self.bakery, business_date=self.today)
+        self.produce_and_sell('20.00', '7.00')
+
+        closing.refresh_from_db()
+
+        self.assertEqual(closing.content['products'], [])
+        self.assertEqual(closing.revenue, Decimal('0.00'))
+
+    def test_a_past_day_can_be_closed(self):
+        yesterday = self.today - timedelta(days=1)
+        self.produce_and_sell('8.00', '8.00', when=self.now - timedelta(days=1))
+
+        closing, created = close_business_day(bakery=self.bakery, business_date=yesterday)
+
+        self.assertTrue(created)
+        self.assertEqual(closing.units_sold, Decimal('8.00'))
+
+    def test_a_day_that_has_not_started_cannot_be_closed(self):
+        with self.assertRaises(ValidationError):
+            close_business_day(
+                bakery=self.bakery, business_date=self.today + timedelta(days=1),
+            )
+        self.assertFalse(DailyClosingSummary.objects.exists())
+
+    def test_closing_is_recorded_in_the_activity_log(self):
+        close_business_day(bakery=self.bakery, business_date=self.today, user=self.user)
+        close_business_day(bakery=self.bakery, business_date=self.today, user=self.user)
+
+        entries = list(
+            ActivityLog.objects
+            .filter(action_type=ActivityLog.ActionType.DAILY_CLOSING)
+            .order_by('created_at')
+        )
+
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[0].user, self.user)
+        self.assertIn('Closed the business day', entries[0].description)
+        self.assertIn('Regenerated', entries[1].description)
+
+    def test_each_bakery_closes_its_own_days(self):
+        other = Bakery.objects.create(name='Other bakery', address='Other address')
+        close_business_day(bakery=self.bakery, business_date=self.today)
+
+        closing, created = close_business_day(bakery=other, business_date=self.today)
+
+        self.assertTrue(created)
+        self.assertEqual(DailyClosingSummary.objects.count(), 2)
+
+
+class DailyClosingViewTests(DailyClosingTestMixin, AuthenticatedTestCase):
+    """FR27 - Closing a day from the web interface."""
+
+    def setUp(self):
+        super().setUp()
+        self.make_closing_data()
+        self.url = reverse('production:daily_closing')
+
+    def close(self, business_date=None, **extra):
+        return self.client.post(self.url, {
+            'business_date': (business_date or self.today).isoformat(),
+            **extra,
+        })
+
+    def test_the_page_proposes_to_close_today(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Close the day')
+        self.assertContains(response, f'value="{self.today.isoformat()}"')
+        self.assertContains(response, 'No business day has been closed yet.')
+
+    def test_the_menu_links_to_the_daily_closing(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertContains(response, self.url)
+
+    def test_closing_from_the_web_shows_the_summary(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        response = self.close()
+
+        closing = DailyClosingSummary.objects.get(bakery=self.bakery)
+        self.assertRedirects(
+            response,
+            reverse('production:daily_closing_detail', kwargs={'closing_id': closing.pk}),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(closing.closed_by, self.auth_user)
+
+        detail = self.client.get(response.url)
+        self.assertContains(detail, 'Croissant')
+        self.assertContains(detail, '35000.00')
+        self.assertContains(detail, 'Business day closed successfully.')
+
+    def test_a_closed_day_needs_confirmation_to_be_regenerated(self):
+        self.close()
+        self.produce_and_sell('20.00', '7.00')
+
+        response = self.close()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'This day is already closed.')
+        closing = DailyClosingSummary.objects.get(bakery=self.bakery)
+        self.assertEqual(closing.revenue, Decimal('0.00'))
+
+        response = self.close(confirm_regenerate='on')
+
+        closing.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse('production:daily_closing_detail', kwargs={'closing_id': closing.pk}),
+        )
+        self.assertEqual(closing.revenue, Decimal('35000.00'))
+
+    def test_a_future_day_is_rejected(self):
+        response = self.close(self.today + timedelta(days=1))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A day that has not started yet cannot be closed.')
+        self.assertFalse(DailyClosingSummary.objects.exists())
+
+    def test_the_closed_days_are_listed(self):
+        self.close(self.today - timedelta(days=1))
+        self.close()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, self.today.isoformat())
+        self.assertContains(response, (self.today - timedelta(days=1)).isoformat())
+        self.assertContains(response, 'View summary', count=2)
+
+    def test_the_summary_of_another_bakery_is_not_found(self):
+        other = Bakery.objects.create(name='Other bakery', address='Other address')
+        closing, _created = close_business_day(bakery=other, business_date=self.today)
+
+        detail = self.client.get(
+            reverse('production:daily_closing_detail', kwargs={'closing_id': closing.pk})
+        )
+        export = self.client.get(
+            reverse('production:daily_closing_export', kwargs={'closing_id': closing.pk}),
+            {'format': 'pdf'},
+        )
+
+        self.assertEqual(detail.status_code, 404)
+        self.assertEqual(export.status_code, 404)
+
+    def test_redirects_when_the_bakery_is_not_set_up(self):
+        Product.objects.all().delete()
+        Bakery.objects.all().delete()
+
+        response = self.client.get(self.url)
+
+        self.assertRedirects(response, reverse('bakery:setup'))
+
+    def test_closing_takes_less_than_five_seconds_on_a_busy_day(self):
+        products = Product.objects.bulk_create([
+            Product(bakery=self.bakery, name=f'Bread {number}', unit_price=Decimal('1500.00'))
+            for number in range(200)
+        ])
+        ProductionRecord.objects.bulk_create([
+            ProductionRecord(
+                bakery=self.bakery, product=product,
+                produced_quantity=Decimal('30.00'), production_date=self.now,
+            )
+            for product in products
+        ])
+        SalesRecord.objects.bulk_create([
+            SalesRecord(
+                bakery=self.bakery, product=product, quantity_sold=Decimal('25.00'),
+                unit_price_at_sale=Decimal('1500.00'), total_amount=Decimal('37500.00'),
+                sale_timestamp=self.now,
+            )
+            for product in products
+        ])
+        ingredients = Ingredient.objects.bulk_create([
+            Ingredient(
+                bakery=self.bakery, unit=self.unit, name=f'Ingredient {number}',
+                current_quantity=Decimal('10.00'),
+                expiration_date=self.today + timedelta(days=number % 10),
+            )
+            for number in range(200)
+        ])
+        StockMovement.objects.bulk_create([
+            StockMovement(
+                bakery=self.bakery, ingredient=ingredient,
+                movement_type='StockIn', quantity=Decimal('2.00'),
+            )
+            for ingredient in ingredients
+        ])
+
+        started = perf_counter()
+        response = self.close()
+        elapsed = perf_counter() - started
+
+        self.assertEqual(response.status_code, 302)
+        self.assertLess(elapsed, 5)
+        closing = DailyClosingSummary.objects.get(bakery=self.bakery)
+        self.assertEqual(len(closing.content['products']), 200)
+
+    def test_the_page_is_translated_to_spanish(self):
+        self.client.post(reverse('set_language'), {'language': 'es', 'next': self.url})
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Cierre del día')
+        self.assertContains(response, 'Cerrar el día')
+
+
+class DailyClosingExportTests(DailyClosingTestMixin, AuthenticatedTestCase):
+    """FR27 - Downloading a closing summary as Excel or PDF."""
+
+    def setUp(self):
+        super().setUp()
+        self.make_closing_data()
+        self.produce_and_sell('20.00', '7.00')
+        self.closing, _created = close_business_day(
+            bakery=self.bakery, business_date=self.today, user=self.auth_user,
+        )
+        self.url = reverse(
+            'production:daily_closing_export', kwargs={'closing_id': self.closing.pk},
+        )
+
+    def test_the_summary_page_offers_both_downloads(self):
+        response = self.client.get(
+            reverse('production:daily_closing_detail', kwargs={'closing_id': self.closing.pk})
+        )
+
+        self.assertContains(response, f'{self.url}?format=xlsx')
+        self.assertContains(response, f'{self.url}?format=pdf')
+
+    def test_the_excel_file_is_readable_and_holds_the_summary(self):
+        response = self.client.get(self.url, {'format': 'xlsx'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f'daily_closing_{self.today.isoformat()}.xlsx',
+            response['Content-Disposition'],
+        )
+        workbook = load_workbook(BytesIO(response.content), read_only=True)
+        rows = list(workbook.active.values)
+        workbook.close()
+        cells = [cell for row in rows for cell in row if cell is not None]
+        self.assertIn('Daily closing summary', cells)
+        self.assertIn('Production and sales', cells)
+        self.assertIn('Croissant', cells)
+        self.assertIn(35000.0, cells)
+        self.assertIn('Orders for the next day', cells)
+
+    def test_the_pdf_file_is_readable_and_holds_the_summary(self):
+        response = self.client.get(self.url, {'format': 'pdf'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        text = '\n'.join(
+            page.extract_text() for page in PdfReader(BytesIO(response.content)).pages
+        )
+        self.assertIn('Daily closing summary', text)
+        self.assertIn('Croissant', text)
+        self.assertIn('35000.00', text)
+
+    def test_an_unknown_format_is_rejected(self):
+        response = self.client.get(self.url, {'format': 'docx'})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_is_not_allowed(self):
+        response = self.client.post(self.url, {'format': 'pdf'})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_excel_escapes_formula_prefixes_in_product_names(self):
+        product = register_product(
+            bakery=self.bakery, name='=HYPERLINK("http://x")', unit_price=Decimal('10.00'),
+        )
+        self.produce_and_sell('1.00', '1.00', product=product)
+        close_business_day(bakery=self.bakery, business_date=self.today)
+
+        response = self.client.get(self.url, {'format': 'xlsx'})
+
+        workbook = load_workbook(BytesIO(response.content), read_only=True)
+        cells = [cell for row in workbook.active.values for cell in row if cell is not None]
+        workbook.close()
+        self.assertIn('\'=HYPERLINK("http://x")', cells)

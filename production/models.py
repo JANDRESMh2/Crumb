@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -298,3 +299,44 @@ class ScheduledOrder(models.Model):
 
     def __str__(self):
         return f'{self.product.name} for {self.customer_name} on {self.scheduled_for:%Y-%m-%d %H:%M}'
+
+
+class DailyClosingSummary(models.Model):
+    """Snapshot of how one business day went, taken when it is closed (FR27).
+
+    The bakery closes a day with a button, and the summary is stored as it
+    was at that moment, so it reads the same later even if the records it
+    was built from change. Closing the same day again replaces the snapshot.
+    The totals are kept in columns too, for the closing history.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    bakery = models.ForeignKey(
+        Bakery, on_delete=models.PROTECT, related_name='daily_closings'
+    )
+    business_date = models.DateField()
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='daily_closings',
+    )
+    closed_at = models.DateTimeField(default=timezone.now)
+    content = models.JSONField(encoder=DjangoJSONEncoder)
+    units_produced = models.DecimalField(max_digits=14, decimal_places=2)
+    units_sold = models.DecimalField(max_digits=14, decimal_places=2)
+    revenue = models.DecimalField(max_digits=14, decimal_places=2)
+    lost_value = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        ordering = ['-business_date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['bakery', 'business_date'],
+                name='unique_daily_closing_per_bakery',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Daily closing of {self.bakery.name} on {self.business_date:%Y-%m-%d}'

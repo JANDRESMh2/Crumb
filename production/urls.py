@@ -56,4 +56,19 @@ urlpatterns = [
         views.loss_report,
         name='loss_report',
     ),
+    path(
+        'daily-closing/',
+        views.daily_closing,
+        name='daily_closing',
+    ),
+    path(
+        'daily-closing/<uuid:closing_id>/',
+        views.daily_closing_detail,
+        name='daily_closing_detail',
+    ),
+    path(
+        'daily-closing/<uuid:closing_id>/export/',
+        views.daily_closing_export,
+        name='daily_closing_export',
+    ),
 ]
