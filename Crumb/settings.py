@@ -62,7 +62,7 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get(
         'CRUMB_ALLOWED_HOSTS',
-        '54.227.200.130,127.0.0.1,localhost',
+        '54.227.200.130,127.0.0.1,localhost','54.226.80.202',
     ).split(',')
     if host.strip()
 ]
