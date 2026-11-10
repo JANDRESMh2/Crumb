@@ -369,7 +369,7 @@ msgid "Inventory management for small bakeries"
 msgstr "Gestión de inventario para panaderías pequeñas"
 
 msgid "Inventory report"
-msgstr "Reporte de inventario"
+msgstr "Informe de inventario"
 
 msgid "Kilogram"
 msgstr "Kilogramo"
