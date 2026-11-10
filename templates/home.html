@@ -13,6 +13,180 @@
   <p class="lede">{% translate "Track ingredients, stock, and expiration dates in one place. Start by setting up your bakery's profile." %}</p>
 {% endif %}
 
+{% if dashboard %}
+  {% with inventory=dashboard.inventory sales=dashboard.sales production=dashboard.production %}
+
+  <h2>{% translate "Inventory" %}</h2>
+  <div class="stat-grid">
+    <a class="stat-tile" href="{% url 'inventory:list' %}">
+      <p class="stat-label">{% translate "Active ingredients" %}</p>
+      <p class="stat-value">{{ inventory.ingredient_count }}</p>
+      <p class="stat-detail">{% translate "View the inventory" %}</p>
+    </a>
+    <a class="stat-tile{% if inventory.low_stock_count %} warning{% endif %}" href="{% url 'inventory:list' %}">
+      <p class="stat-label">{% translate "Low stock" %}</p>
+      {% if inventory.low_stock_enabled %}
+        <p class="stat-value">{{ inventory.low_stock_count }}</p>
+        <p class="stat-detail">{% translate "below their threshold" %}</p>
+      {% else %}
+        <p class="stat-value">—</p>
+        <p class="stat-detail">{% translate "Alerts turned off" %}</p>
+      {% endif %}
+    </a>
+    <a class="stat-tile{% if inventory.expiring_soon_count %} warning{% endif %}" href="{% url 'inventory:list' %}">
+      <p class="stat-label">{% translate "Expiring soon" %}</p>
+      {% if inventory.expiration_enabled %}
+        <p class="stat-value">{{ inventory.expiring_soon_count }}</p>
+        <p class="stat-detail">{% translate "inside their warning period" %}</p>
+      {% else %}
+        <p class="stat-value">—</p>
+        <p class="stat-detail">{% translate "Alerts turned off" %}</p>
+      {% endif %}
+    </a>
+    <a class="stat-tile{% if inventory.expired_count %} error{% endif %}" href="{% url 'inventory:list' %}">
+      <p class="stat-label">{% translate "Expired" %}</p>
+      {% if inventory.expiration_enabled %}
+        <p class="stat-value">{{ inventory.expired_count }}</p>
+        <p class="stat-detail">{% translate "still in the inventory" %}</p>
+      {% else %}
+        <p class="stat-value">—</p>
+        <p class="stat-detail">{% translate "Alerts turned off" %}</p>
+      {% endif %}
+    </a>
+  </div>
+
+  <h2 style="margin-top: 2rem;">{% translate "Sales" %}</h2>
+  <div class="stat-grid">
+    <div class="stat-tile success">
+      <p class="stat-label">{% translate "Revenue today" %}</p>
+      <p class="stat-value">{{ sales.today.revenue }}</p>
+      <p class="stat-detail">
+        {% blocktranslate trimmed count counter=sales.today.sale_count %}{{ counter }} sale{% plural %}{{ counter }} sales{% endblocktranslate %}
+      </p>
+    </div>
+    <div class="stat-tile">
+      <p class="stat-label">{% translate "Units sold today" %}</p>
+      <p class="stat-value">{{ sales.today.units }}</p>
+    </div>
+    <div class="stat-tile">
+      <p class="stat-label">
+        {% blocktranslate trimmed with days=dashboard.period_days %}Revenue, last {{ days }} days{% endblocktranslate %}
+      </p>
+      <p class="stat-value">{{ sales.period.revenue }}</p>
+      <p class="stat-detail">
+        {% include "partials/change.html" with change=sales.revenue_change %}
+      </p>
+    </div>
+    <div class="stat-tile">
+      <p class="stat-label">
+        {% blocktranslate trimmed with days=dashboard.period_days %}Units sold, last {{ days }} days{% endblocktranslate %}
+      </p>
+      <p class="stat-value">{{ sales.period.units }}</p>
+      <p class="stat-detail">
+        {% include "partials/change.html" with change=sales.units_change %}
+      </p>
+    </div>
+  </div>
+
+  <h2 style="margin-top: 2rem;">
+    {% blocktranslate trimmed with days=dashboard.period_days %}Best sellers, last {{ days }} days{% endblocktranslate %}
+  </h2>
+  <div class="card">
+    {% if dashboard.top_products %}
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{% translate "Product" %}</th>
+            <th style="text-align: right;">{% translate "Units sold" %}</th>
+            <th style="text-align: right;">{% translate "Revenue" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in dashboard.top_products %}
+            <tr>
+              <td>{{ row.position }}</td>
+              <td>{{ row.product_name }}</td>
+              <td style="text-align: right;">{{ row.units_sold }}</td>
+              <td style="text-align: right;">{{ row.revenue }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="help"><a href="{% url 'production:sales_analytics' %}">{% translate "See the full sales analytics" %}</a></p>
+    {% else %}
+      <div class="empty-state">
+        <p>{% translate "No sales in this period yet." %}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <h2 style="margin-top: 2rem;">{% translate "Production, losses and orders" %}</h2>
+  <div class="stat-grid">
+    <div class="stat-tile muted">
+      <p class="stat-label">{% translate "Produced / sold today" %}</p>
+      <p class="stat-value">{{ production.produced_quantity }} / {{ production.sold_quantity }}</p>
+      <p class="stat-detail">
+        {% blocktranslate trimmed with unsold=production.unsold_quantity %}{{ unsold }} left unsold{% endblocktranslate %}
+      </p>
+    </div>
+    <a class="stat-tile{% if dashboard.losses.lost_value %} error{% endif %}" href="{% url 'production:loss_report' %}">
+      <p class="stat-label">
+        {% blocktranslate trimmed with days=dashboard.period_days %}Value not earned, last {{ days }} days{% endblocktranslate %}
+      </p>
+      <p class="stat-value">{{ dashboard.losses.lost_value }}</p>
+      <p class="stat-detail">
+        {% blocktranslate trimmed with unsold=dashboard.losses.unsold_quantity %}{{ unsold }} products left unsold{% endblocktranslate %}
+      </p>
+    </a>
+    <a class="stat-tile" href="{% url 'production:scheduled_orders' %}">
+      <p class="stat-label">{% translate "Upcoming orders" %}</p>
+      <p class="stat-value">{{ dashboard.upcoming_order_count }}</p>
+      <p class="stat-detail">{% translate "scheduled from now on" %}</p>
+    </a>
+    <a class="stat-tile{% if not dashboard.today_closed %} warning{% endif %}" href="{% url 'production:daily_closing' %}">
+      <p class="stat-label">{% translate "Daily closing" %}</p>
+      {% if dashboard.last_closing %}
+        <p class="stat-value">{{ dashboard.last_closing.business_date|date:"Y-m-d" }}</p>
+      {% else %}
+        <p class="stat-value">—</p>
+      {% endif %}
+      <p class="stat-detail">
+        {% if dashboard.today_closed %}{% translate "Today is already closed" %}{% else %}{% translate "Today is not closed yet" %}{% endif %}
+      </p>
+    </a>
+  </div>
+
+  {% if dashboard.upcoming_orders %}
+    <div class="card" style="margin-top: 1rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>{% translate "When" %}</th>
+            <th>{% translate "Customer" %}</th>
+            <th>{% translate "Product" %}</th>
+            <th style="text-align: right;">{% translate "Quantity" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in dashboard.upcoming_orders %}
+            <tr>
+              <td>{{ order.scheduled_for|date:"Y-m-d H:i" }}</td>
+              <td>{{ order.customer_name }}</td>
+              <td>{{ order.product.name }}</td>
+              <td style="text-align: right;">{{ order.quantity }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  {% endwith %}
+
+  <h2 style="margin-top: 2rem;">{% translate "Quick actions" %}</h2>
+{% endif %}
+
 <div class="card-grid">
   <a class="action-card" href="{% url 'bakery:detail' %}">
     <span class="icon">

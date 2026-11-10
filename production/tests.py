@@ -43,6 +43,7 @@ from .models import (
 )
 from .services import (
     build_daily_closing_summary,
+    build_dashboard,
     build_daily_unsold_products,
     build_history_tracking,
     build_loss_report,
@@ -2083,3 +2084,209 @@ class DailyClosingExportTests(DailyClosingTestMixin, AuthenticatedTestCase):
         cells = [cell for row in workbook.active.values for cell in row if cell is not None]
         workbook.close()
         self.assertIn('\'=HYPERLINK("http://x")', cells)
+
+
+class DashboardTests(DailyClosingTestMixin, TestCase):
+    """FR33 - The indicators the dashboard summarises."""
+
+    def setUp(self):
+        self.make_closing_data()
+
+    def dashboard(self, bakery=None):
+        # A fresh instance, as each request gets one from get_current_bakery().
+        return build_dashboard(bakery=Bakery.objects.get(pk=(bakery or self.bakery).pk))
+
+    def sell(self, quantity, *, days_ago=0, product=None):
+        register_daily_sale(
+            bakery=self.bakery,
+            product=product or self.product,
+            quantity_sold=Decimal(quantity),
+            sale_timestamp=self.now - timedelta(days=days_ago),
+        )
+
+    def test_counts_the_inventory_and_its_alerts(self):
+        low = self.ingredient('Butter', quantity='1.00')
+        AlertConfiguration.objects.create(ingredient=low, minimum_stock_threshold=Decimal('2.00'))
+        soon = self.ingredient('Milk', expires_in=2)
+        AlertConfiguration.objects.create(ingredient=soon, expiration_warning_days=5)
+        self.ingredient('Old yeast', expires_in=-3)
+        self.ingredient('Sugar')
+        removed = self.ingredient('Removed flour', expires_in=-3)
+        removed.is_active = False
+        removed.save()
+
+        inventory = self.dashboard()['inventory']
+
+        self.assertEqual(inventory['ingredient_count'], 4)
+        self.assertEqual(inventory['low_stock_count'], 1)
+        self.assertEqual(inventory['expiring_soon_count'], 1)
+        self.assertEqual(inventory['expired_count'], 1)
+
+    def test_alerts_turned_off_are_not_counted(self):
+        low = self.ingredient('Butter', quantity='1.00')
+        AlertConfiguration.objects.create(ingredient=low, minimum_stock_threshold=Decimal('2.00'))
+        self.ingredient('Old yeast', expires_in=-3)
+        NotificationPreference.objects.create(
+            bakery=self.bakery, low_stock_enabled=False, expiration_enabled=False,
+        )
+
+        inventory = self.dashboard()['inventory']
+
+        self.assertFalse(inventory['low_stock_enabled'])
+        self.assertFalse(inventory['expiration_enabled'])
+        self.assertEqual(inventory['low_stock_count'], 0)
+        self.assertEqual(inventory['expired_count'], 0)
+
+    def test_summarises_the_sales_of_today(self):
+        self.produce_and_sell('20.00', '7.00')
+
+        today = self.dashboard()['sales']['today']
+
+        self.assertEqual(today, {
+            'revenue': Decimal('35000.00'),
+            'units': Decimal('7.00'),
+            'sale_count': 1,
+        })
+
+    def test_compares_the_last_seven_days_with_the_seven_before(self):
+        self.sell('7.00')
+        self.sell('3.00', days_ago=6)
+        self.sell('5.00', days_ago=7)
+        self.sell('9.00', days_ago=20)
+
+        sales = self.dashboard()['sales']
+
+        self.assertEqual(sales['period']['units'], Decimal('10.00'))
+        self.assertEqual(sales['period']['revenue'], Decimal('50000.00'))
+        self.assertEqual(sales['previous_period']['units'], Decimal('5.00'))
+        self.assertEqual(sales['units_change'], Decimal('100.0'))
+        self.assertEqual(sales['revenue_change'], Decimal('100.0'))
+
+    def test_a_drop_in_sales_is_a_negative_change(self):
+        self.sell('5.00', days_ago=1)
+        self.sell('10.00', days_ago=10)
+
+        sales = self.dashboard()['sales']
+
+        self.assertEqual(sales['units_change'], Decimal('-50.0'))
+
+    def test_without_sales_before_there_is_nothing_to_compare(self):
+        self.sell('5.00')
+
+        sales = self.dashboard()['sales']
+
+        self.assertIsNone(sales['units_change'])
+        self.assertIsNone(sales['revenue_change'])
+
+    def test_lists_the_five_best_sellers_of_the_period(self):
+        for number in range(6):
+            product = register_product(
+                bakery=self.bakery, name=f'Bread {number}', unit_price=Decimal('100.00'),
+            )
+            self.sell(str(number + 1), product=product)
+        old_favourite = register_product(
+            bakery=self.bakery, name='Old favourite', unit_price=Decimal('100.00'),
+        )
+        self.sell('50.00', days_ago=10, product=old_favourite)
+
+        top = self.dashboard()['top_products']
+
+        self.assertEqual(
+            [row['product_name'] for row in top],
+            ['Bread 5', 'Bread 4', 'Bread 3', 'Bread 2', 'Bread 1'],
+        )
+        self.assertEqual(top[0]['units_sold'], Decimal('6.00'))
+        self.assertEqual(top[0]['revenue'], Decimal('600.00'))
+
+    def test_summarises_the_production_of_today_and_the_losses_of_the_period(self):
+        self.produce_and_sell('20.00', '7.00')
+        self.produce_and_sell('10.00', '0', when=self.now - timedelta(days=3))
+        self.produce_and_sell('4.00', '0', when=self.now - timedelta(days=12))
+
+        dashboard = self.dashboard()
+
+        self.assertEqual(dashboard['production'], {
+            'produced_quantity': Decimal('20.00'),
+            'sold_quantity': Decimal('7.00'),
+            'unsold_quantity': Decimal('13.00'),
+        })
+        self.assertEqual(dashboard['losses']['unsold_quantity'], Decimal('23.00'))
+        self.assertEqual(dashboard['losses']['lost_value'], Decimal('115000.00'))
+
+    def test_lists_the_next_scheduled_orders(self):
+        ScheduledOrder.objects.create(
+            bakery=self.bakery, product=self.product, customer_name='Past',
+            quantity=1, scheduled_for=self.now - timedelta(hours=2),
+        )
+        for number in range(6):
+            ScheduledOrder.objects.create(
+                bakery=self.bakery, product=self.product, customer_name=f'Customer {number}',
+                quantity=2, scheduled_for=self.now + timedelta(days=number + 1),
+            )
+
+        dashboard = self.dashboard()
+
+        self.assertEqual(dashboard['upcoming_order_count'], 6)
+        self.assertEqual(
+            [order.customer_name for order in dashboard['upcoming_orders']],
+            [f'Customer {number}' for number in range(5)],
+        )
+
+    def test_reports_the_last_daily_closing(self):
+        dashboard = self.dashboard()
+        self.assertIsNone(dashboard['last_closing'])
+        self.assertFalse(dashboard['today_closed'])
+
+        close_business_day(bakery=self.bakery, business_date=self.today - timedelta(days=1))
+        dashboard = self.dashboard()
+        self.assertEqual(dashboard['last_closing'].business_date, self.today - timedelta(days=1))
+        self.assertFalse(dashboard['today_closed'])
+
+        close_business_day(bakery=self.bakery, business_date=self.today)
+        self.assertTrue(self.dashboard()['today_closed'])
+
+    def test_leaves_out_another_bakery(self):
+        other = Bakery.objects.create(name='Other bakery', address='Other address')
+        other_product = register_product(
+            bakery=other, name='Baguette', unit_price=Decimal('3000.00'),
+        )
+        self.produce_and_sell('5.00', '5.00', product=other_product, bakery=other)
+        self.ingredient('Other flour', bakery=other)
+        close_business_day(bakery=other, business_date=self.today)
+
+        dashboard = self.dashboard()
+
+        self.assertEqual(dashboard['inventory']['ingredient_count'], 0)
+        self.assertEqual(dashboard['sales']['today']['sale_count'], 0)
+        self.assertEqual(dashboard['top_products'], [])
+        self.assertIsNone(dashboard['last_closing'])
+
+    def test_a_new_bakery_reports_zeros(self):
+        dashboard = self.dashboard()
+
+        self.assertEqual(dashboard['inventory']['ingredient_count'], 0)
+        self.assertEqual(dashboard['sales']['today']['revenue'], Decimal('0.00'))
+        self.assertEqual(dashboard['production']['produced_quantity'], Decimal('0.00'))
+        self.assertEqual(dashboard['losses']['lost_value'], Decimal('0.00'))
+        self.assertEqual(dashboard['upcoming_order_count'], 0)
+
+    def test_the_query_count_does_not_grow_with_the_records(self):
+        self.produce_and_sell('20.00', '7.00')
+        self.ingredient('Flour')
+        with CaptureQueriesContext(connection) as few:
+            self.dashboard()
+
+        for number in range(10):
+            product = register_product(
+                bakery=self.bakery, name=f'Bread {number}', unit_price=Decimal('100.00'),
+            )
+            self.produce_and_sell('5.00', '2.00', product=product)
+            self.ingredient(f'Flour {number}')
+            ScheduledOrder.objects.create(
+                bakery=self.bakery, product=product, customer_name='Ana',
+                quantity=1, scheduled_for=self.now + timedelta(days=1),
+            )
+        with CaptureQueriesContext(connection) as many:
+            self.dashboard()
+
+        self.assertEqual(len(few), len(many))

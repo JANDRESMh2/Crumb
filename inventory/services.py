@@ -21,7 +21,7 @@ from bakery.services import record_activity
 
 from .models import (
     AlertConfiguration, BarcodeIdentifier, Ingredient, IngredientCategory,
-    StockMovement, SUPPORTED_UNIT_ABBREVIATIONS, UnitOfMeasure,
+    NotificationPreference, StockMovement, SUPPORTED_UNIT_ABBREVIATIONS, UnitOfMeasure,
 )
 
 
@@ -515,6 +515,56 @@ def filter_inventory_ingredients(*, bakery, query='', start_date=None, end_date=
     if end:
         ingredients = ingredients.filter(expiration_date__lte=end)
     return ingredients.order_by('name', 'pk'), True
+
+
+def build_inventory_alerts(*, bakery, today=None):
+    """FR06, FR11, FR29 - the inventory alerts of a bakery as they stand now.
+
+    Honours the alerts the bakery has turned off. The inventory keeps no
+    history of its alerts, so they can only be evaluated for the present;
+    the daily closing (FR27) and the dashboard (FR33) both read them here.
+    """
+    today = today or timezone.localdate()
+
+    try:
+        preferences = bakery.notification_preferences
+    except NotificationPreference.DoesNotExist:
+        preferences = None
+    low_stock_enabled = preferences.low_stock_enabled if preferences else True
+    expiration_enabled = preferences.expiration_enabled if preferences else True
+
+    # Without a date range the filter cannot be invalid, so only the rows matter.
+    ingredients = filter_inventory_ingredients(bakery=bakery)[0]
+
+    ingredient_count = 0
+    low_stock, expiring_soon, expired = [], [], []
+    for ingredient in ingredients:
+        ingredient_count += 1
+        row = {
+            'ingredient_name': ingredient.name,
+            'quantity': ingredient.current_quantity,
+            'unit': ingredient.unit.abbreviation,
+            'expiration_date': ingredient.expiration_date,
+        }
+        if low_stock_enabled and low_stock_alerts(ingredient=ingredient):
+            low_stock.append({
+                **row,
+                'threshold': ingredient.alert_configuration.minimum_stock_threshold,
+            })
+        if expiration_enabled and is_ingredient_expired(ingredient=ingredient, today=today):
+            expired.append(row)
+        elif expiration_enabled and expiration_alerts(ingredient=ingredient, today=today):
+            expiring_soon.append(row)
+
+    return {
+        'evaluated_on': today,
+        'ingredient_count': ingredient_count,
+        'low_stock_enabled': low_stock_enabled,
+        'expiration_enabled': expiration_enabled,
+        'low_stock': low_stock,
+        'expiring_soon': expiring_soon,
+        'expired': expired,
+    }
 
 
 def build_inventory_report(*, bakery, query='', start_date=None, end_date=None):
