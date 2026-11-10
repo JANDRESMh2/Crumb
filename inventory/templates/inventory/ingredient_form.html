@@ -13,6 +13,7 @@
     <div class="form-errors">{{ form.non_field_errors }}</div>
     {% endif %}
     {% include "partials/field.html" with field=form.name %}
+    {% include "partials/field.html" with field=form.category %}
     <div class="field-row">
       {% include "partials/field.html" with field=form.unit %}
       {% include "partials/field.html" with field=form.current_quantity %}

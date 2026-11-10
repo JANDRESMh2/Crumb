@@ -2,10 +2,9 @@ from django.contrib import messages
 import json
 from decimal import Decimal
 from django.db import transaction
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
-from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_GET, require_POST
 from django.utils.translation import gettext_lazy as _
 
 from bakery.decorators import bakery_required
@@ -15,6 +14,7 @@ from .forms import (
     BarcodeScanningForIngredientRegistrationForm,
     IngredientForm,
     IngredientImportForm,
+    InventoryExportForm,
     LowStockThresholdConfigurationForm,
     NotificationPreferenceForm,
     ManualInventoryCorrectionForm,
@@ -27,11 +27,15 @@ from .models import AlertConfiguration, Ingredient, BarcodeIdentifier, StockMove
 from .services import (
     InsufficientStockError,
     InventoryCorrectionError,
+    build_inventory_excel,
+    build_inventory_pdf,
+    build_inventory_report,
     configure_low_stock_threshold,
     deactivate_ingredient,
     import_ingredients_from_excel,
     is_ingredient_expired,
     expiration_alerts,
+    filter_inventory_ingredients,
     low_stock_alerts,
     register_ingredient,
     build_import_template,
@@ -137,37 +141,6 @@ def ingredient_delete(request, ingredient_id):
             'bakery': bakery,
         },
     )
-def expiration_date_range_filter(
-    *,
-    ingredients,
-    start_date,
-    end_date,
-):
-    """FR24 - filter ingredients by expiration date range."""
-
-    start_date_value = parse_date(start_date) if start_date else None
-    end_date_value = parse_date(end_date) if end_date else None
-
-    if (
-        start_date_value
-        and end_date_value
-        and start_date_value > end_date_value
-    ):
-        return Ingredient.objects.none(), False
-
-    if start_date_value:
-        ingredients = ingredients.filter(
-            expiration_date__gte=start_date_value
-        )
-
-    if end_date_value:
-        ingredients = ingredients.filter(
-            expiration_date__lte=end_date_value
-        )
-
-    return ingredients, True
-
-
 def ingredient_list(request):
     """Display active inventory with alerts and name search (FR05/06/11/22)."""
     bakery = get_current_bakery()
@@ -175,28 +148,20 @@ def ingredient_list(request):
     start_date = request.GET.get('start_date', '').strip()
     end_date = request.GET.get('end_date', '').strip()
 
+    # FR29: una alerta apagada deja de mostrarse en la lista
     try:
         preferences = bakery.notification_preferences if bakery is not None else None
     except NotificationPreference.DoesNotExist:
         preferences = None
     low_stock_enabled = preferences.low_stock_enabled if preferences else True
     expiration_enabled = preferences.expiration_enabled if preferences else True
-    ingredients = (
-        Ingredient.objects.filter(bakery=bakery, is_active=True)
-        .select_related('unit', 'alert_configuration')
-        .prefetch_related('barcodes')
-        if bakery is not None
-        else Ingredient.objects.none()
-    )
-    if query:
-        ingredients = ingredients.filter(name__icontains=query)
 
-    ingredients, valid_date_range = expiration_date_range_filter(
-        ingredients=ingredients,
+    ingredients, valid_date_range = filter_inventory_ingredients(
+        bakery=bakery,
+        query=query,
         start_date=start_date,
         end_date=end_date,
     )
-
     if not valid_date_range:
         messages.error(
             request,
@@ -227,6 +192,36 @@ def ingredient_list(request):
             'notification_preferences': preferences,
         },
     )
+
+
+@require_GET
+@bakery_required(_('Set up the bakery profile before exporting inventory.'))
+def ingredient_export(request):
+    """FR16 - download the filtered inventory in the requested format."""
+    form = InventoryExportForm(request.GET)
+    if not form.is_valid():
+        return HttpResponseBadRequest(_('Invalid export parameters.'))
+
+    params = form.cleaned_data
+    rows = build_inventory_report(
+        bakery=request.bakery,
+        query=params['q'],
+        start_date=params['start_date'],
+        end_date=params['end_date'],
+    )
+    export_format = params['format']
+    if export_format == 'xlsx':
+        content = build_inventory_excel(rows=rows, bakery=request.bakery)
+        content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    else:
+        content = build_inventory_pdf(rows=rows, bakery=request.bakery)
+        content_type = 'application/pdf'
+
+    response = HttpResponse(content, content_type=content_type)
+    response['Content-Disposition'] = (
+        f'attachment; filename="inventory_report.{export_format}"'
+    )
+    return response
 
 
 @bakery_required('Set up the bakery profile before registering stock.')

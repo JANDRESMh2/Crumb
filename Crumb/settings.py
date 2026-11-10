@@ -10,10 +10,37 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+COMILLAS = chr(39) + chr(34)
+
+
+def _load_env_file():
+    """Read .env into the environment, without overwriting what is already set.
+
+    Production passes real environment variables and those always win. On a
+    development machine this saves having to source the file by hand in every
+    terminal, which is easy to forget and leaves the project refusing to start.
+    """
+    archivo = BASE_DIR / '.env'
+    if not archivo.exists():
+        return
+    for linea in archivo.read_text(encoding='utf-8').splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith('#') or '=' not in linea:
+            continue
+        clave, _, valor = linea.partition('=')
+        os.environ.setdefault(clave.strip(), valor.strip().strip(COMILLAS))
+
+
+_load_env_file()
 
 
 # Quick-start development settings - unsuitable for production
@@ -23,9 +50,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ms823773ogo+grpd)y1c602@6&*t9p2gvkqah6!3hmz6w+@pjp'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('CRUMB_DEBUG', 'true').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['54.227.200.130']
+if not DEBUG:
+    SECRET_KEY = os.environ['CRUMB_SECRET_KEY']
+
+# Los hosts permitidos se configuran por variable de entorno. Si no esta
+# definida se usan los del despliegue actual y los de desarrollo local, para
+# que el servidor siga respondiendo sin tener que configurar nada.
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        'CRUMB_ALLOWED_HOSTS',
+        '54.227.200.130,127.0.0.1,localhost',
+    ).split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -53,6 +93,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # default deny; toda vista exige sesión salvo las marcadas explícitamente con @login_not_required.
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -107,6 +149,45 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+EMAIL_MODE = os.environ.get('CRUMB_EMAIL_MODE', 'console' if DEBUG else 'smtp').lower()
+if EMAIL_MODE not in ('console', 'smtp'):
+    raise ImproperlyConfigured('CRUMB_EMAIL_MODE must be console or smtp.')
+EMAIL_BACKEND = f'django.core.mail.backends.{EMAIL_MODE}.EmailBackend'
+DEFAULT_FROM_EMAIL = os.environ.get('CRUMB_DEFAULT_FROM_EMAIL', 'Crumb <noreply@localhost>')
+if EMAIL_MODE == 'smtp':
+    EMAIL_HOST = 'smtp-relay.brevo.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 5
+    EMAIL_HOST_USER = os.environ.get('CRUMB_EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('CRUMB_EMAIL_HOST_PASSWORD', '')
+    if not all((EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, os.environ.get('CRUMB_DEFAULT_FROM_EMAIL'))):
+        raise ImproperlyConfigured('SMTP mode requires CRUMB_EMAIL_HOST_USER, CRUMB_EMAIL_HOST_PASSWORD, and CRUMB_DEFAULT_FROM_EMAIL.')
+
+RECOVERY_HMAC_KEY = os.environ.get('CRUMB_RECOVERY_HMAC_KEY', '')
+if len(RECOVERY_HMAC_KEY) < 32:
+    raise ImproperlyConfigured('CRUMB_RECOVERY_HMAC_KEY must contain at least 32 private characters.')
+
+RECOVERY_CODE_LIFETIME_SECONDS = 600
+RECOVERY_GRANT_LIFETIME_SECONDS = 300
+RECOVERY_RESEND_COOLDOWN_SECONDS = 60
+RECOVERY_MAX_CODE_ATTEMPTS = 5
+
+
+def positive_limit(name, default, maximum):
+    try:
+        value = int(os.environ.get(name, default))
+    except ValueError as error:
+        raise ImproperlyConfigured(f'{name} must be a positive integer.') from error
+    if not 1 <= value <= maximum:
+        raise ImproperlyConfigured(f'{name} must be between 1 and {maximum}.')
+    return value
+
+
+RECOVERY_IDENTITY_HOURLY_LIMIT = positive_limit('CRUMB_RECOVERY_IDENTITY_HOURLY_LIMIT', 5, 10)
+RECOVERY_IP_HOURLY_LIMIT = positive_limit('CRUMB_RECOVERY_IP_HOURLY_LIMIT', 30, 100)
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
@@ -133,3 +214,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'accounts:login'
+

@@ -17,11 +17,21 @@ msgstr "%% de los ingresos"
 msgid "%(units)s units sold"
 msgstr "%(units)s unidades vendidas"
 
+msgid ""
+"A password recovery code was requested for the Crumb account "
+"%(username)s."
+msgstr ""
+"Se solicitó un código de recuperación para la cuenta de Crumb "
+"%(username)s."
+
 msgid "A reason is required to correct the inventory."
 msgstr "Se necesita un motivo para corregir el inventario."
 
 msgid "A stock-in quantity must be greater than zero."
 msgstr "La cantidad de una entrada debe ser mayor que cero."
+
+msgid "Account security"
+msgstr "Seguridad de la cuenta"
 
 msgid "Action"
 msgstr "Acción"
@@ -64,8 +74,11 @@ msgstr "Todos los usuarios"
 msgid "Are you sure you want to remove %(name)s from the inventory?"
 msgstr "¿Seguro que quieres quitar %(name)s del inventario?"
 
-msgid "Authenticate to access the Crumb system."
-msgstr "Identifícate para entrar a Crumb."
+msgid "Back to login"
+msgstr "Volver al inicio de sesión"
+
+msgid "Back to sign in"
+msgstr "Volver a iniciar sesión"
 
 msgid "Bakery"
 msgstr "Panadería"
@@ -93,6 +106,12 @@ msgstr "Cancelar"
 
 msgid "Cancelled"
 msgstr "Cancelada"
+
+msgid "Category"
+msgstr "Categoría"
+
+msgid "Choose a strong password that differs from your current password."
+msgstr "Elige una contraseña segura y distinta de la que tienes."
 
 msgid "Clear filters"
 msgstr "Quitar filtros"
@@ -134,8 +153,11 @@ msgstr "Historial de correcciones"
 msgid "Count"
 msgstr "Conteo"
 
-msgid "Create a new user account for the bakery administrators or staff."
-msgstr "Crea una cuenta para el personal o la administración de la panadería."
+msgid "Create a user account to manage the bakery."
+msgstr "Crea una cuenta de usuario para gestionar la panadería."
+
+msgid "Create account"
+msgstr "Crear cuenta"
 
 msgid "Current quantity:"
 msgstr "Cantidad actual:"
@@ -145,6 +167,9 @@ msgstr "La producción del día se registró correctamente."
 
 msgid "Daily sale registered successfully."
 msgstr "La venta del día se registró correctamente."
+
+msgid "Dairy and eggs"
+msgstr "Lácteos y huevos"
 
 msgid "Dashboard"
 msgstr "Panel"
@@ -163,9 +188,6 @@ msgstr "Eliminar el ingrediente"
 
 msgid "Description"
 msgstr "Descripción"
-
-msgid "Don't have an account?"
-msgstr "¿No tienes cuenta?"
 
 msgid "Download Template"
 msgstr "Descargar la plantilla"
@@ -191,8 +213,18 @@ msgstr "Correo electrónico"
 msgid "Enable Scan Mode"
 msgstr "Activar el modo escáner"
 
+msgid "Enter a six-digit code."
+msgstr "Escribe un código de seis dígitos."
+
 msgid "Enter a valid phone number (digits, spaces, +, -, ( and ) only)."
 msgstr "Escribe un teléfono válido (solo dígitos, espacios, +, -, ( y ))."
+
+msgid ""
+"Enter your username and registered email address. If the account is "
+"eligible, we will email a verification code."
+msgstr ""
+"Escribe tu usuario y el correo que registraste. Si la cuenta cumple los "
+"requisitos, te enviaremos un código de verificación por correo."
 
 msgid "Every product produced so far has been sold."
 msgstr "Todo lo que se ha producido hasta ahora se vendió."
@@ -237,20 +269,59 @@ msgid ""
 "count."
 msgstr "Explica por qué se corrige la cantidad, por ejemplo un conteo físico."
 
+msgid "Export to Excel"
+msgstr "Exportar a Excel"
+
+msgid "Export to PDF"
+msgstr "Exportar a PDF"
+
+msgid "Fats and oils"
+msgstr "Grasas y aceites"
+
 msgid "Filter"
 msgstr "Filtrar"
+
+msgid "Flavorings and decorations"
+msgstr "Saborizantes y decoraciones"
+
+msgid "Flours and grains"
+msgstr "Harinas y cereales"
 
 msgid "For example, flour or sugar"
 msgstr "Por ejemplo, harina o azúcar"
 
+msgid "Forgot your password?"
+msgstr "¿Olvidaste tu contraseña?"
+
 msgid "From"
 msgstr "Desde"
+
+msgid "Fruits, nuts, and seeds"
+msgstr "Frutas, frutos secos y semillas"
 
 msgid "Getting started"
 msgstr "Para empezar"
 
+msgid "Go to login"
+msgstr "Ir al inicio de sesión"
+
 msgid "Gram"
 msgstr "Gramo"
+
+msgid "If no code arrives, try again later or contact the administrator."
+msgstr ""
+"Si no llega ningún código, intenta más tarde o comunícate con el "
+"administrador."
+
+msgid ""
+"If we can process the request, a six-digit code will arrive at the "
+"registered email address. It expires in 10 minutes."
+msgstr ""
+"Si podemos procesar la solicitud, llegará un código de seis dígitos al "
+"correo registrado. Vence en 10 minutos."
+
+msgid "If you did not request this change, you can ignore this email."
+msgstr "Si no pediste este cambio, puedes ignorar este correo."
 
 msgid "Import"
 msgstr "Importar"
@@ -282,8 +353,8 @@ msgstr "Ingredientes"
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-msgid "Invalid username or password."
-msgstr "El usuario o la contraseña no son correctos."
+msgid "Invalid export parameters."
+msgstr "Los parámetros de exportación no son válidos."
 
 msgid "Inventory"
 msgstr "Inventario"
@@ -297,17 +368,20 @@ msgstr "Inventario para panaderías pequeñas"
 msgid "Inventory management for small bakeries"
 msgstr "Gestión de inventario para panaderías pequeñas"
 
+msgid "Inventory report"
+msgstr "Informe de inventario"
+
 msgid "Kilogram"
 msgstr "Kilogramo"
 
 msgid "Language"
 msgstr "Idioma"
 
+msgid "Leavening agents"
+msgstr "Agentes leudantes"
+
 msgid "Liter"
 msgstr "Litro"
-
-msgid "Login"
-msgstr "Entrar"
 
 msgid "Loss"
 msgstr "Pérdida"
@@ -393,6 +467,9 @@ msgstr "Sin iniciar sesión"
 msgid "Note"
 msgstr "Nota"
 
+msgid "Notifications"
+msgstr "Notificaciones"
+
 msgid "Optional."
 msgstr "Opcional."
 
@@ -401,8 +478,17 @@ msgstr ""
 "Opcional. Escanea o escribe un código de barras para vincularlo a este "
 "ingrediente."
 
+msgid "Other"
+msgstr "Otros"
+
 msgid "Overproduction"
 msgstr "Sobreproducción"
+
+msgid "Page"
+msgstr "Página"
+
+msgid "Password updated"
+msgstr "Contraseña actualizada"
 
 msgid "Phone"
 msgstr "Teléfono"
@@ -487,14 +573,14 @@ msgstr "Registra los productos elaborados por %(name)s."
 msgid "Record type"
 msgstr "Tipo de registro"
 
+msgid "Recover your password"
+msgstr "Recupera tu contraseña"
+
 msgid "Register Stock-In"
 msgstr "Registrar una entrada"
 
 msgid "Register Stock-In (Ingredient Purchase)"
 msgstr "Registrar una entrada (compra de ingredientes)"
-
-msgid "Register User"
-msgstr "Registrar un usuario"
 
 msgid "Register a baked product before recording sales."
 msgstr "Registra un producto antes de registrar ventas."
@@ -507,9 +593,6 @@ msgstr "Registrar la producción del día"
 
 msgid "Register daily sales"
 msgstr "Registrar las ventas del día"
-
-msgid "Register here"
-msgstr "Regístrate aquí"
 
 msgid "Register ingredient"
 msgstr "Registrar un ingrediente"
@@ -543,6 +626,9 @@ msgstr ""
 "Reemplaza la cantidad registrada de %(name)s por la cantidad real "
 "contada en la panadería. Cada corrección queda guardada con su fecha, "
 "usuario y motivo."
+
+msgid "Resend code"
+msgstr "Reenviar el código"
 
 msgid "Revenue"
 msgstr "Ingresos"
@@ -586,6 +672,9 @@ msgstr "Guardar los cambios"
 msgid "Save correction"
 msgstr "Guardar la corrección"
 
+msgid "Save new password"
+msgstr "Guardar la contraseña nueva"
+
 msgid "Save profile"
 msgstr "Guardar el perfil"
 
@@ -594,6 +683,9 @@ msgstr "Guardar el mínimo"
 
 msgid "Scan Mode Enabled:"
 msgstr "Modo escáner activado:"
+
+msgid "Scheduled orders"
+msgstr "Órdenes programadas"
 
 msgid "Search"
 msgstr "Buscar"
@@ -604,6 +696,9 @@ msgstr "Buscar ingredientes por nombre"
 msgid "See all your registered ingredients and their current stock levels."
 msgstr "Consulta todos tus ingredientes registrados y sus existencias actuales."
 
+msgid "Select a category"
+msgstr "Selecciona una categoría"
+
 msgid "Select a product"
 msgstr "Selecciona un producto"
 
@@ -612,6 +707,15 @@ msgstr "Selecciona una unidad"
 
 msgid "Select an ingredient"
 msgstr "Selecciona un ingrediente"
+
+msgid "Send verification code"
+msgstr "Enviar el código de verificación"
+
+msgid "Set a new password"
+msgstr "Establecer una contraseña nueva"
+
+msgid "Set up the bakery profile before exporting inventory."
+msgstr "Configura el perfil de la panadería antes de exportar el inventario."
 
 msgid "Set up your bakery"
 msgstr "Configura tu panadería"
@@ -635,6 +739,15 @@ msgstr ""
 "Se muestran las %(shown)s entradas más recientes de %(total)s. Ajusta "
 "los filtros para ver las otras %(hidden)s."
 
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+msgid "Sign in to manage your bakery's inventory."
+msgstr "Inicia sesión para gestionar el inventario de tu panadería."
+
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
 msgid "Signed in"
 msgstr "Inició sesión"
 
@@ -644,6 +757,9 @@ msgstr "Cerró sesión"
 msgid "Sold"
 msgstr "Vendido"
 
+msgid "Start again"
+msgstr "Empezar de nuevo"
+
 msgid "Status"
 msgstr "Estado"
 
@@ -652,6 +768,9 @@ msgstr "Entrada (compra)"
 
 msgid "Stock-in registered"
 msgstr "Entrada registrada"
+
+msgid "Sweeteners"
+msgstr "Endulzantes"
 
 msgid "Tax ID"
 msgstr "NIT"
@@ -668,6 +787,9 @@ msgstr "El perfil de la panadería ya fue configurado."
 msgid "The bakery profile was already set up."
 msgstr "El perfil de la panadería ya estaba configurado."
 
+msgid "The code is invalid, expired, or has no attempts remaining."
+msgstr "El código es inválido, venció o se quedó sin intentos."
+
 msgid "The corrected quantity cannot be negative."
 msgstr "La cantidad corregida no puede ser negativa."
 
@@ -676,6 +798,9 @@ msgstr "La cantidad corregida debe ser distinta de la cantidad actual."
 
 msgid "The ingredient name is required."
 msgstr "El nombre del ingrediente es obligatorio."
+
+msgid "The new password must differ from the current password."
+msgstr "La contraseña nueva debe ser distinta de la actual."
 
 msgid "The product name is required."
 msgstr "El nombre del producto es obligatorio."
@@ -691,6 +816,9 @@ msgstr "La fecha inicial no puede ser posterior a la fecha final."
 msgid "This barcode is already linked to another ingredient."
 msgstr "Este código de barras ya está vinculado a otro ingrediente."
 
+msgid "This code expires in 10 minutes and can be used only once."
+msgstr "Este código vence en 10 minutos y se puede usar una sola vez."
+
 msgid ""
 "This information identifies your bakery across Crumb. You can always add "
 "contact details later."
@@ -700,6 +828,9 @@ msgstr ""
 
 msgid "This product is already registered."
 msgstr "Este producto ya está registrado."
+
+msgid "This recovery authorization has expired. Request a new code."
+msgstr "Esta autorización de recuperación venció. Pide un código nuevo."
 
 msgid "To"
 msgstr "Hasta"
@@ -719,6 +850,9 @@ msgstr ""
 
 msgid "Type"
 msgstr "Tipo"
+
+msgid "Uncategorized"
+msgstr "Sin categoría"
 
 msgid "Unit"
 msgstr "Unidad"
@@ -768,9 +902,6 @@ msgstr ""
 msgid "User"
 msgstr "Usuario"
 
-msgid "User account registered successfully."
-msgstr "La cuenta de usuario se registró correctamente."
-
 msgid "User activity log"
 msgstr "Registro de actividad de los usuarios"
 
@@ -779,6 +910,15 @@ msgstr "Usuario"
 
 msgid "Value not earned"
 msgstr "Valor no percibido"
+
+msgid "Verification code"
+msgstr "Código de verificación"
+
+msgid "Verify code"
+msgstr "Verificar el código"
+
+msgid "Verify your code"
+msgstr "Verifica tu código"
 
 msgid "View Inventory"
 msgstr "Ver el inventario"
@@ -804,6 +944,9 @@ msgstr "Esperando el escaneo..."
 msgid "Welcome back, %(name)s"
 msgstr "Hola de nuevo, %(name)s"
 
+msgid "Welcome back, %(username)s!"
+msgstr "¡Hola de nuevo, %(username)s!"
+
 msgid ""
 "What %(name)s lost: ingredients that expired with stock left, and "
 "products that were baked and never sold."
@@ -822,8 +965,30 @@ msgstr "Cuándo"
 msgid "Which products of %(name)s sell best, ordered from the best seller down."
 msgstr "Cuáles productos de %(name)s se venden más, del más vendido hacia abajo."
 
+msgid ""
+"You can request another code after 60 seconds. A new code replaces the "
+"previous one."
+msgstr ""
+"Puedes pedir otro código después de 60 segundos. El nuevo reemplaza al "
+"anterior."
+
 msgid "You can scan products continuously."
 msgstr "Puedes escanear productos de forma continua."
+
+msgid "You signed out."
+msgstr "Cerraste sesión."
+
+msgid "Your Crumb recovery code"
+msgstr "Tu código de recuperación de Crumb"
+
+msgid "Your account was created successfully."
+msgstr "Tu cuenta se creó correctamente."
+
+msgid "Your password has been changed. Sign in with the new password."
+msgstr "Tu contraseña cambió. Inicia sesión con la nueva."
+
+msgid "Your verification code is %(code)s."
+msgstr "Tu código de verificación es %(code)s."
 
 msgid "from the unsold products"
 msgstr "de los productos sin vender"

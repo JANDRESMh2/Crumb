@@ -9,6 +9,7 @@ from .models import (
     AlertConfiguration,
     BarcodeIdentifier,
     Ingredient,
+    IngredientCategory,
     NotificationPreference,
     StockMovement,
     SUPPORTED_UNIT_ABBREVIATIONS,
@@ -41,6 +42,7 @@ class IngredientForm(forms.ModelForm):
         model = Ingredient
         fields = [
             'name',
+            'category',
             'unit',
             'current_quantity',
             'expiration_date',
@@ -48,6 +50,7 @@ class IngredientForm(forms.ModelForm):
         ]
         labels = {
             'name': _('Name'),
+            'category': _('Category'),
             'current_quantity': _('Quantity'),
             'unit': _('Unit of measure'),
             'expiration_date': _('Expiration date'),
@@ -55,15 +58,22 @@ class IngredientForm(forms.ModelForm):
         field_classes = decimal_field_classes('current_quantity')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': True}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
             'expiration_date': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
+                format='%Y-%m-%d',
+                attrs={'class': 'form-control', 'type': 'date'},
             ),
         }
 
     def __init__(self, *args, bakery=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._bakery = bakery
+        self.fields['category'].required = True
+        self.fields['category'].choices = [
+            ('', _('Select a category')),
+            *IngredientCategory.choices,
+        ]
         self.fields['unit'].queryset = UnitOfMeasure.objects.filter(
             abbreviation__in=SUPPORTED_UNIT_ABBREVIATIONS
         )
@@ -222,6 +232,23 @@ class IngredientImportForm(forms.Form):
             'accept': '.xlsx,.xls,.csv'
         })
     )
+
+
+class InventoryExportForm(forms.Form):
+    format = forms.ChoiceField(choices=[('xlsx', 'Excel'), ('pdf', 'PDF')])
+    q = forms.CharField(required=False, max_length=120, strip=True)
+    start_date = forms.DateField(required=False, input_formats=['%Y-%m-%d'])
+    end_date = forms.DateField(required=False, input_formats=['%Y-%m-%d'])
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError(
+                _('The start date cannot be later than the end date.')
+            )
+        return cleaned_data
 
 
 # [FR23: Manual inventory correction]
