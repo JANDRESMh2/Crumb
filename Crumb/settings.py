@@ -19,6 +19,30 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+COMILLAS = chr(39) + chr(34)
+
+
+def _load_env_file():
+    """Read .env into the environment, without overwriting what is already set.
+
+    Production passes real environment variables and those always win. On a
+    development machine this saves having to source the file by hand in every
+    terminal, which is easy to forget and leaves the project refusing to start.
+    """
+    archivo = BASE_DIR / '.env'
+    if not archivo.exists():
+        return
+    for linea in archivo.read_text(encoding='utf-8').splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith('#') or '=' not in linea:
+            continue
+        clave, _, valor = linea.partition('=')
+        os.environ.setdefault(clave.strip(), valor.strip().strip(COMILLAS))
+
+
+_load_env_file()
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
