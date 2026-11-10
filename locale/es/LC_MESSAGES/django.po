@@ -1204,3 +1204,80 @@ msgid "%(counter)s order for the next day"
 msgid_plural "%(counter)s orders for the next day"
 msgstr[0] "%(counter)s pedido para el día siguiente"
 msgstr[1] "%(counter)s pedidos para el día siguiente"
+
+msgid "Active ingredients"
+msgstr "Ingredientes activos"
+
+msgid "View the inventory"
+msgstr "Ver el inventario"
+
+msgid "below their threshold"
+msgstr "por debajo de su umbral"
+
+msgid "Alerts turned off"
+msgstr "Alertas desactivadas"
+
+msgid "inside their warning period"
+msgstr "dentro de su periodo de aviso"
+
+msgid "still in the inventory"
+msgstr "todavía en el inventario"
+
+msgid "Revenue today"
+msgstr "Ingresos de hoy"
+
+msgid "Units sold today"
+msgstr "Unidades vendidas hoy"
+
+msgid "Revenue, last %(days)s days"
+msgstr "Ingresos, últimos %(days)s días"
+
+msgid "Units sold, last %(days)s days"
+msgstr "Unidades vendidas, últimos %(days)s días"
+
+msgid "Best sellers, last %(days)s days"
+msgstr "Más vendidos, últimos %(days)s días"
+
+msgid "See the full sales analytics"
+msgstr "Ver la analítica de ventas completa"
+
+msgid "No sales in this period yet."
+msgstr "Todavía no hay ventas en este periodo."
+
+msgid "Production, losses and orders"
+msgstr "Producción, pérdidas y pedidos"
+
+msgid "Produced / sold today"
+msgstr "Producido / vendido hoy"
+
+msgid "Value not earned, last %(days)s days"
+msgstr "Valor no ganado, últimos %(days)s días"
+
+msgid "%(unsold)s products left unsold"
+msgstr "%(unsold)s productos sin vender"
+
+msgid "Upcoming orders"
+msgstr "Próximos pedidos"
+
+msgid "scheduled from now on"
+msgstr "programados desde ahora"
+
+msgid "Today is already closed"
+msgstr "Hoy ya está cerrado"
+
+msgid "Today is not closed yet"
+msgstr "Hoy todavía no se ha cerrado"
+
+msgid "Quick actions"
+msgstr "Accesos rápidos"
+
+msgid "No sales in the previous period to compare"
+msgstr "No hay ventas en el periodo anterior para comparar"
+
+msgid "vs. the previous period"
+msgstr "frente al periodo anterior"
+
+msgid "%(counter)s sale"
+msgid_plural "%(counter)s sales"
+msgstr[0] "%(counter)s venta"
+msgstr[1] "%(counter)s ventas"

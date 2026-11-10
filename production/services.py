@@ -23,14 +23,8 @@ from bakery.exports import register_report_fonts, spreadsheet_text
 from bakery.models import ActivityLog
 from bakery.services import record_activity
 
-from inventory.models import NotificationPreference, StockMovement
-from inventory.services import (
-    build_expired_ingredient_losses,
-    expiration_alerts,
-    filter_inventory_ingredients,
-    is_ingredient_expired,
-    low_stock_alerts,
-)
+from inventory.models import StockMovement
+from inventory.services import build_expired_ingredient_losses, build_inventory_alerts
 
 from .models import DailyClosingSummary, Product, ProductionRecord, SalesRecord
 from .models import ScheduledOrder
@@ -53,11 +47,13 @@ def register_scheduled_order(*, bakery, customer_name, product, quantity, schedu
     )
 
 
-def build_daily_unsold_products(*, bakery, day=None):
+def build_daily_unsold_products(*, bakery, day=None, start_date=None, end_date=None):
     """Calculate unsold quantity per product and local calendar day (FR14).
 
     ``day`` narrows the calculation to a single date, which is what the daily
-    closing (FR27) needs; without it every day on record is returned.
+    closing (FR27) needs, and ``start_date``/``end_date`` to an inclusive
+    range, so a report over a few days does not aggregate the whole history.
+    Without them every day on record is returned.
     """
     production = ProductionRecord.objects.filter(
         bakery=bakery, status=ProductionRecord.Status.COMPLETED,
@@ -66,6 +62,12 @@ def build_daily_unsold_products(*, bakery, day=None):
     if day is not None:
         production = production.filter(production_date__date=day)
         sales = sales.filter(sale_timestamp__date=day)
+    if start_date is not None:
+        production = production.filter(production_date__date__gte=start_date)
+        sales = sales.filter(sale_timestamp__date__gte=start_date)
+    if end_date is not None:
+        production = production.filter(production_date__date__lte=end_date)
+        sales = sales.filter(sale_timestamp__date__lte=end_date)
 
     production_totals = (
         production
@@ -534,7 +536,9 @@ def build_loss_report(*, bakery, start_date=None, end_date=None):
 
     overproduction = []
 
-    for daily in build_daily_unsold_products(bakery=bakery):
+    for daily in build_daily_unsold_products(
+        bakery=bakery, start_date=start_date, end_date=end_date,
+    ):
         if daily['unsold_quantity'] <= 0:
             continue
         if start_date and daily['date'] < start_date:
@@ -686,50 +690,6 @@ def _closing_stock(*, bakery, business_date):
     }
 
 
-def _closing_alerts(*, bakery, today):
-    """Inventory alerts as they stand when the day is closed (FR06, FR11, FR29).
-
-    The inventory keeps no history of its alerts, so they are evaluated at the
-    moment of closing, honouring the alerts the bakery has turned off.
-    """
-    try:
-        preferences = bakery.notification_preferences
-    except NotificationPreference.DoesNotExist:
-        preferences = None
-    low_stock_enabled = preferences.low_stock_enabled if preferences else True
-    expiration_enabled = preferences.expiration_enabled if preferences else True
-
-    # Without a date range the filter cannot be invalid, so only the rows matter.
-    ingredients = filter_inventory_ingredients(bakery=bakery)[0]
-
-    low_stock, expiring_soon, expired = [], [], []
-    for ingredient in ingredients:
-        row = {
-            'ingredient_name': ingredient.name,
-            'quantity': ingredient.current_quantity,
-            'unit': ingredient.unit.abbreviation,
-            'expiration_date': ingredient.expiration_date,
-        }
-        if low_stock_enabled and low_stock_alerts(ingredient=ingredient):
-            low_stock.append({
-                **row,
-                'threshold': ingredient.alert_configuration.minimum_stock_threshold,
-            })
-        if expiration_enabled and is_ingredient_expired(ingredient=ingredient, today=today):
-            expired.append(row)
-        elif expiration_enabled and expiration_alerts(ingredient=ingredient, today=today):
-            expiring_soon.append(row)
-
-    return {
-        'evaluated_on': today,
-        'low_stock_enabled': low_stock_enabled,
-        'expiration_enabled': expiration_enabled,
-        'low_stock': low_stock,
-        'expiring_soon': expiring_soon,
-        'expired': expired,
-    }
-
-
 def _closing_losses(*, bakery, business_date, products):
     """What the day lost: unsold products and ingredients whose life ended.
 
@@ -810,7 +770,7 @@ def build_daily_closing_summary(*, bakery, business_date, now=None):
 
     products = _closing_sales(bakery=bakery, business_date=business_date)
     stock = _closing_stock(bakery=bakery, business_date=business_date)
-    alerts = _closing_alerts(bakery=bakery, today=today)
+    alerts = build_inventory_alerts(bakery=bakery, today=today)
     losses = _closing_losses(
         bakery=bakery, business_date=business_date, products=products,
     )
@@ -1160,3 +1120,147 @@ def build_daily_closing_pdf(*, closing):
         onFirstPage=draw_page_number, onLaterPages=draw_page_number,
     )
     return buffer.getvalue()
+
+
+# [FR33: Dashboard]
+
+DASHBOARD_PERIOD_DAYS = 7
+DASHBOARD_TOP_PRODUCTS = 5
+DASHBOARD_UPCOMING_ORDERS = 5
+
+
+def _percentage_change(current, previous):
+    """How much ``current`` moved against ``previous``, or None without a base."""
+    if not previous:
+        return None
+    return ((current - previous) / previous * 100).quantize(
+        Decimal('0.1'), rounding=ROUND_HALF_UP,
+    )
+
+
+def _dashboard_sales(*, bakery, today, period_start, previous_start):
+    """Sales of today, of the period and of the period before, in one query."""
+    previous_end = period_start - timedelta(days=1)
+    windows = {
+        'today': Q(sale_timestamp__date=today),
+        'period': Q(sale_timestamp__date__gte=period_start),
+        'previous_period': Q(sale_timestamp__date__lte=previous_end),
+    }
+    aggregates = {}
+    for window, condition in windows.items():
+        aggregates[f'{window}_revenue'] = Sum(
+            'total_amount', filter=condition, default=Decimal('0'),
+        )
+        aggregates[f'{window}_units'] = Sum(
+            'quantity_sold', filter=condition, default=Decimal('0'),
+        )
+        aggregates[f'{window}_sale_count'] = Count('id', filter=condition)
+
+    totals = (
+        SalesRecord.objects
+        .filter(
+            bakery=bakery,
+            sale_timestamp__date__gte=previous_start,
+            sale_timestamp__date__lte=today,
+        )
+        .aggregate(**aggregates)
+    )
+
+    sales = {
+        window: {
+            'revenue': Decimal(totals[f'{window}_revenue']).quantize(MONEY),
+            'units': Decimal(totals[f'{window}_units']).quantize(MONEY),
+            'sale_count': totals[f'{window}_sale_count'],
+        }
+        for window in windows
+    }
+    sales['revenue_change'] = _percentage_change(
+        sales['period']['revenue'], sales['previous_period']['revenue'],
+    )
+    sales['units_change'] = _percentage_change(
+        sales['period']['units'], sales['previous_period']['units'],
+    )
+    return sales
+
+
+def build_dashboard(*, bakery, now=None):
+    """FR33 - summarise the key inventory and sales indicators of a bakery.
+
+    Four blocks: the inventory and its alerts, the sales of today and of the
+    last seven days against the seven before, the best sellers of those
+    seven days, and production, losses and orders (including the last daily
+    closing). Everything is read from the records already kept, so nothing
+    is stored.
+    """
+    now = now or timezone.now()
+    today = timezone.localdate(now)
+    period_start = today - timedelta(days=DASHBOARD_PERIOD_DAYS - 1)
+    previous_start = period_start - timedelta(days=DASHBOARD_PERIOD_DAYS)
+
+    alerts = build_inventory_alerts(bakery=bakery, today=today)
+
+    rankings, _totals = build_sales_analytics(
+        bakery=bakery, start_date=period_start, end_date=today,
+    )
+    top_products = [
+        {
+            **row,
+            'units_sold': Decimal(row['units_sold']).quantize(MONEY),
+            'revenue': Decimal(row['revenue']).quantize(MONEY),
+        }
+        for row in rankings[:DASHBOARD_TOP_PRODUCTS]
+    ]
+
+    daily = build_daily_unsold_products(bakery=bakery, day=today)
+    losses = build_loss_report(bakery=bakery, start_date=period_start, end_date=today)
+
+    upcoming_orders = (
+        ScheduledOrder.objects
+        .filter(bakery=bakery, scheduled_for__gte=now)
+        .select_related('product')
+        .order_by('scheduled_for', 'created_at')
+    )
+    last_closing = (
+        DailyClosingSummary.objects
+        .filter(bakery=bakery)
+        .order_by('-business_date')
+        .first()
+    )
+
+    return {
+        'today': today,
+        'period_start': period_start,
+        'period_days': DASHBOARD_PERIOD_DAYS,
+        'inventory': {
+            'ingredient_count': alerts['ingredient_count'],
+            'low_stock_count': len(alerts['low_stock']),
+            'expiring_soon_count': len(alerts['expiring_soon']),
+            'expired_count': len(alerts['expired']),
+            'low_stock_enabled': alerts['low_stock_enabled'],
+            'expiration_enabled': alerts['expiration_enabled'],
+        },
+        'sales': _dashboard_sales(
+            bakery=bakery, today=today,
+            period_start=period_start, previous_start=previous_start,
+        ),
+        'top_products': top_products,
+        'production': {
+            'produced_quantity': sum(
+                (row['produced_quantity'] for row in daily), Decimal('0'),
+            ).quantize(MONEY),
+            'sold_quantity': sum(
+                (row['sold_quantity'] for row in daily), Decimal('0'),
+            ).quantize(MONEY),
+            'unsold_quantity': sum(
+                (row['unsold_quantity'] for row in daily), Decimal('0'),
+            ).quantize(MONEY),
+        },
+        'losses': {
+            'unsold_quantity': Decimal(losses['totals']['unsold_quantity']).quantize(MONEY),
+            'lost_value': Decimal(losses['totals']['lost_value']).quantize(MONEY),
+        },
+        'upcoming_orders': list(upcoming_orders[:DASHBOARD_UPCOMING_ORDERS]),
+        'upcoming_order_count': upcoming_orders.count(),
+        'last_closing': last_closing,
+        'today_closed': last_closing is not None and last_closing.business_date == today,
+    }

@@ -380,6 +380,56 @@
       color: var(--muted);
     }
 
+    /* FR33 - indicator tiles of the dashboard */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0 0.5rem;
+    }
+
+    .stat-tile {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.15rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    a.stat-tile:hover {
+      border-color: var(--primary);
+    }
+
+    .stat-tile.success { background: var(--success-bg); }
+    .stat-tile.warning { background: var(--warning-bg); }
+    .stat-tile.error { background: var(--error-bg); }
+    .stat-tile.muted { background: var(--surface-alt); }
+
+    .stat-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat-value {
+      margin: 0.35rem 0 0;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+    }
+
+    .stat-detail {
+      margin: 0.15rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .stat-up { color: var(--success); }
+    .stat-down { color: var(--error); }
+
     .empty-state {
       text-align: center;
       padding: 3rem 1rem;
