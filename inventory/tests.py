@@ -1,16 +1,19 @@
 from decimal import Decimal
 from datetime import date, timedelta
 from io import BytesIO
+import re
 from time import perf_counter
 from unittest.mock import patch
 
 from openpyxl import load_workbook
 from pypdf import PdfReader
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import override
 
 from Crumb.testutils import AuthenticatedTestCase
 from bakery.models import Bakery
@@ -26,6 +29,7 @@ from .models import (
     AlertConfiguration,
     BarcodeIdentifier,
     Ingredient,
+    IngredientCategory,
     StockMovement,
     UnitOfMeasure,
 )
@@ -37,10 +41,12 @@ from .services import (
     deactivate_ingredient,
     is_ingredient_expired,
     expiration_alerts,
+    import_ingredients_from_excel,
     low_stock_alerts,
     register_ingredient,
     register_inventory_correction,
     register_stock_consumption,
+    update_ingredient,
     configure_low_stock_threshold,
     build_inventory_report,
 )
@@ -67,11 +73,12 @@ class InventoryExportTests(TestCase):
         self.client.force_login(self.user)
 
     def add_ingredient(self, name, *, quantity='5.25', expiration_date=None,
-                       bakery=None, is_active=True, barcode=''):
+                       bakery=None, is_active=True, barcode='', category=None):
         ingredient = Ingredient.objects.create(
             bakery=bakery or self.bakery,
             unit=self.unit,
             name=name,
+            category=category,
             current_quantity=Decimal(quantity),
             expiration_date=expiration_date or date(2027, 12, 31),
             is_active=is_active,
@@ -104,7 +111,9 @@ class InventoryExportTests(TestCase):
         self.assertContains(response, 'name="q" value=""')
 
     def test_excel_is_readable_and_has_current_inventory_fields(self):
-        self.add_ingredient('Flour', barcode='FLOUR-001')
+        self.add_ingredient(
+            'Flour', barcode='FLOUR-001', category=IngredientCategory.FLOURS_GRAINS,
+        )
         response, rows = self.excel_rows()
         self.assertEqual(
             response['Content-Type'],
@@ -113,33 +122,40 @@ class InventoryExportTests(TestCase):
         self.assertIn('attachment; filename="inventory_report.xlsx"',
                       response['Content-Disposition'])
         self.assertEqual(rows[2],
-                         ('Name', 'Quantity', 'Unit', 'Expires', 'Barcode', 'Status'))
-        self.assertEqual(rows[3][0:3], ('Flour', 5.25, 'kg'))
-        self.assertEqual(rows[3][3].date(), date(2027, 12, 31))
-        self.assertEqual(rows[3][4:], ('FLOUR-001', 'No inventory alert'))
+                         ('Name', 'Category', 'Quantity', 'Unit', 'Expires', 'Barcode', 'Status'))
+        self.assertEqual(rows[3][0:4], ('Flour', 'Flours and grains', 5.25, 'kg'))
+        self.assertEqual(rows[3][4].date(), date(2027, 12, 31))
+        self.assertEqual(rows[3][5:], ('FLOUR-001', 'No inventory alert'))
 
     def test_pdf_is_readable_and_has_current_inventory_fields(self):
-        self.add_ingredient('Flour', barcode='FLOUR-001')
+        self.add_ingredient(
+            'Flour', barcode='FLOUR-001', category=IngredientCategory.FLOURS_GRAINS,
+        )
         response, text = self.pdf_text()
         self.assertTrue(response.content.startswith(b'%PDF-'))
+        page = PdfReader(BytesIO(response.content)).pages[0]
+        self.assertGreater(float(page.mediabox.width), float(page.mediabox.height))
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertIn('attachment; filename="inventory_report.pdf"',
                       response['Content-Disposition'])
-        for value in ('Inventory report', 'El Buen Pan', 'Name', 'Quantity',
-                      'Unit', 'Expires', 'Barcode', 'Status', 'Flour',
+        for value in ('Inventory report', 'El Buen Pan', 'Name', 'Category', 'Quantity',
+                      'Unit', 'Expires', 'Barcode', 'Status', 'Flour', 'Flours and grains',
                       '5.25', '2027-12-31', 'FLOUR-001', 'No inventory alert'):
             self.assertIn(value, text)
 
     def test_both_formats_use_name_and_inclusive_expiration_filters(self):
         self.add_ingredient('Flour before', expiration_date=date(2026, 8, 31))
-        self.add_ingredient('Flour start', expiration_date=date(2026, 9, 1))
-        self.add_ingredient('Flour end', expiration_date=date(2026, 12, 31))
+        self.add_ingredient('Flour start', expiration_date=date(2026, 9, 1),
+                            category=IngredientCategory.FLOURS_GRAINS)
+        self.add_ingredient('Flour end', expiration_date=date(2026, 12, 31),
+                            category=IngredientCategory.OTHER)
         self.add_ingredient('Sugar', expiration_date=date(2026, 10, 1))
         params = {'q': 'FLOUR', 'start_date': '2026-09-01',
                   'end_date': '2026-12-31'}
         _, rows = self.excel_rows(**params)
         _, text = self.pdf_text(**params)
         self.assertEqual([row[0] for row in rows[3:]], ['Flour end', 'Flour start'])
+        self.assertEqual([row[1] for row in rows[3:]], ['Other', 'Flours and grains'])
         for value in ('Flour start', 'Flour end'):
             self.assertIn(value, text)
         self.assertLess(text.index('Flour end'), text.index('Flour start'))
@@ -161,8 +177,10 @@ class InventoryExportTests(TestCase):
     def test_empty_inventory_creates_valid_documents(self):
         _, rows = self.excel_rows()
         _, text = self.pdf_text()
-        self.assertEqual(rows[2][0], 'Name')
+        self.assertEqual(rows[2],
+                         ('Name', 'Category', 'Quantity', 'Unit', 'Expires', 'Barcode', 'Status'))
         self.assertEqual(rows[3][0], 'No ingredients match the selected filters.')
+        self.assertIn('Category', text)
         self.assertIn('No ingredients match the selected filters.', text)
 
     def test_no_filter_matches_creates_empty_documents(self):
@@ -181,6 +199,7 @@ class InventoryExportTests(TestCase):
         self.assertGreater(len(reader.pages), 1)
         for page in reader.pages:
             self.assertIn('Name', page.extract_text())
+            self.assertIn('Category', page.extract_text())
 
     def test_alert_status_is_consistent_in_both_formats(self):
         ingredient = self.add_ingredient(
@@ -192,7 +211,7 @@ class InventoryExportTests(TestCase):
         )
         _, rows = self.excel_rows()
         _, text = self.pdf_text()
-        self.assertEqual(rows[3][5], 'Low stock, Expired')
+        self.assertEqual(rows[3][6], 'Low stock, Expired')
         self.assertIn('Low stock, Expired', text)
 
     def test_optional_expiration_date_can_be_rendered(self):
@@ -204,7 +223,7 @@ class InventoryExportTests(TestCase):
             BytesIO(build_inventory_excel(rows=rows, bakery=self.bakery)),
             read_only=True,
         )
-        self.assertIsNone(list(workbook.active.values)[3][3])
+        self.assertIsNone(list(workbook.active.values)[3][4])
         workbook.close()
         text = '\n'.join(
             page.extract_text() for page in PdfReader(
@@ -255,9 +274,9 @@ class InventoryExportTests(TestCase):
         response = self.client.get(self.url, {'format': 'xlsx'})
         workbook = load_workbook(BytesIO(response.content))
         self.assertEqual(workbook.active['A4'].data_type, 's')
-        self.assertEqual(workbook.active['E4'].data_type, 's')
+        self.assertEqual(workbook.active['F4'].data_type, 's')
         self.assertEqual(workbook.active['A4'].value, "'=SUM(1,1)")
-        self.assertEqual(workbook.active['E4'].value, "'@ATTACK")
+        self.assertEqual(workbook.active['F4'].value, "'@ATTACK")
         workbook.close()
 
     def test_excel_removes_only_invalid_controls_without_changing_records(self):
@@ -275,7 +294,7 @@ class InventoryExportTests(TestCase):
         self.assertEqual(sheet['B1'].value, "'=BAKERY()")
         exported = {sheet.cell(row, 1).value: row for row in range(4, 7)}
         self.assertIn('FlourX', exported)
-        self.assertEqual(sheet.cell(exported['FlourX'], 5).value, 'CODEX')
+        self.assertEqual(sheet.cell(exported['FlourX'], 6).value, 'CODEX')
         self.assertIn("'=SUM(1,1)", exported)
         self.assertIn('Crème\nMilk', exported)
         self.assertEqual(sheet.cell(exported["'=SUM(1,1)"], 1).data_type, 's')
@@ -291,10 +310,11 @@ class InventoryExportTests(TestCase):
         self.add_ingredient('<b>Flour & Milk</b>', barcode='<script>alert(1)</script>')
         _, text = self.pdf_text()
         self.assertIn('<b>Flour & Milk</b>', text)
-        self.assertIn('<script>alert(1)</script>', text)
+        self.assertIn('<script>alert(1)</script>', text.replace('\n', ''))
 
     def test_spanish_interface_and_documents_are_translated(self):
-        self.add_ingredient('Harina')
+        self.add_ingredient('Harina', category=IngredientCategory.FLOURS_GRAINS)
+        self.add_ingredient('Azúcar')
         self.client.post(reverse('set_language'), {
             'language': 'es', 'next': reverse('inventory:list'),
         })
@@ -303,7 +323,24 @@ class InventoryExportTests(TestCase):
         _, pdf = self.pdf_text()
         self.assertContains(page, 'Exportar a Excel')
         self.assertEqual(excel[2][0], 'Nombre')
+        self.assertEqual(excel[2][1], 'Categoría')
+        self.assertEqual([row[1] for row in excel[3:]], ['Sin categoría', 'Harinas y cereales'])
         self.assertIn('Informe de inventario', pdf)
+        self.assertIn('Harinas y cereales', pdf)
+        self.assertIn('Sin categoría', pdf)
+
+    def test_long_category_label_appears_in_both_spanish_reports(self):
+        self.add_ingredient(
+            'Decorative sprinkles',
+            category=IngredientCategory.FLAVORINGS_DECORATIONS,
+        )
+        self.client.post(reverse('set_language'), {
+            'language': 'es', 'next': reverse('inventory:list'),
+        })
+        _, excel = self.excel_rows()
+        _, pdf = self.pdf_text()
+        self.assertEqual(excel[3][1], 'Saborizantes y decoraciones')
+        self.assertIn('Saborizantes y decoraciones', ' '.join(pdf.split()))
 
     def test_export_query_count_does_not_grow_per_ingredient(self):
         for index in range(30):
@@ -600,6 +637,7 @@ class RegisterIngredientServiceTests(TestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='g')
         ingredient = register_ingredient(
             bakery=bakery, name='Sugar', unit=unit,
+            category=IngredientCategory.SWEETENERS,
             current_quantity=Decimal('750.00'), expiration_date='2026-10-01',
         )
         self.assertEqual(ingredient.bakery, bakery)
@@ -627,6 +665,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         response = self.client.post(self.url, {
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': str(unit.pk),
             'current_quantity': '10.50',
             'expiration_date': '2026-12-31',
@@ -642,6 +681,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
 
         response = self.client.post(self.url, {
             'name': 'Fresh Cream',
+            'category': IngredientCategory.DAIRY_EGGS,
             'unit': str(unit.pk),
             'current_quantity': '5.00',
             'expiration_date': '2026-09-03',
@@ -664,6 +704,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
 
         response = self.client.post(self.url, {
             'name': 'Fresh Cream',
+            'category': IngredientCategory.DAIRY_EGGS,
             'unit': str(unit.pk),
             'current_quantity': '5.00',
             'expiration_date': '2026-09-03',
@@ -695,6 +736,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         response = self.client.post(self.url, {
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': str(unit.pk),
             'current_quantity': '-5.00',
             'expiration_date': '2026-12-31',
@@ -711,6 +753,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
         )
         response = self.client.post(self.url, {
             'name': 'flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': str(unit.pk),
             'current_quantity': '2.00',
             'expiration_date': '2026-12-31',
@@ -732,6 +775,7 @@ class IngredientCreateViewTests(AuthenticatedTestCase):
 
         response = self.client.post(self.url, {
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': str(unit.pk),
             'current_quantity': '12.00',
             'expiration_date': '2027-02-01',
@@ -1260,6 +1304,7 @@ class IngredientEditViewTests(AuthenticatedTestCase):
             self.url,
             {
                 'name': 'Whole Wheat Flour',
+                'category': IngredientCategory.FLOURS_GRAINS,
                 'unit': str(gram.pk),
                 'current_quantity': '8.50',
                 'expiration_date': '2027-01-15',
@@ -1309,6 +1354,7 @@ class IngredientEditViewTests(AuthenticatedTestCase):
             self.url,
             {
                 'name': 'Flour',
+                'category': IngredientCategory.FLOURS_GRAINS,
                 'unit': str(self.unit.pk),
                 'current_quantity': '5.00',
                 'expiration_date': '2026-12-31',
@@ -1337,6 +1383,7 @@ class IngredientEditViewTests(AuthenticatedTestCase):
             self.url,
             {
                 'name': 'Sugar',
+                'category': IngredientCategory.SWEETENERS,
                 'unit': str(self.unit.pk),
                 'current_quantity': '5.00',
                 'expiration_date': '2026-12-31',
@@ -1424,6 +1471,7 @@ class IngredientDeleteViewTests(AuthenticatedTestCase):
         registered = register_ingredient(
             bakery=bakery,
             name='Flour',
+            category=IngredientCategory.FLOURS_GRAINS,
             unit=unit,
             current_quantity=Decimal('10.00'),
             expiration_date='2027-01-31',
@@ -1452,6 +1500,7 @@ class BarcodeRegistrationServiceTests(TestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         ingredient = register_ingredient(
             bakery=bakery, name='Flour', unit=unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
             barcode_value='7501234567890',
         )
@@ -1463,6 +1512,7 @@ class BarcodeRegistrationServiceTests(TestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         register_ingredient(
             bakery=bakery, name='Flour', unit=unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
         )
         self.assertEqual(BarcodeIdentifier.objects.count(), 0)
@@ -1480,6 +1530,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
 
         form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': unit.pk,
             'current_quantity': '10.00',
             'expiration_date': '2027-01-31',
@@ -1494,6 +1545,7 @@ class IngredientRegistrationFormBarcodeTests(TestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': unit.pk,
             'current_quantity': '10.00',
             'expiration_date': '2027-01-31',
@@ -1508,6 +1560,7 @@ class IngredientCreateViewBarcodeTests(AuthenticatedTestCase):
         unit = UnitOfMeasure.objects.get(abbreviation='kg')
         response = self.client.post(reverse('inventory:create'), {
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': str(unit.pk),
             'current_quantity': '10.00',
             'expiration_date': '2027-01-31',
@@ -1641,6 +1694,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
         self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
         self.ingredient = register_ingredient(
             bakery=self.bakery, name='Flour', unit=self.unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
             barcode_value='7501234567890',
         )
@@ -1656,6 +1710,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
 
         form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Flour',
+            'category': IngredientCategory.FLOURS_GRAINS,
             'unit': self.unit.pk,
             'current_quantity': '5.00',
             'expiration_date': '2027-02-28',
@@ -1669,6 +1724,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
 
         reactivated = register_ingredient(
             bakery=self.bakery, name='Flour', unit=self.unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('5.00'), expiration_date='2027-02-28',
             barcode_value='7501234567890',
         )
@@ -1684,6 +1740,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
 
         sugar = register_ingredient(
             bakery=self.bakery, name='Sugar', unit=self.unit,
+            category=IngredientCategory.SWEETENERS,
             current_quantity=Decimal('2.00'), expiration_date='2027-02-28',
             barcode_value='7501234567890',
         )
@@ -1697,6 +1754,7 @@ class BarcodeAfterIngredientDeletionTests(TestCase):
     def test_a_barcode_linked_to_an_active_ingredient_is_still_rejected(self):
         form = BarcodeScanningForIngredientRegistrationForm(data={
             'name': 'Sugar',
+            'category': IngredientCategory.SWEETENERS,
             'unit': self.unit.pk,
             'current_quantity': '5.00',
             'expiration_date': '2027-02-28',
@@ -1718,6 +1776,7 @@ class IngredientListViewBarcodeTests(AuthenticatedTestCase):
     def test_shows_the_barcode_linked_to_each_ingredient(self):
         register_ingredient(
             bakery=self.bakery, name='Flour', unit=self.unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
             barcode_value='7501234567890',
         )
@@ -1729,16 +1788,18 @@ class IngredientListViewBarcodeTests(AuthenticatedTestCase):
     def test_shows_a_placeholder_when_the_ingredient_has_no_barcode(self):
         register_ingredient(
             bakery=self.bakery, name='Sugar', unit=self.unit,
+            category=IngredientCategory.SWEETENERS,
             current_quantity=Decimal('4.00'), expiration_date='2027-01-31',
         )
 
         response = self.client.get(reverse('inventory:list'))
 
-        self.assertContains(response, '<td>—</td>')
+        self.assertContains(response, '<span class="inventory-mobile-label">Barcode</span>—')
 
     def test_does_not_show_the_barcode_of_a_deleted_ingredient(self):
         ingredient = register_ingredient(
             bakery=self.bakery, name='Flour', unit=self.unit,
+            category=IngredientCategory.FLOURS_GRAINS,
             current_quantity=Decimal('10.00'), expiration_date='2027-01-31',
             barcode_value='7501234567890',
         )
@@ -2099,7 +2160,8 @@ class DecimalSeparatorInFormsTests(AuthenticatedTestCase):
 
     def test_registering_an_ingredient_with_a_comma(self):
         self.client.post(reverse('inventory:create'), {
-            'name': 'Sugar', 'unit': str(self.unit.pk), 'current_quantity': '12,5',
+            'name': 'Sugar', 'category': IngredientCategory.SWEETENERS,
+            'unit': str(self.unit.pk), 'current_quantity': '12,5',
             'expiration_date': '2027-12-31', 'expiration_warning_days': '', 'barcode_value': '',
         })
         self.assertEqual(Ingredient.objects.get(name='Sugar').current_quantity, Decimal('12.50'))
@@ -2242,3 +2304,342 @@ class ExpiredIngredientLossTests(TestCase):
             [row['ingredient_name'] for row in losses],
             ['Flour'],
         )
+
+
+class IngredientCategoryTests(TestCase):
+    def setUp(self):
+        self.bakery = make_bakery()
+        self.unit = UnitOfMeasure.objects.get(abbreviation='kg')
+        self.create_url = reverse('inventory:create')
+        self.list_url = reverse('inventory:list')
+        # El inventario exige sesion abierta (FR31b).
+        self.user = get_user_model().objects.create_user(username='panadera')
+        self.client.force_login(self.user)
+
+    def ingredient(self, name='Flour', *, category=None, bakery=None, is_active=True):
+        return Ingredient.objects.create(
+            bakery=bakery or self.bakery,
+            unit=self.unit,
+            name=name,
+            category=category,
+            current_quantity=Decimal('5.00'),
+            expiration_date=date(2027, 12, 31),
+            is_active=is_active,
+        )
+
+    def ingredient_data(self, name='Flour', category=IngredientCategory.FLOURS_GRAINS):
+        return {
+            'name': name,
+            'category': category,
+            'unit': str(self.unit.pk),
+            'current_quantity': '5.00',
+            'expiration_date': '2027-12-31',
+        }
+
+    def select_language(self, language):
+        self.client.post(reverse('set_language'), {
+            'language': language, 'next': self.list_url,
+        })
+
+    def test_existing_expiration_date_uses_iso_html_value_in_both_languages(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        edit_url = reverse('inventory:edit', args=[ingredient.pk])
+        for language in ('en', 'es'):
+            with self.subTest(language=language):
+                self.select_language(language)
+                response = self.client.get(edit_url)
+                self.assertEqual(response.status_code, 200)
+                date_input = str(response.context['form']['expiration_date'])
+                self.assertIn('type="date"', date_input)
+                self.assertIn('value="2027-12-31"', date_input)
+                self.assertNotIn('value="31/12/2027"', date_input)
+                ingredient.refresh_from_db()
+                self.assertEqual(ingredient.expiration_date, date(2027, 12, 31))
+
+    def test_editing_only_category_preserves_expiration_date_in_both_languages(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        edit_url = reverse('inventory:edit', args=[ingredient.pk])
+        for language, category in (
+            ('en', IngredientCategory.SWEETENERS),
+            ('es', IngredientCategory.OTHER),
+        ):
+            with self.subTest(language=language):
+                self.select_language(language)
+                response = self.client.get(edit_url)
+                date_input = str(response.context['form']['expiration_date'])
+                rendered_date = re.search(r'value="([^"]+)"', date_input).group(1)
+                data = self.ingredient_data(category=category)
+                data['expiration_date'] = rendered_date
+                self.assertRedirects(self.client.post(edit_url, data), self.list_url)
+                ingredient.refresh_from_db()
+                self.assertEqual(ingredient.category, category)
+                self.assertEqual(ingredient.expiration_date, date(2027, 12, 31))
+
+    def test_editing_date_accepts_iso_and_rejects_invalid_in_both_languages(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        edit_url = reverse('inventory:edit', args=[ingredient.pk])
+        for language, new_date in (('en', '2028-01-15'), ('es', '2028-02-16')):
+            with self.subTest(language=language):
+                self.select_language(language)
+                data = self.ingredient_data()
+                data['expiration_date'] = new_date
+                self.assertRedirects(self.client.post(edit_url, data), self.list_url)
+                ingredient.refresh_from_db()
+                self.assertEqual(ingredient.expiration_date, date.fromisoformat(new_date))
+
+                data['expiration_date'] = '2028-02-30'
+                response = self.client.post(edit_url, data)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('expiration_date', response.context['form'].errors)
+                ingredient.refresh_from_db()
+                self.assertEqual(ingredient.expiration_date, date.fromisoformat(new_date))
+
+    def test_registration_date_input_accepts_iso_and_rejects_invalid_in_both_languages(self):
+        for language in ('en', 'es'):
+            with self.subTest(language=language):
+                self.select_language(language)
+                response = self.client.get(self.create_url)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('type="date"', str(response.context['form']['expiration_date']))
+
+                name = f'Flour {language}'
+                data = self.ingredient_data(name=name)
+                self.assertRedirects(self.client.post(self.create_url, data), self.list_url)
+                self.assertEqual(
+                    Ingredient.objects.get(name=name).expiration_date,
+                    date(2027, 12, 31),
+                )
+
+                data = self.ingredient_data(name=f'Invalid flour {language}')
+                data['expiration_date'] = '2027-02-30'
+                response = self.client.post(self.create_url, data)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('expiration_date', response.context['form'].errors)
+                self.assertFalse(Ingredient.objects.filter(name=data['name']).exists())
+
+    def test_predefined_categories_have_stable_values(self):
+        self.assertEqual(IngredientCategory.values, [
+            'flours_grains', 'sweeteners', 'dairy_eggs', 'fats_oils',
+            'leavening', 'fruits_nuts_seeds', 'flavorings_decorations', 'other',
+        ])
+
+    def test_manual_registration_requires_category_and_accepts_other(self):
+        data = self.ingredient_data('Special ingredient')
+        data.pop('category')
+        response = self.client.post(self.create_url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('category', response.context['form'].errors)
+        self.assertFalse(Ingredient.objects.exists())
+
+        data['category'] = IngredientCategory.OTHER
+        self.assertRedirects(self.client.post(self.create_url, data), self.list_url)
+        self.assertEqual(
+            Ingredient.objects.get(name='Special ingredient').category,
+            IngredientCategory.OTHER,
+        )
+
+    def test_invalid_category_is_rejected_by_form_service_and_database(self):
+        response = self.client.post(self.create_url, self.ingredient_data(category='invalid'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('category', response.context['form'].errors)
+
+        for category in (None, '', 'invalid'):
+            with self.subTest(category=category):
+                with self.assertRaises(ValueError):
+                    register_ingredient(
+                        bakery=self.bakery, name='Flour', category=category,
+                        unit=self.unit, current_quantity=Decimal('5.00'),
+                        expiration_date=date(2027, 12, 31),
+                    )
+        self.assertFalse(Ingredient.objects.exists())
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                self.ingredient(category='invalid')
+        self.assertFalse(Ingredient.objects.exists())
+
+    def test_editing_a_legacy_ingredient_requires_category(self):
+        ingredient = self.ingredient()
+        edit_url = reverse('inventory:edit', args=[ingredient.pk])
+        data = self.ingredient_data()
+        data.pop('category')
+
+        response = self.client.post(edit_url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('category', response.context['form'].errors)
+        ingredient.refresh_from_db()
+        self.assertIsNone(ingredient.category)
+
+        data['category'] = IngredientCategory.FLOURS_GRAINS
+        self.assertRedirects(self.client.post(edit_url, data), self.list_url)
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.category, IngredientCategory.FLOURS_GRAINS)
+
+    def test_editing_changes_category_but_cannot_clear_it(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        edit_url = reverse('inventory:edit', args=[ingredient.pk])
+        self.assertRedirects(
+            self.client.post(edit_url, self.ingredient_data(category=IngredientCategory.SWEETENERS)),
+            self.list_url,
+        )
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.category, IngredientCategory.SWEETENERS)
+
+        for category in ('', 'invalid'):
+            with self.subTest(category=category):
+                response = self.client.post(edit_url, self.ingredient_data(category=category))
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('category', response.context['form'].errors)
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.category, IngredientCategory.SWEETENERS)
+
+        with self.assertRaises(ValueError):
+            update_ingredient(
+                ingredient=ingredient, name=ingredient.name, category='invalid',
+                unit=self.unit, current_quantity=ingredient.current_quantity,
+                expiration_date=ingredient.expiration_date,
+            )
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.category, IngredientCategory.SWEETENERS)
+
+    def test_reactivation_assigns_the_selected_category(self):
+        ingredient = self.ingredient(category=IngredientCategory.OTHER, is_active=False)
+        self.assertRedirects(
+            self.client.post(self.create_url, self.ingredient_data()),
+            self.list_url,
+        )
+        ingredient.refresh_from_db()
+        self.assertTrue(ingredient.is_active)
+        self.assertEqual(ingredient.category, IngredientCategory.FLOURS_GRAINS)
+        self.assertEqual(Ingredient.objects.count(), 1)
+
+    def test_reactivation_without_category_keeps_the_ingredient_inactive(self):
+        ingredient = self.ingredient(is_active=False)
+        data = self.ingredient_data()
+        data.pop('category')
+        response = self.client.post(self.create_url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('category', response.context['form'].errors)
+        ingredient.refresh_from_db()
+        self.assertFalse(ingredient.is_active)
+        self.assertIsNone(ingredient.category)
+
+    def test_inventory_displays_category_and_legacy_placeholder(self):
+        self.ingredient('Flour', category=IngredientCategory.FLOURS_GRAINS)
+        self.ingredient('Legacy sugar')
+        response = self.client.get(self.list_url)
+        self.assertContains(response, '<th>Category</th>', html=True)
+        self.assertContains(response, 'Flours and grains')
+        self.assertContains(response, 'Uncategorized')
+
+    def test_inventory_keeps_all_actions_accessible(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        response = self.client.get(self.list_url)
+        self.assertContains(response, '<main class="wide inventory-page">')
+        self.assertContains(response, 'class="inventory-row-actions"')
+        self.assertContains(response, 'class="inventory-direct-actions"')
+        self.assertContains(response, 'class="inventory-compact-actions"')
+        self.assertContains(response, '<details class="inventory-more-actions">')
+        self.assertContains(response, 'aria-label="Actions: Flour"')
+        self.assertContains(response, 'aria-label="Edit: Flour"')
+        for route in ('edit', 'delete', 'low_stock_threshold_configuration', 'manual_inventory_correction'):
+            with self.subTest(route=route):
+                self.assertContains(response, reverse(f'inventory:{route}', args=[ingredient.pk]), count=2)
+
+        self.select_language('es')
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'aria-label="Acciones: Flour"')
+
+    def test_inventory_uses_compact_localized_dates_and_combined_quantity(self):
+        ingredient = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        ingredient.current_quantity = Decimal('400.00')
+        ingredient.expiration_date = date(2027, 2, 26)
+        ingredient.save(update_fields=['current_quantity', 'expiration_date'])
+
+        for language, quantity, display_date, heading in (
+            ('en', '400.00 kg', '02/26/2027', 'Quantity'),
+            ('es', '400,00 kg', '26/02/2027', 'Cantidad'),
+        ):
+            with self.subTest(language=language):
+                self.select_language(language)
+                response = self.client.get(self.list_url, {
+                    'start_date': '2027-02-26',
+                })
+                self.assertContains(response, quantity)
+                self.assertContains(response, display_date)
+                self.assertContains(response, 'value="2027-02-26"')
+                self.assertContains(response, 'class="inventory-name-category"')
+                self.assertContains(response, f'<th>{heading}</th>', html=True)
+                self.assertNotContains(response, '<th>Unit</th>', html=True)
+                self.assertEqual(response.content.count(b'<th>'), 7)
+
+    def test_category_labels_are_translated_in_english_and_spanish(self):
+        translations = (
+            (IngredientCategory.FLOURS_GRAINS, 'Flours and grains', 'Harinas y cereales'),
+            (IngredientCategory.SWEETENERS, 'Sweeteners', 'Endulzantes'),
+            (IngredientCategory.DAIRY_EGGS, 'Dairy and eggs', 'Lácteos y huevos'),
+            (IngredientCategory.FATS_OILS, 'Fats and oils', 'Grasas y aceites'),
+            (IngredientCategory.LEAVENING, 'Leavening agents', 'Agentes leudantes'),
+            (IngredientCategory.FRUITS_NUTS_SEEDS, 'Fruits, nuts, and seeds', 'Frutas, frutos secos y semillas'),
+            (IngredientCategory.FLAVORINGS_DECORATIONS, 'Flavorings and decorations', 'Saborizantes y decoraciones'),
+            (IngredientCategory.OTHER, 'Other', 'Otros'),
+        )
+        for category, english, spanish in translations:
+            with self.subTest(category=category):
+                with override('en'):
+                    self.assertEqual(str(category.label), english)
+                with override('es'):
+                    self.assertEqual(str(category.label), spanish)
+
+        self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        self.ingredient('Legacy sugar')
+        self.client.post(reverse('set_language'), {'language': 'es', 'next': self.list_url})
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'Categoría')
+        self.assertContains(response, 'Harinas y cereales')
+        self.assertContains(response, 'Sin categoría')
+
+    def test_category_does_not_expose_another_bakery_ingredient(self):
+        other = Bakery.objects.create(name='Other bakery', address='Other address')
+        foreign = self.ingredient('Private flour', category=IngredientCategory.OTHER, bakery=other)
+        response = self.client.get(self.list_url)
+        self.assertNotContains(response, 'Private flour')
+        self.assertEqual(
+            self.client.post(reverse('inventory:edit', args=[foreign.pk]), self.ingredient_data()).status_code,
+            404,
+        )
+        foreign.refresh_from_db()
+        self.assertEqual(foreign.category, IngredientCategory.OTHER)
+
+    def test_import_keeps_existing_category_and_leaves_new_rows_uncategorized(self):
+        existing = self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        imported = SimpleUploadedFile(
+            'ingredients.csv',
+            b'Nombre,Unidad,Cantidad,Fecha de caducidad\n'
+            b'Flour,kg,2.00,2027-12-31\n'
+            b'Sugar,kg,3.00,2027-12-31\n',
+            content_type='text/csv',
+        )
+        created, updated = import_ingredients_from_excel(file=imported, bakery=self.bakery)
+        self.assertEqual((created, updated), (1, 1))
+        existing.refresh_from_db()
+        self.assertEqual(existing.current_quantity, Decimal('7.00'))
+        self.assertEqual(existing.category, IngredientCategory.FLOURS_GRAINS)
+        self.assertIsNone(Ingredient.objects.get(name='Sugar').category)
+
+    def test_fr16_exports_include_category_after_name_in_both_formats(self):
+        self.ingredient(category=IngredientCategory.FLOURS_GRAINS)
+        xlsx = self.client.get(reverse('inventory:export'), {'format': 'xlsx'})
+        self.assertEqual(xlsx.status_code, 200)
+        workbook = load_workbook(BytesIO(xlsx.content), read_only=True)
+        headers = list(workbook.active.values)[2]
+        workbook.close()
+        self.assertEqual(headers, (
+            'Name', 'Category', 'Quantity', 'Unit', 'Expires', 'Barcode', 'Status',
+        ))
+
+        pdf = self.client.get(reverse('inventory:export'), {'format': 'pdf'})
+        self.assertEqual(pdf.status_code, 200)
+        text = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(pdf.content)).pages)
+        self.assertIn('Flour', text)
+        self.assertIn('Flours and grains', text)
