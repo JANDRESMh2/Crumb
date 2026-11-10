@@ -11,6 +11,24 @@ from bakery.services import record_activity
 from inventory.services import build_expired_ingredient_losses
 
 from .models import Product, ProductionRecord, SalesRecord
+from .models import ScheduledOrder
+
+
+@transaction.atomic
+def register_scheduled_order(*, bakery, customer_name, product, quantity, scheduled_for, notes=''):
+    """FR34 - save a future order for an active product in this bakery."""
+    if product.bakery_id != bakery.pk or product.status != Product.Status.ACTIVE:
+        raise ValidationError('Choose an active product from this bakery.')
+    if quantity <= 0:
+        raise ValidationError('Order quantity must be greater than zero.')
+    return ScheduledOrder.objects.create(
+        bakery=bakery,
+        customer_name=customer_name,
+        product=product,
+        quantity=quantity,
+        scheduled_for=scheduled_for,
+        notes=notes,
+    )
 
 
 def build_daily_unsold_products(*, bakery):

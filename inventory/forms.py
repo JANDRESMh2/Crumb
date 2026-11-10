@@ -10,10 +10,21 @@ from .models import (
     BarcodeIdentifier,
     Ingredient,
     IngredientCategory,
+    NotificationPreference,
     StockMovement,
     SUPPORTED_UNIT_ABBREVIATIONS,
     UnitOfMeasure,
 )
+
+
+class NotificationPreferenceForm(forms.ModelForm):
+    class Meta:
+        model = NotificationPreference
+        fields = ['low_stock_enabled', 'expiration_enabled']
+        labels = {
+            'low_stock_enabled': 'Low-stock alerts',
+            'expiration_enabled': 'Expiration alerts',
+        }
 
 
 class IngredientForm(forms.ModelForm):

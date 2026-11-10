@@ -269,3 +269,32 @@ class SalesRecord(models.Model):
             f'{self.quantity_sold} sold '
             f'on {self.sale_timestamp:%Y-%m-%d %H:%M}'
         )
+
+
+class ScheduledOrder(models.Model):
+    """A customer order that the bakery expects to prepare later (FR34)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    bakery = models.ForeignKey(
+        Bakery, on_delete=models.PROTECT, related_name='scheduled_orders'
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name='scheduled_orders'
+    )
+    customer_name = models.CharField(max_length=120)
+    quantity = models.PositiveIntegerField()
+    scheduled_for = models.DateTimeField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['scheduled_for', 'created_at']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name='scheduled_order_quantity_positive',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.product.name} for {self.customer_name} on {self.scheduled_for:%Y-%m-%d %H:%M}'

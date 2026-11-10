@@ -1,3 +1,9 @@
+"""Business logic for user accounts.
+
+Signing in, signing out and registering (FR31) live next to the password
+recovery flow (FR32): both work on the same account, so they share this
+module and the rate limits that protect it.
+"""
 import hashlib
 import hmac
 import logging
@@ -7,7 +13,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
 from django.core.mail import send_mail
 from django.db import DatabaseError, transaction
 from django.db.models import F, Q
@@ -21,16 +27,19 @@ logger = logging.getLogger(__name__)
 
 @transaction.atomic
 def register_new_user(form):
-    user = form.save()
+    """FR31a - Crea el usuario a partir de un formulario ya validado."""
+    return form.save()
+
+
+def log_in_user(request, user):
+    """FR31b - Abre la sesion. La autenticacion ya la hizo el formulario."""
+    login(request, user)
     return user
 
 
-def authenticate_user(request, username, password):
-    user = authenticate(request, username=username, password=password)
-    if user is not None:
-        login(request, user)
-        return user
-    return None
+def log_out_user(request):
+    """FR31b - Cierra la sesion y deja que la signal registre la salida."""
+    logout(request)
 
 
 class RecoveryRateLimited(Exception):

@@ -509,6 +509,46 @@
       box-shadow: var(--shadow-sm);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .header-user form {
+      margin: 0;
+    }
+
+    .header-username {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .auth-card {
+      max-width: 480px;
+    }
+
+    .btn-sm {
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8rem;
+    }
+
+    .form-errors p {
+      margin: 0 0 0.35rem;
+    }
+
+    .form-errors p:last-child {
+      margin-bottom: 0;
+    }
+
   </style>
 </head>
 
@@ -518,11 +558,34 @@
       <span class="brand-mark">C</span>
       <span class="brand-name">Crumb</span>
     </a>
-    <nav>
-      <a href="{% url 'bakery:detail' %}">{% translate "Bakery profile" %}</a>
-      <a href="{% url 'inventory:list' %}">{% translate "Ingredients" %}</a>
-      <a href="{% url 'production:list' %}">{% translate "Production" %}</a>
-    </nav>
+
+    <div class="header-actions">
+      {% if user.is_authenticated %}
+        <nav>
+          <a href="{% url 'bakery:detail' %}">{% translate "Bakery profile" %}</a>
+          <a href="{% url 'inventory:list' %}">{% translate "Ingredients" %}</a>
+          <a href="{% url 'production:list' %}">{% translate "Production" %}</a>
+          <a href="{% url 'production:scheduled_orders' %}">{% translate "Scheduled orders" %}</a>
+          <a href="{% url 'inventory:notification_preferences' %}">{% translate "Notifications" %}</a>
+        </nav>
+
+        <div class="header-user">
+          <span class="header-username">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm">
+              {% translate "Sign out" %}
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <nav>
+          <a href="{% url 'accounts:login' %}">{% translate "Sign in" %}</a>
+          <a href="{% url 'accounts:register' %}">{% translate "Create account" %}</a>
+        </nav>
+      {% endif %}
+    </div>
+
     <form
       class="lang-switch"
       action="{% url 'set_language' %}"

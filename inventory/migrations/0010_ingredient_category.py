@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('bakery', '0002_activitylog'),
-        ('inventory', '0008_stock_movement_correction_audit'),
+        ('inventory', '0009_notificationpreference'),
     ]
 
     operations = [
