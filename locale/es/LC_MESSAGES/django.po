@@ -1023,3 +1023,184 @@ msgid "over %(counter)s product-day"
 msgid_plural "over %(counter)s product-days"
 msgstr[0] "en %(counter)s producto-día"
 msgstr[1] "en %(counter)s productos-día"
+
+msgid "Day closed"
+msgstr "Día cerrado"
+
+msgid "Business day"
+msgstr "Día de negocio"
+
+msgid "Days are counted in UTC, the time zone the server keeps."
+msgstr "Los días se cuentan en UTC, la zona horaria que usa el servidor."
+
+msgid "Replace the summary if this day is already closed"
+msgstr "Reemplazar el resumen si este día ya está cerrado"
+
+msgid "Only needed when the day was closed before."
+msgstr "Solo hace falta si el día ya se había cerrado."
+
+msgid "A day that has not started yet cannot be closed."
+msgstr "No se puede cerrar un día que todavía no ha empezado."
+
+msgid "Choose the day to close."
+msgstr "Elige el día que quieres cerrar."
+
+msgid "Closed the business day %(date)s."
+msgstr "Cerró el día de negocio %(date)s."
+
+msgid "Regenerated the closing summary of %(date)s."
+msgstr "Regeneró el resumen de cierre del %(date)s."
+
+msgid "Low-stock alerts are turned off in the notification preferences."
+msgstr ""
+"Las alertas de stock bajo están desactivadas en las preferencias de "
+"notificación."
+
+msgid "Expiration alerts are turned off in the notification preferences."
+msgstr ""
+"Las alertas de vencimiento están desactivadas en las preferencias de "
+"notificación."
+
+msgid "Nothing was produced or sold on this day."
+msgstr "Este día no se produjo ni se vendió nada."
+
+msgid "Stock movements"
+msgstr "Movimientos de stock"
+
+msgid "Stock-in"
+msgstr "Entradas"
+
+msgid "Corrections"
+msgstr "Correcciones"
+
+msgid "No stock movement was registered on this day."
+msgstr "Este día no se registró ningún movimiento de stock."
+
+msgid "Inventory corrections"
+msgstr "Correcciones de inventario"
+
+msgid "Time"
+msgstr "Hora"
+
+msgid "No inventory correction was made on this day."
+msgstr "Este día no se hizo ninguna corrección de inventario."
+
+msgid "Threshold"
+msgstr "Umbral"
+
+msgid "No ingredient is below its low-stock threshold."
+msgstr "Ningún ingrediente está por debajo de su umbral de stock bajo."
+
+msgid "No ingredient is about to expire."
+msgstr "Ningún ingrediente está por vencer."
+
+msgid "No ingredient in the inventory has expired."
+msgstr "Ningún ingrediente del inventario está vencido."
+
+msgid "Every product produced on this day was sold."
+msgstr "Todo lo que se produjo este día se vendió."
+
+msgid "Ingredients that expired at closing"
+msgstr "Ingredientes que vencieron al cierre"
+
+msgid "No ingredient with stock left expired on this day."
+msgstr "Este día no venció ningún ingrediente con stock."
+
+msgid "Orders for the next day"
+msgstr "Pedidos para el día siguiente"
+
+msgid "Customer"
+msgstr "Cliente"
+
+msgid "Notes"
+msgstr "Notas"
+
+msgid "No order is scheduled for the next day."
+msgstr "No hay pedidos programados para el día siguiente."
+
+msgid "Generated at"
+msgstr "Generado el"
+
+msgid "Closed by"
+msgstr "Cerrado por"
+
+msgid "Daily closing"
+msgstr "Cierre del día"
+
+msgid "Daily closing summary"
+msgstr "Resumen de cierre del día"
+
+msgid ""
+"Close the business day of %(name)s to get its summary: production and "
+"sales, stock movements, inventory alerts, losses and the orders for the "
+"next day."
+msgstr ""
+"Cierra el día de negocio de %(name)s para obtener su resumen: producción y "
+"ventas, movimientos de stock, alertas de inventario, pérdidas y los pedidos "
+"del día siguiente."
+
+msgid "Close the day"
+msgstr "Cerrar el día"
+
+msgid "Closed days"
+msgstr "Días cerrados"
+
+msgid "View summary"
+msgstr "Ver resumen"
+
+msgid "No business day has been closed yet."
+msgstr "Todavía no se ha cerrado ningún día de negocio."
+
+msgid "Closing summary of %(day)s"
+msgstr "Resumen de cierre del %(day)s"
+
+msgid "Generated at %(generated)s."
+msgstr "Generado el %(generated)s."
+
+msgid "Closed by %(username)s."
+msgstr "Cerrado por %(username)s."
+
+msgid "Produced / sold"
+msgstr "Producido / vendido"
+
+msgid "%(unsold)s left unsold"
+msgstr "%(unsold)s sin vender"
+
+msgid "Inventory alerts"
+msgstr "Alertas de inventario"
+
+msgid ""
+"The inventory does not keep a history of its alerts, so they show the stock "
+"as it was when the summary was generated (%(day)s)."
+msgstr ""
+"El inventario no guarda un historial de sus alertas, así que muestran el "
+"stock tal como estaba cuando se generó el resumen (%(day)s)."
+
+msgid "Losses"
+msgstr "Pérdidas"
+
+msgid "Set up the bakery profile before closing the day."
+msgstr "Configura el perfil de la panadería antes de cerrar el día."
+
+msgid ""
+"This day is already closed. Confirm to replace its summary with the current "
+"data."
+msgstr ""
+"Este día ya está cerrado. Confirma para reemplazar su resumen con los datos "
+"actuales."
+
+msgid "Business day closed successfully."
+msgstr "El día de negocio se cerró correctamente."
+
+msgid "Closing summary regenerated with the current data."
+msgstr "El resumen de cierre se regeneró con los datos actuales."
+
+msgid "from %(counter)s sale"
+msgid_plural "from %(counter)s sales"
+msgstr[0] "de %(counter)s venta"
+msgstr[1] "de %(counter)s ventas"
+
+msgid "%(counter)s order for the next day"
+msgid_plural "%(counter)s orders for the next day"
+msgstr[0] "%(counter)s pedido para el día siguiente"
+msgstr[1] "%(counter)s pedidos para el día siguiente"

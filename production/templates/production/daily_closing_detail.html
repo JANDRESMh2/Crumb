@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Daily closing summary" %} - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">{% translate "Daily closing" %}</p>
+
+<h1>
+    {% blocktranslate trimmed with day=closing.business_date|date:"Y-m-d" %}Closing summary of
+    {{ day }}{% endblocktranslate %}
+</h1>
+
+<p class="lede">
+    {% blocktranslate trimmed with generated=summary.generated_at %}Generated at
+    {{ generated }}.{% endblocktranslate %}
+    {% if closing.closed_by %}
+        {% blocktranslate trimmed with username=closing.closed_by.get_username %}Closed by
+        {{ username }}.{% endblocktranslate %}
+    {% endif %}
+</p>
+
+<div class="actions">
+
+    <a
+        class="btn"
+        href="{% url 'production:daily_closing_export' closing_id=closing.pk %}?format=xlsx"
+    >
+        {% translate "Export to Excel" %}
+    </a>
+
+    <a
+        class="btn"
+        href="{% url 'production:daily_closing_export' closing_id=closing.pk %}?format=pdf"
+    >
+        {% translate "Export to PDF" %}
+    </a>
+
+    <a class="btn btn-secondary" href="{% url 'production:daily_closing' %}">
+        {% translate "Daily closing" %}
+    </a>
+
+</div>
+
+<div
+    style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    "
+>
+
+    <div style="flex: 1 1 180px; background: var(--success-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.15rem;">
+        <p style="margin: 0; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;">{% translate "Revenue" %}</p>
+        <p style="margin: 0.35rem 0 0; font-family: var(--font-display); font-size: 1.5rem; color: var(--text);">{{ summary.totals.revenue }}</p>
+        <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+            {% blocktranslate trimmed count counter=summary.totals.sale_count %}from {{ counter }} sale{% plural %}from {{ counter }} sales{% endblocktranslate %}
+        </p>
+    </div>
+
+    <div style="flex: 1 1 180px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.15rem;">
+        <p style="margin: 0; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;">{% translate "Produced / sold" %}</p>
+        <p style="margin: 0.35rem 0 0; font-family: var(--font-display); font-size: 1.5rem; color: var(--text);">{{ summary.totals.units_produced }} / {{ summary.totals.units_sold }}</p>
+        <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+            {% blocktranslate trimmed with unsold=summary.totals.unsold_quantity %}{{ unsold }} left unsold{% endblocktranslate %}
+        </p>
+    </div>
+
+    <div style="flex: 1 1 180px; background: var(--error-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.15rem;">
+        <p style="margin: 0; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;">{% translate "Value not earned" %}</p>
+        <p style="margin: 0.35rem 0 0; font-family: var(--font-display); font-size: 1.5rem; color: var(--text);">{{ summary.totals.lost_value }}</p>
+        <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">{% translate "from the unsold products" %}</p>
+    </div>
+
+    <div style="flex: 1 1 180px; background: var(--warning-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.15rem;">
+        <p style="margin: 0; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;">{% translate "Inventory alerts" %}</p>
+        <p style="margin: 0.35rem 0 0; font-family: var(--font-display); font-size: 1.5rem; color: var(--text);">{{ summary.totals.alert_count }}</p>
+        <p style="margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem;">
+            {% blocktranslate trimmed count counter=summary.totals.next_day_order_count %}{{ counter }} order for the next day{% plural %}{{ counter }} orders for the next day{% endblocktranslate %}
+        </p>
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h2>{% translate "Production and sales" %}</h2>
+
+    {% if summary.products %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Produced" %}</th>
+                    <th style="text-align: right;">{% translate "Sold" %}</th>
+                    <th style="text-align: right;">{% translate "Unsold" %}</th>
+                    <th style="text-align: right;">{% translate "Sales" %}</th>
+                    <th style="text-align: right;">{% translate "Revenue" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.products %}
+                    <tr>
+                        <td>{{ row.product_name }}</td>
+                        <td style="text-align: right;">{{ row.produced_quantity }}</td>
+                        <td style="text-align: right;">{{ row.sold_quantity }}</td>
+                        <td style="text-align: right;">{{ row.unsold_quantity }}</td>
+                        <td style="text-align: right;">{{ row.sale_count }}</td>
+                        <td style="text-align: right;">{{ row.revenue }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>{% translate "Totals" %}</th>
+                    <td style="text-align: right;">{{ summary.totals.units_produced }}</td>
+                    <td style="text-align: right;">{{ summary.totals.units_sold }}</td>
+                    <td style="text-align: right;">{{ summary.totals.unsold_quantity }}</td>
+                    <td style="text-align: right;">{{ summary.totals.sale_count }}</td>
+                    <td style="text-align: right;">{{ summary.totals.revenue }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "Nothing was produced or sold on this day." %}</p>
+        </div>
+    {% endif %}
+
+    <h2 style="margin-top: 2.5rem;">{% translate "Stock movements" %}</h2>
+
+    {% if summary.stock.ingredients %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th>{% translate "Unit" %}</th>
+                    <th style="text-align: right;">{% translate "Stock-in" %}</th>
+                    <th style="text-align: right;">{% translate "Consumption" %}</th>
+                    <th style="text-align: right;">{% translate "Corrections" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.stock.ingredients %}
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td>{{ row.unit }}</td>
+                        <td style="text-align: right;">{{ row.stock_in }}</td>
+                        <td style="text-align: right;">{{ row.consumption }}</td>
+                        <td style="text-align: right;">{{ row.correction_count }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No stock movement was registered on this day." %}</p>
+        </div>
+    {% endif %}
+
+    {% if summary.stock.corrections %}
+        <h3 style="margin-top: 1.5rem;">{% translate "Inventory corrections" %}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Time" %}</th>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Before" %}</th>
+                    <th style="text-align: right;">{% translate "After" %}</th>
+                    <th>{% translate "Reason" %}</th>
+                    <th>{% translate "User" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.stock.corrections %}
+                    <tr>
+                        <td>{{ row.time }}</td>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.previous_quantity }} {{ row.unit }}</td>
+                        <td style="text-align: right;">{{ row.new_quantity }} {{ row.unit }}</td>
+                        <td>{{ row.reason }}</td>
+                        <td>{{ row.user|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <h2 style="margin-top: 2.5rem;">{% translate "Inventory alerts" %}</h2>
+
+    <p class="help">
+        {% blocktranslate trimmed with day=summary.alerts.evaluated_on %}The inventory does not keep
+        a history of its alerts, so they show the stock as it was when the summary was
+        generated ({{ day }}).{% endblocktranslate %}
+    </p>
+
+    <h3>{% translate "Low stock" %}</h3>
+    {% if not summary.alerts.low_stock_enabled %}
+        <div class="empty-state">
+            <p>{% translate "Low-stock alerts are turned off in the notification preferences." %}</p>
+        </div>
+    {% elif summary.alerts.low_stock %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity" %}</th>
+                    <th style="text-align: right;">{% translate "Threshold" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.alerts.low_stock %}
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }} {{ row.unit }}</td>
+                        <td style="text-align: right;">{{ row.threshold }} {{ row.unit }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No ingredient is below its low-stock threshold." %}</p>
+        </div>
+    {% endif %}
+
+    <h3 style="margin-top: 1.5rem;">{% translate "Expiring soon" %}</h3>
+    {% if not summary.alerts.expiration_enabled %}
+        <div class="empty-state">
+            <p>{% translate "Expiration alerts are turned off in the notification preferences." %}</p>
+        </div>
+    {% elif summary.alerts.expiring_soon %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity" %}</th>
+                    <th>{% translate "Expires" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.alerts.expiring_soon %}
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }} {{ row.unit }}</td>
+                        <td>{{ row.expiration_date }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No ingredient is about to expire." %}</p>
+        </div>
+    {% endif %}
+
+    <h3 style="margin-top: 1.5rem;">{% translate "Expired" %}</h3>
+    {% if not summary.alerts.expiration_enabled %}
+        <div class="empty-state">
+            <p>{% translate "Expiration alerts are turned off in the notification preferences." %}</p>
+        </div>
+    {% elif summary.alerts.expired %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity" %}</th>
+                    <th>{% translate "Expired on" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.alerts.expired %}
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }} {{ row.unit }}</td>
+                        <td>{{ row.expiration_date }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No ingredient in the inventory has expired." %}</p>
+        </div>
+    {% endif %}
+
+    <h2 style="margin-top: 2.5rem;">{% translate "Losses" %}</h2>
+
+    <h3>{% translate "Overproduction" %}</h3>
+    {% if summary.losses.overproduction %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Unsold" %}</th>
+                    <th style="text-align: right;">{% translate "Unit price" %}</th>
+                    <th style="text-align: right;">{% translate "Value not earned" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.losses.overproduction %}
+                    <tr>
+                        <td>{{ row.product_name }}</td>
+                        <td style="text-align: right;">{{ row.unsold_quantity }}</td>
+                        <td style="text-align: right;">{{ row.unit_price }}</td>
+                        <td style="text-align: right;">{{ row.lost_value }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>{% translate "Totals" %}</th>
+                    <td style="text-align: right;">{{ summary.totals.unsold_quantity }}</td>
+                    <td></td>
+                    <td style="text-align: right;">{{ summary.totals.lost_value }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "Every product produced on this day was sold." %}</p>
+        </div>
+    {% endif %}
+
+    <h3 style="margin-top: 1.5rem;">{% translate "Ingredients that expired at closing" %}</h3>
+    {% if summary.losses.expired_ingredients %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Ingredient" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity left" %}</th>
+                    <th>{% translate "Expired on" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.losses.expired_ingredients %}
+                    <tr>
+                        <td>{{ row.ingredient_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }} {{ row.unit }}</td>
+                        <td>{{ row.expiration_date }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No ingredient with stock left expired on this day." %}</p>
+        </div>
+    {% endif %}
+
+    <h2 style="margin-top: 2.5rem;">{% translate "Orders for the next day" %}</h2>
+
+    {% if summary.next_day_orders %}
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Time" %}</th>
+                    <th>{% translate "Customer" %}</th>
+                    <th>{% translate "Product" %}</th>
+                    <th style="text-align: right;">{% translate "Quantity" %}</th>
+                    <th>{% translate "Notes" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.next_day_orders %}
+                    <tr>
+                        <td>{{ row.time }}</td>
+                        <td>{{ row.customer_name }}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td style="text-align: right;">{{ row.quantity }}</td>
+                        <td>{{ row.notes|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>{% translate "No order is scheduled for the next day." %}</p>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

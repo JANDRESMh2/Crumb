@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Daily closing" %} - Crumb{% endblock %}
+
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+
+<p class="eyebrow">{% translate "Production" %}</p>
+
+<h1>{% translate "Daily closing" %}</h1>
+
+<p class="lede">
+    {% blocktranslate trimmed with name=bakery.name %}Close the business day of {{ name }} to
+    get its summary: production and sales, stock movements, inventory alerts, losses
+    and the orders for the next day.{% endblocktranslate %}
+</p>
+
+<div class="card">
+
+    <form method="post" novalidate>
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {% include "partials/field.html" with field=form.business_date %}
+        {% include "partials/field.html" with field=form.confirm_regenerate %}
+
+        <div class="actions">
+            <button type="submit">{% translate "Close the day" %}</button>
+        </div>
+
+    </form>
+
+</div>
+
+<h2 style="margin-top: 2.5rem;">{% translate "Closed days" %}</h2>
+
+<div class="card">
+
+    {% if closings %}
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>{% translate "Business day" %}</th>
+                    <th>{% translate "Closed by" %}</th>
+                    <th style="text-align: right;">{% translate "Produced" %}</th>
+                    <th style="text-align: right;">{% translate "Sold" %}</th>
+                    <th style="text-align: right;">{% translate "Revenue" %}</th>
+                    <th style="text-align: right;">{% translate "Value not earned" %}</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for closing in closings %}
+
+                    <tr>
+                        <td>{{ closing.business_date|date:"Y-m-d" }}</td>
+                        <td>{% if closing.closed_by %}{{ closing.closed_by.get_username }}{% else %}—{% endif %}</td>
+                        <td style="text-align: right;">{{ closing.units_produced }}</td>
+                        <td style="text-align: right;">{{ closing.units_sold }}</td>
+                        <td style="text-align: right;">{{ closing.revenue }}</td>
+                        <td style="text-align: right;">{{ closing.lost_value }}</td>
+                        <td>
+                            <a href="{% url 'production:daily_closing_detail' closing_id=closing.pk %}">
+                                {% translate "View summary" %}
+                            </a>
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <div class="empty-state">
+            <p>{% translate "No business day has been closed yet." %}</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -46,6 +46,7 @@ class ActivityLog(models.Model):
         STOCK_IN = 'StockIn', _('Stock-in registered')
         CORRECTION = 'Correction', _('Inventory corrected')
         SALE = 'Sale', _('Sale registered')
+        DAILY_CLOSING = 'DailyClosing', _('Day closed')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
